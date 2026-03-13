@@ -65,6 +65,7 @@ export default function EditSection({
                 <SectionForm
                     section={section}
                     districts={districts}
+                    minimalLayout
                     statusOptions={statusOptions}
                 />
             </div>

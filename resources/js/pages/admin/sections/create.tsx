@@ -48,6 +48,7 @@ export default function CreateSection({ districts, statusOptions }: Props) {
                 />
                 <SectionForm
                     districts={districts}
+                    minimalLayout
                     statusOptions={statusOptions}
                 />
             </div>

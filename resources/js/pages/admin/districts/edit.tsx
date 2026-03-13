@@ -50,6 +50,7 @@ export default function EditDistrict({ district, statusOptions }: Props) {
                 />
                 <DistrictForm
                     district={district}
+                    minimalLayout
                     statusOptions={statusOptions}
                 />
             </div>

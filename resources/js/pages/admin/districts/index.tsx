@@ -3,7 +3,6 @@ import DistrictController from '@/actions/App/Http/Controllers/Admin/DistrictCon
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -54,8 +53,9 @@ export default function DistrictIndex({ districts }: Props) {
                     <Heading
                         title="Districts"
                         description="Manage the top-level district records used to organize sections and pastors."
+                        className="mb-0"
                     />
-                    <Button asChild>
+                    <Button asChild className="h-11 rounded-xl">
                         <Link href={DistrictController.create()}>
                             New district
                         </Link>
@@ -68,102 +68,104 @@ export default function DistrictIndex({ districts }: Props) {
                     </div>
                 )}
 
-                <Card className="border-sidebar-border/70">
-                    <CardHeader>
-                        <CardTitle>District directory</CardTitle>
-                        <CardDescription>
-                            Districts sit at the top of the master-data tree.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
-                            <thead>
-                                <tr className="text-left text-muted-foreground">
-                                    <th className="py-3 pr-4 font-medium">
-                                        District
-                                    </th>
-                                    <th className="py-3 pr-4 font-medium">
-                                        Status
-                                    </th>
-                                    <th className="py-3 pr-4 font-medium">
-                                        Sections
-                                    </th>
-                                    <th className="py-3 text-right font-medium">
-                                        Actions
-                                    </th>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
+                        <thead className="bg-muted/40">
+                            <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                <th className="py-2.5 pr-3 pl-4 font-medium">
+                                    District
+                                </th>
+                                <th className="py-2.5 pr-3 font-medium">
+                                    Status
+                                </th>
+                                <th className="py-2.5 pr-3 font-medium">
+                                    Sections
+                                </th>
+                                <th className="py-2.5 pr-4 text-right font-medium">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-sidebar-border/50">
+                            {districts.length === 0 ? (
+                                <tr>
+                                    <td
+                                        colSpan={4}
+                                        className="px-4 py-14 text-center"
+                                    >
+                                        <div className="space-y-2">
+                                            <div className="text-base font-medium">
+                                                No districts yet.
+                                            </div>
+                                            <div className="text-sm text-muted-foreground">
+                                                Create the first district to start
+                                                organizing sections and pastors.
+                                            </div>
+                                        </div>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-sidebar-border/50">
-                                {districts.length === 0 ? (
-                                    <tr>
-                                        <td
-                                            colSpan={4}
-                                            className="py-10 text-center text-muted-foreground"
-                                        >
-                                            No districts yet.
+                            ) : (
+                                districts.map((district) => (
+                                    <tr
+                                        key={district.id}
+                                        className="bg-background transition-colors hover:bg-muted/20"
+                                    >
+                                        <td className="px-4 py-3.5 align-middle">
+                                            <div className="font-medium text-foreground">
+                                                {district.name}
+                                            </div>
+                                            <div className="mt-1 max-w-xl text-sm text-muted-foreground">
+                                                {district.description ||
+                                                    'No description provided.'}
+                                            </div>
+                                        </td>
+                                        <td className="py-3.5 pr-3 align-middle">
+                                            <Badge
+                                                variant={
+                                                    district.status === 'active'
+                                                        ? 'secondary'
+                                                        : 'destructive'
+                                                }
+                                                className="capitalize"
+                                            >
+                                                {district.status}
+                                            </Badge>
+                                        </td>
+                                        <td className="py-3.5 pr-3 align-middle text-muted-foreground">
+                                            {district.sections_count}
+                                        </td>
+                                        <td className="py-3.5 pr-4 align-middle">
+                                            <div className="flex justify-end gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={DistrictController.edit(
+                                                            district.id,
+                                                        )}
+                                                    >
+                                                        Edit
+                                                    </Link>
+                                                </Button>
+                                                <Button
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        destroy(district)
+                                                    }
+                                                >
+                                                    Delete
+                                                </Button>
+                                            </div>
                                         </td>
                                     </tr>
-                                ) : (
-                                    districts.map((district) => (
-                                        <tr key={district.id}>
-                                            <td className="py-4 pr-4 align-top">
-                                                <div className="font-medium">
-                                                    {district.name}
-                                                </div>
-                                                <div className="mt-1 max-w-xl text-sm text-muted-foreground">
-                                                    {district.description ||
-                                                        'No description provided.'}
-                                                </div>
-                                            </td>
-                                            <td className="py-4 pr-4 align-top">
-                                                <Badge
-                                                    variant={
-                                                        district.status ===
-                                                        'active'
-                                                            ? 'secondary'
-                                                            : 'outline'
-                                                    }
-                                                    className="capitalize"
-                                                >
-                                                    {district.status}
-                                                </Badge>
-                                            </td>
-                                            <td className="py-4 pr-4 align-top text-muted-foreground">
-                                                {district.sections_count}
-                                            </td>
-                                            <td className="py-4 align-top">
-                                                <div className="flex justify-end gap-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        asChild
-                                                    >
-                                                        <Link
-                                                            href={DistrictController.edit(
-                                                                district.id,
-                                                            )}
-                                                        >
-                                                            Edit
-                                                        </Link>
-                                                    </Button>
-                                                    <Button
-                                                        variant="destructive"
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            destroy(district)
-                                                        }
-                                                    >
-                                                        Delete
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </CardContent>
-                </Card>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </AppLayout>
     );

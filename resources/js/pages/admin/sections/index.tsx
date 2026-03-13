@@ -3,7 +3,6 @@ import SectionController from '@/actions/App/Http/Controllers/Admin/SectionContr
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -58,8 +57,9 @@ export default function SectionIndex({ sections }: Props) {
                     <Heading
                         title="Sections"
                         description="Create and maintain the section records that sit beneath each district."
+                        className="mb-0"
                     />
-                    <Button asChild>
+                    <Button asChild className="h-11 rounded-xl">
                         <Link href={SectionController.create()}>
                             New section
                         </Link>
@@ -72,109 +72,110 @@ export default function SectionIndex({ sections }: Props) {
                     </div>
                 )}
 
-                <Card className="border-sidebar-border/70">
-                    <CardHeader>
-                        <CardTitle>Section directory</CardTitle>
-                        <CardDescription>
-                            Sections organize the pastors and churches inside a
-                            district.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
-                            <thead>
-                                <tr className="text-left text-muted-foreground">
-                                    <th className="py-3 pr-4 font-medium">
-                                        Section
-                                    </th>
-                                    <th className="py-3 pr-4 font-medium">
-                                        District
-                                    </th>
-                                    <th className="py-3 pr-4 font-medium">
-                                        Pastors
-                                    </th>
-                                    <th className="py-3 pr-4 font-medium">
-                                        Status
-                                    </th>
-                                    <th className="py-3 text-right font-medium">
-                                        Actions
-                                    </th>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
+                        <thead className="bg-muted/40">
+                            <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                <th className="py-2.5 pr-3 pl-4 font-medium">
+                                    Section
+                                </th>
+                                <th className="py-2.5 pr-3 font-medium">
+                                    District
+                                </th>
+                                <th className="py-2.5 pr-3 font-medium">
+                                    Pastors
+                                </th>
+                                <th className="py-2.5 pr-3 font-medium">
+                                    Status
+                                </th>
+                                <th className="py-2.5 pr-4 text-right font-medium">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-sidebar-border/50">
+                            {sections.length === 0 ? (
+                                <tr>
+                                    <td
+                                        colSpan={5}
+                                        className="px-4 py-14 text-center"
+                                    >
+                                        <div className="space-y-2">
+                                            <div className="text-base font-medium">
+                                                No sections yet.
+                                            </div>
+                                            <div className="text-sm text-muted-foreground">
+                                                Create the first section to group
+                                                pastors under a district.
+                                            </div>
+                                        </div>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-sidebar-border/50">
-                                {sections.length === 0 ? (
-                                    <tr>
-                                        <td
-                                            colSpan={5}
-                                            className="py-10 text-center text-muted-foreground"
-                                        >
-                                            No sections yet.
+                            ) : (
+                                sections.map((section) => (
+                                    <tr
+                                        key={section.id}
+                                        className="bg-background transition-colors hover:bg-muted/20"
+                                    >
+                                        <td className="px-4 py-3.5 align-middle">
+                                            <div className="font-medium text-foreground">
+                                                {section.name}
+                                            </div>
+                                            <div className="mt-1 max-w-xl text-sm text-muted-foreground">
+                                                {section.description ||
+                                                    'No description provided.'}
+                                            </div>
+                                        </td>
+                                        <td className="py-3.5 pr-3 align-middle text-muted-foreground">
+                                            {section.district.name}
+                                        </td>
+                                        <td className="py-3.5 pr-3 align-middle text-muted-foreground">
+                                            {section.pastors_count}
+                                        </td>
+                                        <td className="py-3.5 pr-3 align-middle">
+                                            <Badge
+                                                variant={
+                                                    section.status === 'active'
+                                                        ? 'secondary'
+                                                        : 'destructive'
+                                                }
+                                                className="capitalize"
+                                            >
+                                                {section.status}
+                                            </Badge>
+                                        </td>
+                                        <td className="py-3.5 pr-4 align-middle">
+                                            <div className="flex justify-end gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={SectionController.edit(
+                                                            section.id,
+                                                        )}
+                                                    >
+                                                        Edit
+                                                    </Link>
+                                                </Button>
+                                                <Button
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        destroy(section)
+                                                    }
+                                                >
+                                                    Delete
+                                                </Button>
+                                            </div>
                                         </td>
                                     </tr>
-                                ) : (
-                                    sections.map((section) => (
-                                        <tr key={section.id}>
-                                            <td className="py-4 pr-4 align-top">
-                                                <div className="font-medium">
-                                                    {section.name}
-                                                </div>
-                                                <div className="mt-1 max-w-xl text-sm text-muted-foreground">
-                                                    {section.description ||
-                                                        'No description provided.'}
-                                                </div>
-                                            </td>
-                                            <td className="py-4 pr-4 align-top text-muted-foreground">
-                                                {section.district.name}
-                                            </td>
-                                            <td className="py-4 pr-4 align-top text-muted-foreground">
-                                                {section.pastors_count}
-                                            </td>
-                                            <td className="py-4 pr-4 align-top">
-                                                <Badge
-                                                    variant={
-                                                        section.status ===
-                                                        'active'
-                                                            ? 'secondary'
-                                                            : 'outline'
-                                                    }
-                                                    className="capitalize"
-                                                >
-                                                    {section.status}
-                                                </Badge>
-                                            </td>
-                                            <td className="py-4 align-top">
-                                                <div className="flex justify-end gap-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        asChild
-                                                    >
-                                                        <Link
-                                                            href={SectionController.edit(
-                                                                section.id,
-                                                            )}
-                                                        >
-                                                            Edit
-                                                        </Link>
-                                                    </Button>
-                                                    <Button
-                                                        variant="destructive"
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            destroy(section)
-                                                        }
-                                                    >
-                                                        Delete
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </CardContent>
-                </Card>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </AppLayout>
     );

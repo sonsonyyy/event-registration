@@ -40,7 +40,7 @@ export default function CreateDistrict({ statusOptions }: Props) {
                     title="Create district"
                     description="Add a district before you assign sections beneath it."
                 />
-                <DistrictForm statusOptions={statusOptions} />
+                <DistrictForm minimalLayout statusOptions={statusOptions} />
             </div>
         </AppLayout>
     );
