@@ -97,6 +97,7 @@ export default function EditUser({
                 />
                 <UserForm
                     userRecord={userRecord}
+                    minimalLayout
                     roles={roles}
                     districts={districts}
                     sections={sections}

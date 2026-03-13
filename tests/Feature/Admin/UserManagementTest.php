@@ -22,7 +22,10 @@ test('admins can browse the user management pages', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/users/index')
-            ->has('users', 2));
+            ->has('users.data', 2)
+            ->where('filters.search', '')
+            ->where('filters.per_page', 10)
+            ->has('perPageOptions', 3));
 
     $this->actingAs($admin)
         ->get(route('admin.users.create'))
@@ -48,6 +51,39 @@ test('admins can browse the user management pages', function () {
             ->component('admin/users/edit')
             ->where('userRecord.email', $onlineRegistrant->email)
             ->where('userRecord.pastor_id', $pastor->id));
+});
+
+test('admins can search and paginate users', function () {
+    $admin = User::factory()->admin()->create();
+
+    User::factory()->manager()->create([
+        'name' => 'North Section Account',
+        'email' => 'north-manager@example.com',
+    ]);
+
+    User::factory()->manager()->create([
+        'name' => 'South Section Account',
+        'email' => 'south-manager@example.com',
+    ]);
+
+    User::factory()->registrationStaff()->create([
+        'name' => 'Registration Encoder',
+        'email' => 'encoder@example.com',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.users.index', [
+            'search' => 'Manager',
+            'per_page' => 1,
+        ]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/users/index')
+            ->where('filters.search', 'Manager')
+            ->where('filters.per_page', 1)
+            ->has('users.data', 1)
+            ->where('users.meta.total', 2)
+            ->where('users.meta.last_page', 2));
 });
 
 test('non admins cannot access admin user management routes', function () {

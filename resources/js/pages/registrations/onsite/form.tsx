@@ -6,7 +6,6 @@ import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteR
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -198,16 +197,8 @@ export default function OnsiteRegistrationForm({
     };
 
     return (
-        <form className="space-y-6" onSubmit={submit}>
-            <Card className="border-sidebar-border/70">
-                <CardHeader>
-                    <CardTitle>Transaction details</CardTitle>
-                    <CardDescription>
-                        Select the event, pastor or church, and payment details
-                        for this onsite transaction.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
+        <form className="space-y-8" onSubmit={submit}>
+            <div className="space-y-6">
                     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
                         <div className="grid gap-2">
                             <Label htmlFor="event_id">Event</Label>
@@ -357,31 +348,31 @@ export default function OnsiteRegistrationForm({
                         />
                         <InputError message={form.errors.remarks} />
                     </div>
-                </CardContent>
-            </Card>
+            </div>
 
-            <Card className="border-sidebar-border/70">
-                <CardHeader>
-                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                        <div>
-                            <CardTitle>Line items</CardTitle>
-                            <CardDescription>
-                                Add one or more fee categories with their
-                                corresponding quantities.
-                            </CardDescription>
-                        </div>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={addLineItem}
-                        >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add item
-                        </Button>
+            <section className="space-y-4 border-t border-sidebar-border/70 pt-8">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div className="space-y-1">
+                        <h3 className="text-base font-semibold tracking-tight">
+                            Line items
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                            Add one or more fee categories with their
+                            corresponding quantities.
+                        </p>
                     </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {form.data.line_items.map((lineItem, index) => {
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-xl"
+                        onClick={addLineItem}
+                    >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add item
+                    </Button>
+                </div>
+
+                {form.data.line_items.map((lineItem, index) => {
                         const selectedFeeCategory =
                             availableFeeCategories.find(
                                 (feeCategory) =>
@@ -392,7 +383,7 @@ export default function OnsiteRegistrationForm({
                         return (
                             <div
                                 key={index}
-                                className="rounded-xl border border-sidebar-border/70 p-4"
+                                className="rounded-xl border border-sidebar-border/70 bg-background p-4"
                             >
                                 <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_160px_auto]">
                                     <div className="grid gap-2">
@@ -487,13 +478,23 @@ export default function OnsiteRegistrationForm({
 
                                 {selectedFeeCategory && (
                                     <div className="mt-3 flex flex-wrap gap-2 text-sm text-muted-foreground">
-                                        <Badge variant="outline">
+                                        <Badge variant="default">
                                             {formatCurrency(
                                                 selectedFeeCategory.amount,
                                             )}{' '}
                                             each
                                         </Badge>
-                                        <Badge variant="outline">
+                                        <Badge
+                                            variant={
+                                                selectedFeeCategory.remaining_slots ===
+                                                null
+                                                    ? 'default'
+                                                    : selectedFeeCategory.remaining_slots >
+                                                          0
+                                                      ? 'secondary'
+                                                      : 'destructive'
+                                            }
+                                        >
                                             {selectedFeeCategory.remaining_slots ===
                                             null
                                                 ? 'No category slot limit'
@@ -506,19 +507,21 @@ export default function OnsiteRegistrationForm({
                     })}
 
                     <InputError message={form.errors.line_items} />
-                </CardContent>
-            </Card>
+            </section>
 
-            <Card className="border-sidebar-border/70">
-                <CardHeader>
-                    <CardTitle>Transaction summary</CardTitle>
-                    <CardDescription>
+            <section className="space-y-4 border-t border-sidebar-border/70 pt-8">
+                <div className="space-y-1">
+                    <h3 className="text-base font-semibold tracking-tight">
+                        Transaction summary
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
                         One receipt can cover multiple fee-category quantities in
                         the same onsite transaction.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="grid gap-4 md:grid-cols-3">
-                    <div className="rounded-xl border border-sidebar-border/70 p-4">
+                    </p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                    <div className="rounded-xl border border-sidebar-border/70 bg-background p-4">
                         <div className="text-sm text-muted-foreground">
                             Selected church
                         </div>
@@ -532,7 +535,7 @@ export default function OnsiteRegistrationForm({
                         </div>
                     </div>
 
-                    <div className="rounded-xl border border-sidebar-border/70 p-4">
+                    <div className="rounded-xl border border-sidebar-border/70 bg-background p-4">
                         <div className="text-sm text-muted-foreground">
                             Total quantity
                         </div>
@@ -546,7 +549,7 @@ export default function OnsiteRegistrationForm({
                         </div>
                     </div>
 
-                    <div className="rounded-xl border border-sidebar-border/70 p-4">
+                    <div className="rounded-xl border border-sidebar-border/70 bg-background p-4">
                         <div className="text-sm text-muted-foreground">
                             Estimated total
                         </div>
@@ -557,8 +560,8 @@ export default function OnsiteRegistrationForm({
                             Computed from the selected fee category rates.
                         </div>
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </section>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                 <Button variant="outline" asChild>

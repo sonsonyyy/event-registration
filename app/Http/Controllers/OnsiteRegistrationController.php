@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\IndexOnsiteRegistrationRequest;
 use App\Http\Requests\StoreOnsiteRegistrationRequest;
 use App\Models\Event;
 use App\Models\EventFeeCategory;
@@ -9,6 +10,7 @@ use App\Models\Pastor;
 use App\Models\Registration;
 use App\Models\RegistrationItem;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -23,39 +25,33 @@ class OnsiteRegistrationController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): Response
+    public function index(IndexOnsiteRegistrationRequest $request): Response
     {
         Gate::authorize('viewAnyOnsite', Registration::class);
 
         $user = $request->user();
-        $registrations = Registration::query()
-            ->where('registration_mode', Registration::MODE_ONSITE)
-            ->with([
-                'encodedByUser',
-                'event',
-                'items.feeCategory',
-                'pastor.section.district',
-            ])
-            ->withSum('items as total_quantity', 'quantity')
-            ->withSum('items as total_amount', 'subtotal_amount')
-            ->latest('submitted_at')
-            ->latest('id');
-
-        if ($user?->isManager()) {
-            $registrations->whereHas('pastor', function ($query) use ($user): void {
-                $query->where('section_id', $user->section_id);
-            });
-        }
-
-        if ($user?->isRegistrationStaff()) {
-            $registrations->where('encoded_by_user_id', $user->getKey());
-        }
+        $filters = $request->filters();
+        $registrations = $this->onsiteRegistrationIndexQuery($user, $filters['search'])
+            ->paginate($filters['per_page'])
+            ->withQueryString();
 
         return Inertia::render('registrations/onsite/index', [
-            'registrations' => $registrations
-                ->get()
-                ->map(fn (Registration $registration): array => $this->registrationData($registration))
-                ->values(),
+            'registrations' => [
+                'data' => $registrations->getCollection()
+                    ->map(fn (Registration $registration): array => $this->registrationData($registration))
+                    ->values()
+                    ->all(),
+                'meta' => [
+                    'current_page' => $registrations->currentPage(),
+                    'last_page' => $registrations->lastPage(),
+                    'per_page' => $registrations->perPage(),
+                    'from' => $registrations->firstItem(),
+                    'to' => $registrations->lastItem(),
+                    'total' => $registrations->total(),
+                ],
+            ],
+            'filters' => $filters,
+            'perPageOptions' => [10, 25, 50],
         ]);
     }
 
@@ -341,5 +337,51 @@ class OnsiteRegistrationController extends Controller
                 ])
                 ->values(),
         ];
+    }
+
+    private function onsiteRegistrationIndexQuery(?User $user, string $search): Builder
+    {
+        $registrations = Registration::query()
+            ->where('registration_mode', Registration::MODE_ONSITE)
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                $query->where(function (Builder $query) use ($search): void {
+                    $query
+                        ->where('payment_reference', 'like', "%{$search}%")
+                        ->orWhere('remarks', 'like', "%{$search}%")
+                        ->orWhereHas('event', function (Builder $query) use ($search): void {
+                            $query->where('name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('pastor', function (Builder $query) use ($search): void {
+                            $query
+                                ->where('church_name', 'like', "%{$search}%")
+                                ->orWhere('pastor_name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('encodedByUser', function (Builder $query) use ($search): void {
+                            $query->where('name', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->with([
+                'encodedByUser',
+                'event',
+                'items.feeCategory',
+                'pastor.section.district',
+            ])
+            ->withSum('items as total_quantity', 'quantity')
+            ->withSum('items as total_amount', 'subtotal_amount')
+            ->latest('submitted_at')
+            ->latest('id');
+
+        if ($user?->isManager()) {
+            $registrations->whereHas('pastor', function (Builder $query) use ($user): void {
+                $query->where('section_id', $user->section_id);
+            });
+        }
+
+        if ($user?->isRegistrationStaff()) {
+            $registrations->where('encoded_by_user_id', $user->getKey());
+        }
+
+        return $registrations;
     }
 }

@@ -75,11 +75,43 @@ test('registration staff can create onsite registrations with multiple fee-categ
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('registrations/onsite/index')
-            ->has('registrations', 1)
-            ->where('registrations.0.id', $registration->id)
-            ->where('registrations.0.total_quantity', 13)
-            ->where('registrations.0.total_amount', '5900.00')
-            ->where('registrations.0.items.0.category_name', 'Regular (Onsite)'));
+            ->has('registrations.data', 1)
+            ->where('registrations.data.0.id', $registration->id)
+            ->where('registrations.data.0.total_quantity', 13)
+            ->where('registrations.data.0.total_amount', '5900.00')
+            ->where('registrations.data.0.items.0.category_name', 'Regular (Onsite)')
+            ->where('filters.search', '')
+            ->where('filters.per_page', 10)
+            ->has('perPageOptions', 3));
+});
+
+test('onsite registrations can be searched and paginated', function () {
+    $staff = User::factory()->registrationStaff()->create();
+    $pastor = Pastor::factory()->create([
+        'church_name' => 'Grace Community Church',
+    ]);
+    $event = onsiteRegistrationEvent();
+    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Onsite)',
+        'amount' => '500.00',
+    ]);
+
+    createOnsiteRegistration($event, $pastor, $staff, $feeCategory, 2);
+    createOnsiteRegistration($event, $pastor, $staff, $feeCategory, 3);
+
+    $this->actingAs($staff)
+        ->get(route('registrations.onsite.index', [
+            'search' => 'Grace',
+            'per_page' => 1,
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/onsite/index')
+            ->where('filters.search', 'Grace')
+            ->where('filters.per_page', 1)
+            ->has('registrations.data', 1)
+            ->where('registrations.meta.total', 2)
+            ->where('registrations.meta.last_page', 2));
 });
 
 test('managers are limited to onsite registrations and pastors within their assigned section', function () {
@@ -119,8 +151,8 @@ test('managers are limited to onsite registrations and pastors within their assi
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('registrations/onsite/index')
-            ->has('registrations', 1)
-            ->where('registrations.0.pastor.church_name', 'Grace Community Church'));
+            ->has('registrations.data', 1)
+            ->where('registrations.data.0.pastor.church_name', 'Grace Community Church'));
 
     $this->actingAs($manager)
         ->post(route('registrations.onsite.store'), [

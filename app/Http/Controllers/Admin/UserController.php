@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\IndexUserRequest;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\District;
@@ -10,6 +11,7 @@ use App\Models\Pastor;
 use App\Models\Role;
 use App\Models\Section;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
@@ -21,24 +23,67 @@ class UserController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): Response
+    public function index(IndexUserRequest $request): Response
     {
+        $filters = $request->filters();
+        $users = $this->userIndexQuery($filters['search'])
+            ->paginate($filters['per_page'])
+            ->withQueryString();
+
         return Inertia::render('admin/users/index', [
-            'users' => User::query()
-                ->with([
-                    'role:id,name',
-                    'district:id,name',
-                    'section:id,name,district_id',
-                    'section.district:id,name',
-                    'pastor:id,pastor_name,church_name,section_id',
-                    'pastor.section:id,name,district_id',
-                    'pastor.section.district:id,name',
-                ])
-                ->orderBy('name')
-                ->get()
-                ->map(fn (User $user): array => $this->userIndexData($user))
-                ->values(),
+            'users' => [
+                'data' => $users->getCollection()
+                    ->map(fn (User $user): array => $this->userIndexData($user))
+                    ->values()
+                    ->all(),
+                'meta' => [
+                    'current_page' => $users->currentPage(),
+                    'last_page' => $users->lastPage(),
+                    'per_page' => $users->perPage(),
+                    'from' => $users->firstItem(),
+                    'to' => $users->lastItem(),
+                    'total' => $users->total(),
+                ],
+            ],
+            'filters' => $filters,
+            'perPageOptions' => [10, 25, 50],
         ]);
+    }
+
+    private function userIndexQuery(string $search): Builder
+    {
+        return User::query()
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                $query->where(function (Builder $query) use ($search): void {
+                    $query
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhereHas('role', function (Builder $query) use ($search): void {
+                            $query->where('name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('district', function (Builder $query) use ($search): void {
+                            $query->where('name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('section', function (Builder $query) use ($search): void {
+                            $query->where('name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('pastor', function (Builder $query) use ($search): void {
+                            $query
+                                ->where('church_name', 'like', "%{$search}%")
+                                ->orWhere('pastor_name', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->with([
+                'role:id,name',
+                'district:id,name',
+                'section:id,name,district_id',
+                'section.district:id,name',
+                'pastor:id,pastor_name,church_name,section_id',
+                'pastor.section:id,name,district_id',
+                'pastor.section.district:id,name',
+            ])
+            ->orderBy('name');
     }
 
     /**

@@ -65,6 +65,7 @@ type Props = {
     sections: SectionOption[];
     pastors: PastorOption[];
     statusOptions: StatusOption[];
+    minimalLayout?: boolean;
 };
 
 type UserFormData = {
@@ -95,6 +96,7 @@ export default function UserForm({
     sections,
     pastors,
     statusOptions,
+    minimalLayout = false,
 }: Props) {
     const isEditing = userRecord !== undefined;
     const form = useForm<UserFormData>({
@@ -210,19 +212,8 @@ export default function UserForm({
         );
     };
 
-    return (
-        <Card className="border-sidebar-border/70">
-            <CardHeader>
-                <CardTitle>
-                    {isEditing ? 'Edit user' : 'User details'}
-                </CardTitle>
-                <CardDescription>
-                    Assign the correct role, status, and hierarchy scope for
-                    this account.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <form className="space-y-6" onSubmit={submit}>
+    const formContent = (
+        <form className="space-y-6" onSubmit={submit}>
                     <div className="grid gap-6 md:grid-cols-2">
                         <div className="grid gap-2">
                             <Label htmlFor="name">Full name</Label>
@@ -501,7 +492,24 @@ export default function UserForm({
                         </Button>
                     </div>
                 </form>
-            </CardContent>
+    );
+
+    if (minimalLayout) {
+        return formContent;
+    }
+
+    return (
+        <Card className="border-sidebar-border/70">
+            <CardHeader>
+                <CardTitle>
+                    {isEditing ? 'Edit user' : 'User details'}
+                </CardTitle>
+                <CardDescription>
+                    Assign the correct role, status, and hierarchy scope for
+                    this account.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>{formContent}</CardContent>
         </Card>
     );
 }

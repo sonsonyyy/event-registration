@@ -81,6 +81,7 @@ export default function CreateUser({
                     description="Create system accounts and assign the correct role and operational scope."
                 />
                 <UserForm
+                    minimalLayout
                     roles={roles}
                     districts={districts}
                     sections={sections}

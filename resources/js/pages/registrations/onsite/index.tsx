@@ -1,12 +1,14 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
+import DataTablePagination from '@/components/data-table-pagination';
+import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
-import type { BreadcrumbItem } from '@/types';
+import type { BreadcrumbItem, PaginatedData } from '@/types';
 
 type RegistrationItemRecord = {
     id: number;
@@ -44,7 +46,12 @@ type RegistrationRecord = {
 };
 
 type Props = {
-    registrations: RegistrationRecord[];
+    registrations: PaginatedData<RegistrationRecord>;
+    filters: {
+        search: string;
+        per_page: number;
+    };
+    perPageOptions: number[];
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -75,26 +82,92 @@ const formatDate = (value: string | null): string => {
     }).format(new Date(value));
 };
 
-export default function OnsiteRegistrationIndex({ registrations }: Props) {
+const registrationStatusVariant = (
+    status: string,
+): 'default' | 'secondary' | 'destructive' => {
+    switch (status) {
+        case 'completed':
+        case 'verified':
+            return 'secondary';
+        case 'cancelled':
+            return 'destructive';
+        default:
+            return 'default';
+    }
+};
+
+const paymentStatusVariant = (
+    status: string,
+): 'default' | 'secondary' | 'destructive' => {
+    switch (status) {
+        case 'paid':
+            return 'secondary';
+        case 'unpaid':
+            return 'destructive';
+        default:
+            return 'default';
+    }
+};
+
+export default function OnsiteRegistrationIndex({
+    registrations,
+    filters,
+    perPageOptions,
+}: Props) {
     const page = usePage();
     const flash = page.props.flash as { success?: string | null } | undefined;
+    const [search, setSearch] = useState(filters.search);
+
+    useEffect(() => {
+        setSearch(filters.search);
+    }, [filters.search]);
+
+    const visitIndex = (query: {
+        search?: string;
+        per_page: number;
+        page?: number;
+    }): void => {
+        router.get(OnsiteRegistrationController.index.url({ query }), {}, {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
+    };
+
+    const submitSearch = (): void => {
+        const normalizedSearch = search.trim();
+
+        visitIndex({
+            ...(normalizedSearch !== '' ? { search: normalizedSearch } : {}),
+            per_page: filters.per_page,
+        });
+    };
+
+    const updatePerPage = (value: number): void => {
+        visitIndex({
+            ...(filters.search !== '' ? { search: filters.search } : {}),
+            per_page: value,
+        });
+    };
+
+    const changePage = (pageNumber: number): void => {
+        visitIndex({
+            ...(filters.search !== '' ? { search: filters.search } : {}),
+            per_page: filters.per_page,
+            ...(pageNumber > 1 ? { page: pageNumber } : {}),
+        });
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Onsite Registration" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-                    <Heading
-                        title="Onsite registration"
-                        description="Record walk-in quantities with multiple fee-category items in a single transaction."
-                    />
-                    <Button asChild>
-                        <Link href={OnsiteRegistrationController.create()}>
-                            New onsite transaction
-                        </Link>
-                    </Button>
-                </div>
+                <Heading
+                    title="Onsite registration"
+                    description="Record walk-in quantities with multiple fee-category items in a single transaction."
+                    className="mb-4"
+                />
 
                 {flash?.success && (
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100">
@@ -102,178 +175,197 @@ export default function OnsiteRegistrationIndex({ registrations }: Props) {
                     </div>
                 )}
 
-                <Card className="border-sidebar-border/70">
-                    <CardHeader>
-                        <CardTitle>Recorded transactions</CardTitle>
-                        <CardDescription>
-                            Staff see their own onsite entries. Managers see
-                            onsite registrations within their assigned section.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
-                            <thead>
-                                <tr className="text-left text-muted-foreground">
-                                    <th className="py-3 pr-4 font-medium">
-                                        Transaction
-                                    </th>
-                                    <th className="py-3 pr-4 font-medium">
-                                        Church
-                                    </th>
-                                    <th className="py-3 pr-4 font-medium">
-                                        Items
-                                    </th>
-                                    <th className="py-3 pr-4 font-medium">
-                                        Totals
-                                    </th>
-                                    <th className="py-3 pr-4 font-medium">
-                                        Payment
-                                    </th>
-                                    <th className="py-3 font-medium">
-                                        Encoded by
-                                    </th>
+                <DataTableToolbar
+                    searchValue={search}
+                    onSearchValueChange={setSearch}
+                    onSubmit={submitSearch}
+                    placeholder="Search event, church, pastor, receipt, or encoder"
+                    action={(
+                        <Button asChild className="h-11 rounded-xl">
+                            <Link href={OnsiteRegistrationController.create()}>
+                                New onsite transaction
+                            </Link>
+                        </Button>
+                    )}
+                />
+
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
+                        <thead className="bg-muted/40">
+                            <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                <th className="py-2.5 pr-3 pl-4 font-medium">
+                                    Transaction
+                                </th>
+                                <th className="py-2.5 pr-3 font-medium">
+                                    Church
+                                </th>
+                                <th className="py-2.5 pr-3 font-medium">
+                                    Items
+                                </th>
+                                <th className="py-2.5 pr-3 font-medium">
+                                    Totals
+                                </th>
+                                <th className="py-2.5 pr-3 font-medium">
+                                    Payment
+                                </th>
+                                <th className="py-2.5 pr-4 font-medium">
+                                    Encoded by
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-sidebar-border/50">
+                            {registrations.data.length === 0 ? (
+                                <tr>
+                                    <td
+                                        colSpan={6}
+                                        className="px-4 py-14 text-center"
+                                    >
+                                        <div className="space-y-2">
+                                            <div className="text-base font-medium">
+                                                {filters.search === ''
+                                                    ? 'No onsite registrations yet.'
+                                                    : `No registrations matched "${filters.search}".`}
+                                            </div>
+                                            <div className="text-sm text-muted-foreground">
+                                                {filters.search === ''
+                                                    ? 'Create the first onsite transaction to start recording walk-in registrations.'
+                                                    : 'Try another event, church, pastor, receipt, or encoder term.'}
+                                            </div>
+                                        </div>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-sidebar-border/50">
-                                {registrations.length === 0 ? (
-                                    <tr>
-                                        <td
-                                            colSpan={6}
-                                            className="py-10 text-center text-muted-foreground"
-                                        >
-                                            No onsite registrations yet.
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    registrations.map((registration) => (
-                                        <tr key={registration.id}>
-                                            <td className="py-4 pr-4 align-top">
-                                                <div className="font-medium">
-                                                    #{registration.id} ·{' '}
-                                                    {registration.event.name}
-                                                </div>
-                                                <div className="mt-1 text-sm text-muted-foreground">
-                                                    {formatDate(
-                                                        registration.submitted_at,
-                                                    )}
-                                                </div>
-                                                <div className="mt-2">
-                                                    <Badge
-                                                        variant="outline"
-                                                        className="capitalize"
-                                                    >
-                                                        {
-                                                            registration.registration_status
-                                                        }
-                                                    </Badge>
-                                                </div>
-                                            </td>
-                                            <td className="py-4 pr-4 align-top">
-                                                <div className="font-medium">
-                                                    {
-                                                        registration.pastor
-                                                            .church_name
-                                                    }
-                                                </div>
-                                                <div className="mt-1 text-sm text-muted-foreground">
-                                                    {
-                                                        registration.pastor
-                                                            .pastor_name
-                                                    }
-                                                </div>
-                                                <div className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
-                                                    {
-                                                        registration.pastor
-                                                            .section_name
-                                                    }{' '}
-                                                    ·{' '}
-                                                    {
-                                                        registration.pastor
-                                                            .district_name
-                                                    }
-                                                </div>
-                                            </td>
-                                            <td className="py-4 pr-4 align-top">
-                                                <div className="space-y-2">
-                                                    {registration.items.map(
-                                                        (item) => (
-                                                            <div
-                                                                key={item.id}
-                                                                className="rounded-lg border border-sidebar-border/60 px-3 py-2"
-                                                            >
-                                                                <div className="font-medium">
-                                                                    {
-                                                                        item.category_name
-                                                                    }
-                                                                </div>
-                                                                <div className="mt-1 text-sm text-muted-foreground">
-                                                                    {
-                                                                        item.quantity
-                                                                    }{' '}
-                                                                    x{' '}
-                                                                    {formatCurrency(
-                                                                        item.unit_amount,
-                                                                    )}{' '}
-                                                                    ={' '}
-                                                                    {formatCurrency(
-                                                                        item.subtotal_amount,
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        ),
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="py-4 pr-4 align-top text-muted-foreground">
-                                                <div>
-                                                    Quantity{' '}
-                                                    {
-                                                        registration.total_quantity
-                                                    }
-                                                </div>
-                                                <div className="mt-1 font-medium text-foreground">
-                                                    {formatCurrency(
-                                                        registration.total_amount,
-                                                    )}
-                                                </div>
-                                                {registration.remarks && (
-                                                    <div className="mt-2 max-w-sm text-sm">
-                                                        {registration.remarks}
-                                                    </div>
+                            ) : (
+                                registrations.data.map((registration) => (
+                                    <tr
+                                        key={registration.id}
+                                        className="bg-background transition-colors hover:bg-muted/20"
+                                    >
+                                        <td className="px-4 py-3.5 align-middle">
+                                            <div className="font-medium text-foreground">
+                                                #{registration.id} ·{' '}
+                                                {registration.event.name}
+                                            </div>
+                                            <div className="mt-1 text-sm text-muted-foreground">
+                                                {formatDate(
+                                                    registration.submitted_at,
                                                 )}
-                                            </td>
-                                            <td className="py-4 pr-4 align-top">
+                                            </div>
+                                            <div className="mt-2">
                                                 <Badge
-                                                    variant={
-                                                        registration.payment_status ===
-                                                        'paid'
-                                                            ? 'secondary'
-                                                            : 'outline'
-                                                    }
+                                                    variant={registrationStatusVariant(
+                                                        registration.registration_status,
+                                                    )}
                                                     className="capitalize"
                                                 >
                                                     {
-                                                        registration.payment_status
+                                                        registration.registration_status
                                                     }
                                                 </Badge>
-                                                <div className="mt-2 text-sm text-muted-foreground">
-                                                    {registration.payment_reference ??
-                                                        'No receipt reference'}
-                                                </div>
-                                            </td>
-                                            <td className="py-4 align-top text-muted-foreground">
+                                            </div>
+                                        </td>
+                                        <td className="py-3.5 pr-3 align-middle">
+                                            <div className="font-medium text-foreground">
                                                 {
-                                                    registration.encoded_by
-                                                        .name
+                                                    registration.pastor
+                                                        .church_name
                                                 }
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </CardContent>
-                </Card>
+                                            </div>
+                                            <div className="mt-1 text-sm text-muted-foreground">
+                                                {
+                                                    registration.pastor
+                                                        .pastor_name
+                                                }
+                                            </div>
+                                            <div className="mt-2 text-xs uppercase tracking-wide text-muted-foreground">
+                                                {
+                                                    registration.pastor
+                                                        .section_name
+                                                }{' '}
+                                                ·{' '}
+                                                {
+                                                    registration.pastor
+                                                        .district_name
+                                                }
+                                            </div>
+                                        </td>
+                                        <td className="py-3.5 pr-3 align-middle">
+                                            <div className="space-y-2">
+                                                {registration.items.map(
+                                                    (item) => (
+                                                        <div
+                                                            key={item.id}
+                                                            className="rounded-lg border border-sidebar-border/60 bg-background px-3 py-2"
+                                                        >
+                                                            <div className="font-medium text-foreground">
+                                                                {
+                                                                    item.category_name
+                                                                }
+                                                            </div>
+                                                            <div className="mt-1 text-sm text-muted-foreground">
+                                                                {
+                                                                    item.quantity
+                                                                }{' '}
+                                                                x{' '}
+                                                                {formatCurrency(
+                                                                    item.unit_amount,
+                                                                )}{' '}
+                                                                ={' '}
+                                                                {formatCurrency(
+                                                                    item.subtotal_amount,
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ),
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="py-3.5 pr-3 align-middle text-sm text-muted-foreground">
+                                            <div>
+                                                Quantity{' '}
+                                                {registration.total_quantity}
+                                            </div>
+                                            <div className="mt-2 font-medium text-foreground">
+                                                {formatCurrency(
+                                                    registration.total_amount,
+                                                )}
+                                            </div>
+                                            {registration.remarks && (
+                                                <div className="mt-2 max-w-sm text-sm">
+                                                    {registration.remarks}
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="py-3.5 pr-3 align-middle">
+                                            <Badge
+                                                variant={paymentStatusVariant(
+                                                    registration.payment_status,
+                                                )}
+                                                className="capitalize"
+                                            >
+                                                {registration.payment_status}
+                                            </Badge>
+                                            <div className="mt-2 text-sm text-muted-foreground">
+                                                {registration.payment_reference ??
+                                                    'No receipt reference'}
+                                            </div>
+                                        </td>
+                                        <td className="py-3.5 pr-4 align-middle text-muted-foreground">
+                                            {registration.encoded_by.name}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                <DataTablePagination
+                    meta={registrations.meta}
+                    onPageChange={changePage}
+                    rowsPerPage={filters.per_page}
+                    rowOptions={perPageOptions}
+                    onRowsPerPageChange={updatePerPage}
+                />
             </div>
         </AppLayout>
     );
