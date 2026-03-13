@@ -15,30 +15,23 @@ class ManagerUserSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call(RoleSeeder::class);
+        $this->call([
+            RoleSeeder::class,
+            DemoChurchHierarchySeeder::class,
+        ]);
 
         $managerRole = Role::query()->firstOrCreate([
             'name' => Role::MANAGER,
         ]);
 
-        $district = District::query()->updateOrCreate(
-            ['name' => 'Demo District'],
-            [
-                'description' => 'Seeded district for role-based UI testing.',
-                'status' => 'active',
-            ],
-        );
+        $district = District::query()
+            ->where('name', 'Demo District')
+            ->firstOrFail();
 
-        $section = Section::query()->updateOrCreate(
-            [
-                'district_id' => $district->id,
-                'name' => 'North Section',
-            ],
-            [
-                'description' => 'Seeded section assigned to the manager demo user.',
-                'status' => 'active',
-            ],
-        );
+        $section = Section::query()
+            ->where('district_id', $district->id)
+            ->where('name', 'North Section')
+            ->firstOrFail();
 
         User::query()->updateOrCreate(
             ['email' => 'manager@example.com'],

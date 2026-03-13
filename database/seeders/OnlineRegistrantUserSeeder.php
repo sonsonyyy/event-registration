@@ -16,44 +16,28 @@ class OnlineRegistrantUserSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call(RoleSeeder::class);
+        $this->call([
+            RoleSeeder::class,
+            DemoChurchHierarchySeeder::class,
+        ]);
 
         $onlineRegistrantRole = Role::query()->firstOrCreate([
             'name' => Role::ONLINE_REGISTRANT,
         ]);
 
-        $district = District::query()->updateOrCreate(
-            ['name' => 'Demo District'],
-            [
-                'description' => 'Seeded district for role-based UI testing.',
-                'status' => 'active',
-            ],
-        );
+        $district = District::query()
+            ->where('name', 'Demo District')
+            ->firstOrFail();
 
-        $section = Section::query()->updateOrCreate(
-            [
-                'district_id' => $district->id,
-                'name' => 'North Section',
-            ],
-            [
-                'description' => 'Seeded section shared by demo scoped users.',
-                'status' => 'active',
-            ],
-        );
+        $section = Section::query()
+            ->where('district_id', $district->id)
+            ->where('name', 'North Section')
+            ->firstOrFail();
 
-        $pastor = Pastor::query()->updateOrCreate(
-            [
-                'section_id' => $section->id,
-                'church_name' => 'Grace Community Church',
-            ],
-            [
-                'pastor_name' => 'Pastor Jane Doe',
-                'contact_number' => '+63 912 345 6789',
-                'email' => 'grace@example.com',
-                'address' => '123 Church Street',
-                'status' => 'active',
-            ],
-        );
+        $pastor = Pastor::query()
+            ->where('section_id', $section->id)
+            ->where('church_name', 'Grace Community Church')
+            ->firstOrFail();
 
         User::query()->updateOrCreate(
             ['email' => 'registrant@example.com'],
