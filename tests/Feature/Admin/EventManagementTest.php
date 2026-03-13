@@ -32,12 +32,15 @@ test('admins can browse the event management pages', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/events/index')
-            ->has('events', 1)
-            ->where('events.0.name', $event->name)
-            ->where('events.0.reserved_quantity', 7)
-            ->where('events.0.remaining_slots', 13)
-            ->where('events.0.status', Event::STATUS_OPEN)
-            ->where('events.0.fee_categories_count', 2));
+            ->has('events.data', 1)
+            ->where('events.data.0.name', $event->name)
+            ->where('events.data.0.reserved_quantity', 7)
+            ->where('events.data.0.remaining_slots', 13)
+            ->where('events.data.0.status', Event::STATUS_OPEN)
+            ->where('events.data.0.fee_categories_count', 2)
+            ->where('filters.search', '')
+            ->where('filters.per_page', 10)
+            ->has('perPageOptions', 3));
 
     $this->actingAs($admin)
         ->get(route('admin.events.create'))
@@ -55,6 +58,46 @@ test('admins can browse the event management pages', function () {
             ->where('event.name', $event->name)
             ->where('event.remaining_slots', 13)
             ->where('event.fee_categories.0.reserved_quantity', 7));
+});
+
+test('admins can search and paginate events by name venue or description', function () {
+    $admin = User::factory()->admin()->create();
+
+    Event::factory()->create([
+        'name' => 'Leaders Summit',
+        'venue' => 'Clark Freeport',
+        'description' => 'Leadership training event',
+        'date_from' => '2026-06-10',
+    ]);
+
+    Event::factory()->create([
+        'name' => 'Worship Night',
+        'venue' => 'SMX Clark',
+        'description' => 'District-wide gathering',
+        'date_from' => '2026-06-12',
+    ]);
+
+    Event::factory()->create([
+        'name' => 'Youth Conference',
+        'venue' => 'San Fernando',
+        'description' => 'Held near Clark for section leaders',
+        'date_from' => '2026-06-14',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.events.index', [
+            'search' => 'Clark',
+            'per_page' => 1,
+        ]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/events/index')
+            ->where('filters.search', 'Clark')
+            ->where('filters.per_page', 1)
+            ->has('events.data', 1)
+            ->where('events.meta.total', 3)
+            ->where('events.meta.last_page', 3)
+            ->where('events.data.0.name', 'Youth Conference'));
 });
 
 test('non admins cannot access admin event management routes', function () {
@@ -266,13 +309,13 @@ test('full or expired open events are automatically surfaced as closed with no r
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/events/index')
-            ->has('events', 2)
-            ->where('events.0.name', 'Expired Event')
-            ->where('events.0.status', Event::STATUS_CLOSED)
-            ->where('events.0.remaining_slots', 20)
-            ->where('events.1.name', 'Full Event')
-            ->where('events.1.status', Event::STATUS_CLOSED)
-            ->where('events.1.remaining_slots', 0));
+            ->has('events.data', 2)
+            ->where('events.data.0.name', 'Expired Event')
+            ->where('events.data.0.status', Event::STATUS_CLOSED)
+            ->where('events.data.0.remaining_slots', 20)
+            ->where('events.data.1.name', 'Full Event')
+            ->where('events.data.1.status', Event::STATUS_CLOSED)
+            ->where('events.data.1.remaining_slots', 0));
 
     expect($fullEvent->refresh()->status)->toBe(Event::STATUS_CLOSED)
         ->and($expiredEvent->refresh()->status)->toBe(Event::STATUS_CLOSED);

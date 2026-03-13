@@ -4,7 +4,6 @@ import EventController from '@/actions/App/Http/Controllers/Admin/EventControlle
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -159,251 +158,247 @@ export default function EventForm({
     };
 
     return (
-        <form className="space-y-6" onSubmit={submit}>
-            <Card className="border-sidebar-border/70">
-                <CardHeader>
-                    <CardTitle>
-                        {isEditing ? 'Edit event' : 'Event details'}
-                    </CardTitle>
-                    <CardDescription>
-                        Configure the registration window, overall capacity, and
-                        current event status.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="grid gap-6 lg:grid-cols-2">
-                        <div className="grid gap-2">
-                            <Label htmlFor="name">Event name</Label>
-                            <Input
-                                id="name"
-                                name="name"
-                                value={form.data.name}
-                                onChange={(inputEvent) =>
-                                    form.setData('name', inputEvent.target.value)
-                                }
-                                autoFocus
-                                placeholder="District Youth Camp"
-                            />
-                            <InputError message={form.errors.name} />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="venue">Venue</Label>
-                            <Input
-                                id="venue"
-                                name="venue"
-                                value={form.data.venue}
-                                onChange={(inputEvent) =>
-                                    form.setData('venue', inputEvent.target.value)
-                                }
-                                placeholder="Main Convention Hall"
-                            />
-                            <InputError message={form.errors.venue} />
-                        </div>
+        <form className="space-y-8" onSubmit={submit}>
+            <div className="space-y-6">
+                <div className="grid gap-6 lg:grid-cols-2">
+                    <div className="grid gap-2">
+                        <Label htmlFor="name">Event name</Label>
+                        <Input
+                            id="name"
+                            name="name"
+                            value={form.data.name}
+                            onChange={(inputEvent) =>
+                                form.setData('name', inputEvent.target.value)
+                            }
+                            autoFocus
+                            placeholder="District Youth Camp"
+                        />
+                        <InputError message={form.errors.name} />
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="description">Description</Label>
-                        <textarea
-                            id="description"
-                            name="description"
-                            value={form.data.description}
+                        <Label htmlFor="venue">Venue</Label>
+                        <Input
+                            id="venue"
+                            name="venue"
+                            value={form.data.venue}
+                            onChange={(inputEvent) =>
+                                form.setData('venue', inputEvent.target.value)
+                            }
+                            placeholder="Main Convention Hall"
+                        />
+                        <InputError message={form.errors.venue} />
+                    </div>
+                </div>
+
+                <div className="grid gap-2">
+                    <Label htmlFor="description">Description</Label>
+                    <textarea
+                        id="description"
+                        name="description"
+                        value={form.data.description}
+                        onChange={(inputEvent) =>
+                            form.setData(
+                                'description',
+                                inputEvent.target.value,
+                            )
+                        }
+                        placeholder="Describe the event purpose, audience, and important logistics."
+                        className={textareaClassName}
+                    />
+                    <InputError message={form.errors.description} />
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="date_from">Event start</Label>
+                        <Input
+                            id="date_from"
+                            name="date_from"
+                            type="date"
+                            value={form.data.date_from}
                             onChange={(inputEvent) =>
                                 form.setData(
-                                    'description',
+                                    'date_from',
                                     inputEvent.target.value,
                                 )
                             }
-                            placeholder="Describe the event purpose, audience, and important logistics."
-                            className={textareaClassName}
                         />
-                        <InputError message={form.errors.description} />
+                        <InputError message={form.errors.date_from} />
                     </div>
 
-                    <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="date_from">Event start</Label>
-                            <Input
-                                id="date_from"
-                                name="date_from"
-                                type="date"
-                                value={form.data.date_from}
-                                onChange={(inputEvent) =>
-                                    form.setData(
-                                        'date_from',
-                                        inputEvent.target.value,
-                                    )
-                                }
-                            />
-                            <InputError message={form.errors.date_from} />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="date_to">Event end</Label>
-                            <Input
-                                id="date_to"
-                                name="date_to"
-                                type="date"
-                                value={form.data.date_to}
-                                onChange={(inputEvent) =>
-                                    form.setData(
-                                        'date_to',
-                                        inputEvent.target.value,
-                                    )
-                                }
-                            />
-                            <InputError message={form.errors.date_to} />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="registration_open_at">
-                                Registration opens
-                            </Label>
-                            <Input
-                                id="registration_open_at"
-                                name="registration_open_at"
-                                type="datetime-local"
-                                value={form.data.registration_open_at}
-                                onChange={(inputEvent) =>
-                                    form.setData(
-                                        'registration_open_at',
-                                        inputEvent.target.value,
-                                    )
-                                }
-                            />
-                            <InputError
-                                message={form.errors.registration_open_at}
-                            />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="registration_close_at">
-                                Registration closes
-                            </Label>
-                            <Input
-                                id="registration_close_at"
-                                name="registration_close_at"
-                                type="datetime-local"
-                                value={form.data.registration_close_at}
-                                onChange={(inputEvent) =>
-                                    form.setData(
-                                        'registration_close_at',
-                                        inputEvent.target.value,
-                                    )
-                                }
-                            />
-                            <InputError
-                                message={form.errors.registration_close_at}
-                            />
-                        </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="date_to">Event end</Label>
+                        <Input
+                            id="date_to"
+                            name="date_to"
+                            type="date"
+                            value={form.data.date_to}
+                            onChange={(inputEvent) =>
+                                form.setData(
+                                    'date_to',
+                                    inputEvent.target.value,
+                                )
+                            }
+                        />
+                        <InputError message={form.errors.date_to} />
                     </div>
 
-                    <div className="grid gap-6 lg:grid-cols-[220px_220px_minmax(0,1fr)]">
-                        <div className="grid gap-2">
-                            <Label htmlFor="status">Status</Label>
-                            <select
-                                id="status"
-                                name="status"
-                                value={form.data.status}
-                                onChange={(changeEvent) =>
-                                    form.setData(
-                                        'status',
-                                        changeEvent.target.value,
-                                    )
+                    <div className="grid gap-2">
+                        <Label htmlFor="registration_open_at">
+                            Registration opens
+                        </Label>
+                        <Input
+                            id="registration_open_at"
+                            name="registration_open_at"
+                            type="datetime-local"
+                            value={form.data.registration_open_at}
+                            onChange={(inputEvent) =>
+                                form.setData(
+                                    'registration_open_at',
+                                    inputEvent.target.value,
+                                )
+                            }
+                        />
+                        <InputError
+                            message={form.errors.registration_open_at}
+                        />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="registration_close_at">
+                            Registration closes
+                        </Label>
+                        <Input
+                            id="registration_close_at"
+                            name="registration_close_at"
+                            type="datetime-local"
+                            value={form.data.registration_close_at}
+                            onChange={(inputEvent) =>
+                                form.setData(
+                                    'registration_close_at',
+                                    inputEvent.target.value,
+                                )
+                            }
+                        />
+                        <InputError
+                            message={form.errors.registration_close_at}
+                        />
+                    </div>
+                </div>
+
+                <div className="grid gap-6 lg:grid-cols-[220px_220px_minmax(0,1fr)]">
+                    <div className="grid gap-2">
+                        <Label htmlFor="status">Status</Label>
+                        <select
+                            id="status"
+                            name="status"
+                            value={form.data.status}
+                            onChange={(changeEvent) =>
+                                form.setData(
+                                    'status',
+                                    changeEvent.target.value,
+                                )
+                            }
+                            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+                        >
+                            {statusOptions.map((option) => (
+                                <option
+                                    key={option.value}
+                                    value={option.value}
+                                >
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                        <InputError message={form.errors.status} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="total_capacity">Total capacity</Label>
+                        <Input
+                            id="total_capacity"
+                            name="total_capacity"
+                            type="number"
+                            min="1"
+                            value={form.data.total_capacity}
+                            onChange={(inputEvent) =>
+                                form.setData(
+                                    'total_capacity',
+                                    inputEvent.target.value,
+                                )
+                            }
+                            placeholder="500"
+                        />
+                        <InputError message={form.errors.total_capacity} />
+                    </div>
+
+                    <div className="grid gap-3 rounded-xl border border-sidebar-border/70 bg-muted/30 p-4">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="default">
+                                Reserved {reservedQuantity}
+                            </Badge>
+                            <Badge
+                                variant={
+                                    remainingSlots > 0
+                                        ? 'secondary'
+                                        : 'destructive'
                                 }
-                                className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
                             >
-                                {statusOptions.map((option) => (
-                                    <option
-                                        key={option.value}
-                                        value={option.value}
-                                    >
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <InputError message={form.errors.status} />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="total_capacity">Total capacity</Label>
-                            <Input
-                                id="total_capacity"
-                                name="total_capacity"
-                                type="number"
-                                min="1"
-                                value={form.data.total_capacity}
-                                onChange={(inputEvent) =>
-                                    form.setData(
-                                        'total_capacity',
-                                        inputEvent.target.value,
-                                    )
-                                }
-                                placeholder="500"
-                            />
-                            <InputError message={form.errors.total_capacity} />
-                        </div>
-
-                        <div className="grid gap-3 rounded-xl border border-sidebar-border/70 bg-muted/30 p-4">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <Badge variant="outline">
-                                    Reserved {reservedQuantity}
-                                </Badge>
+                                Remaining {remainingSlots}
+                            </Badge>
+                            {event && (
                                 <Badge
                                     variant={
-                                        remainingSlots > 0
+                                        event.accepting_registrations
                                             ? 'secondary'
-                                            : 'outline'
+                                            : 'destructive'
                                     }
+                                    className="capitalize"
                                 >
-                                    Remaining {remainingSlots}
+                                    {event.status}
                                 </Badge>
-                                {event && (
-                                    <Badge
-                                        variant={
-                                            event.accepting_registrations
-                                                ? 'secondary'
-                                                : 'outline'
-                                        }
-                                        className="capitalize"
-                                    >
-                                        {event.status}
-                                    </Badge>
-                                )}
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                                Remaining slots are computed from all submitted,
-                                pending, verified, and completed registrations.
-                            </p>
-                            {event?.status_reason && (
-                                <p className="text-sm text-muted-foreground">
-                                    {event.status_reason}
-                                </p>
                             )}
                         </div>
+                        <p className="text-sm text-muted-foreground">
+                            Remaining slots are computed from all submitted,
+                            pending, verified, and completed registrations.
+                        </p>
+                        {event?.status_reason && (
+                            <p className="text-sm text-muted-foreground">
+                                {event.status_reason}
+                            </p>
+                        )}
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </div>
 
-            <Card className="border-sidebar-border/70">
-                <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <section className="space-y-4 border-t border-sidebar-border/70 pt-8">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div className="space-y-1">
-                        <CardTitle>Fee categories</CardTitle>
-                        <CardDescription>
+                        <h3 className="text-base font-semibold tracking-tight">
+                            Fee categories
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
                             Set the fee lines that can be used during onsite and
                             online registration.
-                        </CardDescription>
+                        </p>
                     </div>
-                    <Button type="button" variant="outline" onClick={addFeeCategory}>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-xl"
+                        onClick={addFeeCategory}
+                    >
                         Add fee category
                     </Button>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {form.errors.fee_categories && (
-                        <InputError message={form.errors.fee_categories} />
-                    )}
+                </div>
 
-                    {form.data.fee_categories.map((feeCategory, index) => {
+                {form.errors.fee_categories && (
+                    <InputError message={form.errors.fee_categories} />
+                )}
+
+                {form.data.fee_categories.map((feeCategory, index) => {
                         const categoryRemainingSlots =
                             feeCategory.slot_limit === ''
                                 ? null
@@ -421,7 +416,7 @@ export default function EventForm({
                         return (
                             <div
                                 key={`${feeCategory.id ?? 'new'}-${index}`}
-                                className="rounded-xl border border-sidebar-border/70 p-4"
+                                className="rounded-xl border border-sidebar-border/70 bg-background p-4"
                             >
                                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                                     <div className="space-y-1">
@@ -435,11 +430,17 @@ export default function EventForm({
                                         </p>
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <Badge variant="outline">
+                                        <Badge variant="default">
                                             Reserved {feeCategory.reserved_quantity}
                                         </Badge>
                                         {categoryRemainingSlots !== null && (
-                                            <Badge variant="secondary">
+                                            <Badge
+                                                variant={
+                                                    categoryRemainingSlots > 0
+                                                        ? 'secondary'
+                                                        : 'destructive'
+                                                }
+                                            >
                                                 Remaining {categoryRemainingSlots}
                                             </Badge>
                                         )}
@@ -592,9 +593,8 @@ export default function EventForm({
                                 </div>
                             </div>
                         );
-                    })}
-                </CardContent>
-            </Card>
+                })}
+            </section>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                 <Button variant="outline" asChild>

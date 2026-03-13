@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\IndexEventRequest;
 use App\Http\Requests\Admin\StoreEventRequest;
 use App\Http\Requests\Admin\UpdateEventRequest;
 use App\Models\Event;
 use App\Models\EventFeeCategory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -19,19 +21,46 @@ class EventController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): Response
+    public function index(IndexEventRequest $request): Response
     {
+        $filters = $request->filters();
+
         $events = Event::query()
+            ->when($filters['search'] !== '', function (Builder $query) use ($filters): void {
+                $search = $filters['search'];
+
+                $query->where(function (Builder $query) use ($search): void {
+                    $query
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('venue', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
+                });
+            })
             ->withCapacityMetrics()
             ->orderByDesc('date_from')
-            ->get();
+            ->paginate($filters['per_page'])
+            ->withQueryString();
 
-        $events->each(fn (Event $event): bool => $event->syncOperationalStatus());
+        $events->getCollection()
+            ->each(fn (Event $event): bool => $event->syncOperationalStatus());
 
         return Inertia::render('admin/events/index', [
-            'events' => $events->map(
-                fn (Event $event): array => $this->eventIndexData($event),
-            ),
+            'events' => [
+                'data' => $events->getCollection()
+                    ->map(fn (Event $event): array => $this->eventIndexData($event))
+                    ->values()
+                    ->all(),
+                'meta' => [
+                    'current_page' => $events->currentPage(),
+                    'last_page' => $events->lastPage(),
+                    'per_page' => $events->perPage(),
+                    'from' => $events->firstItem(),
+                    'to' => $events->lastItem(),
+                    'total' => $events->total(),
+                ],
+            ],
+            'filters' => $filters,
+            'perPageOptions' => [10, 25, 50],
         ]);
     }
 
