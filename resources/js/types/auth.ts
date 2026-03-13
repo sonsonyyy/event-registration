@@ -7,11 +7,16 @@ export type User = {
     two_factor_enabled?: boolean;
     created_at: string;
     updated_at: string;
+    role_name?: string | null;
+    status?: string;
     [key: string]: unknown;
 };
 
 export type Auth = {
     user: User;
+    can: {
+        manageMasterData: boolean;
+    };
 };
 
 export type TwoFactorSetupData = {

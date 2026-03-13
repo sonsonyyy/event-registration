@@ -1,5 +1,8 @@
-import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-react';
+import { Link, usePage } from '@inertiajs/react';
+import { BookOpen, Building2, FolderGit2, Layers3, LayoutGrid, Map } from 'lucide-react';
+import DistrictController from '@/actions/App/Http/Controllers/Admin/DistrictController';
+import PastorController from '@/actions/App/Http/Controllers/Admin/PastorController';
+import SectionController from '@/actions/App/Http/Controllers/Admin/SectionController';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -16,14 +19,6 @@ import {
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
-
 const footerNavItems: NavItem[] = [
     {
         title: 'Repository',
@@ -38,6 +33,34 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+    const { auth } = usePage().props;
+    const mainNavItems: NavItem[] = [
+        {
+            title: 'Dashboard',
+            href: dashboard(),
+            icon: LayoutGrid,
+        },
+        ...(auth.can.manageMasterData
+            ? [
+                  {
+                      title: 'Districts',
+                      href: DistrictController.index(),
+                      icon: Map,
+                  },
+                  {
+                      title: 'Sections',
+                      href: SectionController.index(),
+                      icon: Layers3,
+                  },
+                  {
+                      title: 'Pastors',
+                      href: PastorController.index(),
+                      icon: Building2,
+                  },
+              ]
+            : []),
+    ];
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>

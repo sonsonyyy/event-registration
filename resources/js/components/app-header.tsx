@@ -1,5 +1,8 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-react';
+import { BookOpen, Building2, Folder, Layers3, LayoutGrid, Map, Menu, Search } from 'lucide-react';
+import DistrictController from '@/actions/App/Http/Controllers/Admin/DistrictController';
+import PastorController from '@/actions/App/Http/Controllers/Admin/PastorController';
+import SectionController from '@/actions/App/Http/Controllers/Admin/SectionController';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -40,14 +43,6 @@ type Props = {
     breadcrumbs?: BreadcrumbItem[];
 };
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
-
 const rightNavItems: NavItem[] = [
     {
         title: 'Repository',
@@ -69,6 +64,33 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     const { auth } = page.props;
     const getInitials = useInitials();
     const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
+    const mainNavItems: NavItem[] = [
+        {
+            title: 'Dashboard',
+            href: dashboard(),
+            icon: LayoutGrid,
+        },
+        ...(auth.can.manageMasterData
+            ? [
+                  {
+                      title: 'Districts',
+                      href: DistrictController.index(),
+                      icon: Map,
+                  },
+                  {
+                      title: 'Sections',
+                      href: SectionController.index(),
+                      icon: Layers3,
+                  },
+                  {
+                      title: 'Pastors',
+                      href: PastorController.index(),
+                      icon: Building2,
+                  },
+              ]
+            : []),
+    ];
+
     return (
         <>
             <div className="border-b border-sidebar-border/80">

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\District;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -35,11 +36,29 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'avatar' => null,
+                    'email_verified_at' => $user->email_verified_at,
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at,
+                    'role_name' => $user->roleName(),
+                    'status' => $user->status,
+                ] : null,
+                'can' => [
+                    'manageMasterData' => $user?->can('viewAny', District::class) ?? false,
+                ],
+            ],
+            'flash' => [
+                'success' => fn (): ?string => $request->session()->get('success'),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
