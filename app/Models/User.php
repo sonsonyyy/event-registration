@@ -92,4 +92,93 @@ class User extends Authenticatable
     {
         return $this->hasMany(Registration::class, 'receipt_uploaded_by_user_id');
     }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    public function roleName(): ?string
+    {
+        if ($this->relationLoaded('role')) {
+            return $this->role?->name;
+        }
+
+        return $this->role()->value('name');
+    }
+
+    public function hasRole(string $role): bool
+    {
+        return $this->roleName() === $role;
+    }
+
+    public function hasAnyRole(string ...$roles): bool
+    {
+        return in_array($this->roleName(), $roles, true);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->hasRole(Role::ADMIN);
+    }
+
+    public function isManager(): bool
+    {
+        return $this->hasRole(Role::MANAGER);
+    }
+
+    public function isRegistrationStaff(): bool
+    {
+        return $this->hasRole(Role::REGISTRATION_STAFF);
+    }
+
+    public function isOnlineRegistrant(): bool
+    {
+        return $this->hasRole(Role::ONLINE_REGISTRANT);
+    }
+
+    public function managesSection(int $sectionId): bool
+    {
+        return $this->isManager() && $this->section_id !== null && $this->section_id === $sectionId;
+    }
+
+    public function belongsToPastor(int $pastorId): bool
+    {
+        return $this->isOnlineRegistrant() && $this->pastor_id !== null && $this->pastor_id === $pastorId;
+    }
+
+    public function canAccessSection(Section $section): bool
+    {
+        return $this->isAdmin() || $this->managesSection($section->getKey());
+    }
+
+    public function canAccessPastor(Pastor $pastor): bool
+    {
+        if ($this->isAdmin() || $this->isRegistrationStaff()) {
+            return true;
+        }
+
+        if ($this->isManager()) {
+            return $this->managesSection($pastor->section_id);
+        }
+
+        return $this->belongsToPastor($pastor->getKey());
+    }
+
+    public function canAccessRegistration(Registration $registration): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        if ($this->isManager()) {
+            return $this->managesSection($registration->pastor->section_id);
+        }
+
+        if ($this->isRegistrationStaff()) {
+            return $registration->encoded_by_user_id === $this->getKey();
+        }
+
+        return $this->belongsToPastor($registration->pastor_id);
+    }
 }

@@ -65,4 +65,40 @@ class UserFactory extends Factory
             'two_factor_confirmed_at' => now(),
         ]);
     }
+
+    public function withRole(string $role): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role_id' => fn () => Role::query()->firstOrCreate([
+                'name' => $role,
+            ])->id,
+        ]);
+    }
+
+    public function admin(): static
+    {
+        return $this->withRole(Role::ADMIN);
+    }
+
+    public function manager(): static
+    {
+        return $this->withRole(Role::MANAGER);
+    }
+
+    public function registrationStaff(): static
+    {
+        return $this->withRole(Role::REGISTRATION_STAFF);
+    }
+
+    public function onlineRegistrant(): static
+    {
+        return $this->withRole(Role::ONLINE_REGISTRANT);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'inactive',
+        ]);
+    }
 }
