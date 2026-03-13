@@ -1,78 +1,131 @@
 import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import type { PaginationMeta } from '@/types';
 
 type DataTablePaginationProps = {
     meta: PaginationMeta;
     onPageChange: (page: number) => void;
+    rowsPerPage?: number;
+    rowOptions?: number[];
+    onRowsPerPageChange?: (value: number) => void;
 };
 
 export default function DataTablePagination({
     meta,
     onPageChange,
+    rowsPerPage,
+    rowOptions,
+    onRowsPerPageChange,
 }: DataTablePaginationProps) {
     const pages = buildPageWindow(meta.current_page, meta.last_page);
     const summary = buildSummary(meta);
 
     return (
-        <div className="flex flex-col gap-4 border-t border-sidebar-border/70 pt-4 md:flex-row md:items-center md:justify-between">
-            <p className="text-sm text-muted-foreground">{summary}</p>
-
-            {meta.last_page > 1 && (
-                <div className="flex items-center gap-1 overflow-x-auto pb-1">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="rounded-lg"
-                        onClick={() => onPageChange(meta.current_page - 1)}
-                        disabled={meta.current_page <= 1}
-                    >
-                        <ChevronLeft className="size-4" />
-                        Previous
-                    </Button>
-
-                    {pages.map((page, index) =>
-                        page === 'ellipsis' ? (
-                            <Button
-                                key={`ellipsis-${index}`}
-                                type="button"
-                                variant="ghost"
+        <div className="flex flex-col gap-4 border-t border-sidebar-border/70 pt-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                {rowsPerPage !== undefined &&
+                    rowOptions !== undefined &&
+                    onRowsPerPageChange !== undefined && (
+                        <Select
+                            value={String(rowsPerPage)}
+                            onValueChange={(value) =>
+                                onRowsPerPageChange(Number(value))
+                            }
+                        >
+                            <SelectTrigger
+                                id="directory-per-page"
+                                aria-label="Rows per page"
                                 size="sm"
-                                className="rounded-lg"
-                                disabled
+                                className="h-8 w-[6.25rem] shrink-0 rounded-lg bg-background"
                             >
-                                <MoreHorizontal className="size-4" />
-                            </Button>
-                        ) : (
-                            <Button
-                                key={page}
-                                type="button"
-                                variant={
-                                    page === meta.current_page
-                                        ? 'default'
-                                        : 'outline'
-                                }
-                                size="sm"
-                                className="min-w-9 rounded-lg"
-                                onClick={() => onPageChange(page)}
-                            >
-                                {page}
-                            </Button>
-                        ),
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent align="start">
+                                {rowOptions.map((option) => (
+                                    <SelectItem
+                                        key={option}
+                                        value={String(option)}
+                                    >
+                                        {option} rows
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     )}
 
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="rounded-lg"
-                        onClick={() => onPageChange(meta.current_page + 1)}
-                        disabled={meta.current_page >= meta.last_page}
-                    >
-                        Next
-                        <ChevronRight className="size-4" />
-                    </Button>
+                <p className="text-sm text-muted-foreground sm:text-right">
+                    {summary}
+                </p>
+            </div>
+
+            {meta.last_page > 1 && (
+                <div className="flex justify-end overflow-x-auto pb-1">
+                    <div className="flex items-center gap-1">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="rounded-lg"
+                            onClick={() =>
+                                onPageChange(meta.current_page - 1)
+                            }
+                            disabled={meta.current_page <= 1}
+                        >
+                            <ChevronLeft className="size-4" />
+                            Previous
+                        </Button>
+
+                        {pages.map((page, index) =>
+                            page === 'ellipsis' ? (
+                                <Button
+                                    key={`ellipsis-${index}`}
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="rounded-lg"
+                                    disabled
+                                >
+                                    <MoreHorizontal className="size-4" />
+                                </Button>
+                            ) : (
+                                <Button
+                                    key={page}
+                                    type="button"
+                                    variant={
+                                        page === meta.current_page
+                                            ? 'default'
+                                            : 'outline'
+                                    }
+                                    size="sm"
+                                    className="min-w-9 rounded-lg"
+                                    onClick={() => onPageChange(page)}
+                                >
+                                    {page}
+                                </Button>
+                            ),
+                        )}
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="rounded-lg"
+                            onClick={() =>
+                                onPageChange(meta.current_page + 1)
+                            }
+                            disabled={meta.current_page >= meta.last_page}
+                        >
+                            Next
+                            <ChevronRight className="size-4" />
+                        </Button>
+                    </div>
                 </div>
             )}
         </div>
