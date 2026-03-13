@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\District;
 use App\Models\Event;
 use App\Models\Registration;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -59,10 +60,12 @@ class HandleInertiaRequests extends Middleware
                     'manageEvents' => $user?->can('create', Event::class) ?? false,
                     'manageMasterData' => $user?->can('viewAny', District::class) ?? false,
                     'manageOnsiteRegistrations' => $user?->can('viewAnyOnsite', Registration::class) ?? false,
+                    'manageUsers' => $user?->can('viewAny', User::class) ?? false,
                 ],
             ],
             'flash' => [
                 'success' => fn (): ?string => $request->session()->get('success'),
+                'error' => fn (): ?string => $request->session()->get('error'),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

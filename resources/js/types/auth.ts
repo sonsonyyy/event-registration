@@ -18,6 +18,7 @@ export type Auth = {
         manageEvents: boolean;
         manageMasterData: boolean;
         manageOnsiteRegistrations: boolean;
+        manageUsers: boolean;
     };
 };
 
