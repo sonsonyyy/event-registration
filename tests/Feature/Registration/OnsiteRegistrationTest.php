@@ -34,6 +34,8 @@ test('registration staff can create onsite registrations with multiple fee-categ
             ->where('events.0.name', $event->name)
             ->has('events.0.fee_categories', 2)
             ->where('pastors.0.church_name', $pastor->church_name)
+            ->where('pastors.0.section_id', $pastor->section_id)
+            ->where('pastors.0.district_id', $pastor->section->district_id)
             ->has('paymentStatusOptions', 3));
 
     $this->actingAs($staff)
@@ -144,7 +146,9 @@ test('managers are limited to onsite registrations and pastors within their assi
         ->assertInertia(fn (Assert $page) => $page
             ->component('registrations/onsite/create')
             ->has('pastors', 1)
-            ->where('pastors.0.church_name', 'Grace Community Church'));
+            ->where('pastors.0.church_name', 'Grace Community Church')
+            ->where('pastors.0.section_id', $managedSection->id)
+            ->where('pastors.0.district_id', $district->id));
 
     $this->actingAs($manager)
         ->get(route('registrations.onsite.index'))

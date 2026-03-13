@@ -30,7 +30,9 @@ type PastorOption = {
     id: number;
     pastor_name: string;
     church_name: string;
+    section_id: number;
     section_name: string;
+    district_id: number;
     district_name: string;
 };
 

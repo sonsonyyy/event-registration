@@ -229,7 +229,9 @@ class OnsiteRegistrationController extends Controller
                 'id' => $pastor->getKey(),
                 'pastor_name' => $pastor->pastor_name,
                 'church_name' => $pastor->church_name,
+                'section_id' => $pastor->section->getKey(),
                 'section_name' => $pastor->section->name,
+                'district_id' => $pastor->section->district->getKey(),
                 'district_name' => $pastor->section->district->name,
             ])
             ->values()

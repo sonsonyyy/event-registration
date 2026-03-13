@@ -1,11 +1,11 @@
 import { Link, useForm } from '@inertiajs/react';
-import { Plus, Search, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import type { FormEvent } from 'react';
-import { useState } from 'react';
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -33,7 +33,16 @@ type PastorOption = {
     id: number;
     pastor_name: string;
     church_name: string;
+    section_id: number;
     section_name: string;
+    district_id: number;
+    district_name: string;
+};
+
+type SectionOption = {
+    id: number;
+    name: string;
+    district_id: number;
     district_name: string;
 };
 
@@ -49,6 +58,8 @@ type LineItemFormValue = {
 
 type OnsiteRegistrationFormData = {
     event_id: string;
+    district_id: string;
+    section_id: string;
     pastor_id: string;
     payment_status: string;
     payment_reference: string;
@@ -89,9 +100,10 @@ export default function OnsiteRegistrationForm({
     pastors,
     paymentStatusOptions,
 }: Props) {
-    const [pastorSearch, setPastorSearch] = useState('');
     const form = useForm<OnsiteRegistrationFormData>({
         event_id: events[0]?.id.toString() ?? '',
+        district_id: '',
+        section_id: '',
         pastor_id: '',
         payment_status:
             paymentStatusOptions.find((option) => option.value === 'unpaid')
@@ -109,23 +121,25 @@ export default function OnsiteRegistrationForm({
         pastors.find((pastor) => pastor.id.toString() === form.data.pastor_id) ??
         null;
     const availableFeeCategories = selectedEvent?.fee_categories ?? [];
-    const filteredPastors = pastors.filter((pastor) => {
-        const haystack = [
-            pastor.church_name,
-            pastor.pastor_name,
-            pastor.section_name,
-            pastor.district_name,
-        ]
-            .join(' ')
-            .toLowerCase();
-
-        return haystack.includes(pastorSearch.toLowerCase());
-    });
-    const pastorOptions =
-        selectedPastor &&
-        ! filteredPastors.some((pastor) => pastor.id === selectedPastor.id)
-            ? [selectedPastor, ...filteredPastors]
-            : filteredPastors;
+    const sectionOptions = Array.from(
+        new Map(
+            pastors.map((pastor) => [
+                pastor.section_id,
+                {
+                    id: pastor.section_id,
+                    name: pastor.section_name,
+                    district_id: pastor.district_id,
+                    district_name: pastor.district_name,
+                },
+            ]),
+        ).values(),
+    ).sort((left, right) => left.name.localeCompare(right.name));
+    const filteredPastors = form.data.section_id
+        ? pastors.filter(
+              (pastor) =>
+                  pastor.section_id.toString() === form.data.section_id,
+          )
+        : pastors;
 
     let totalQuantity = 0;
     let totalAmount = 0;
@@ -154,6 +168,40 @@ export default function OnsiteRegistrationForm({
             ...currentData,
             event_id: eventId,
             line_items: [emptyLineItem()],
+        }));
+    };
+
+    const changeSection = (value: string): void => {
+        const section = sectionOptions.find(
+            (option) => option.id.toString() === value,
+        );
+        const nextPastor = pastors.find(
+            (pastor) =>
+                pastor.id.toString() === form.data.pastor_id &&
+                pastor.section_id.toString() === value,
+        );
+
+        form.setData((currentData) => ({
+            ...currentData,
+            district_id:
+                section?.district_id.toString() ?? currentData.district_id,
+            section_id: value,
+            pastor_id: nextPastor?.id.toString() ?? '',
+        }));
+    };
+
+    const changePastor = (value: string): void => {
+        const pastor = pastors.find(
+            (option) => option.id.toString() === value,
+        );
+
+        form.setData((currentData) => ({
+            ...currentData,
+            district_id:
+                pastor?.district_id.toString() ?? currentData.district_id,
+            section_id:
+                pastor?.section_id.toString() ?? currentData.section_id,
+            pastor_id: value,
         }));
     };
 
@@ -199,92 +247,98 @@ export default function OnsiteRegistrationForm({
     return (
         <form className="space-y-8" onSubmit={submit}>
             <div className="space-y-6">
-                    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-                        <div className="grid gap-2">
-                            <Label htmlFor="event_id">Event</Label>
-                            <select
-                                id="event_id"
-                                name="event_id"
-                                value={form.data.event_id}
-                                onChange={(event) =>
-                                    setEvent(event.target.value)
-                                }
-                                className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                                disabled={events.length === 0}
-                            >
-                                <option value="">Select an event</option>
-                                {events.map((event) => (
-                                    <option key={event.id} value={event.id}>
-                                        {event.name} · {event.remaining_slots}{' '}
-                                        slots left
-                                    </option>
-                                ))}
-                            </select>
-                            <InputError message={form.errors.event_id} />
+                <div className="grid gap-6">
+                    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch">
+                        <div className="flex h-full flex-col gap-6">
+                            <div className="grid gap-2">
+                                <Label htmlFor="event_id">Event</Label>
+                                <select
+                                    id="event_id"
+                                    name="event_id"
+                                    value={form.data.event_id}
+                                    onChange={(event) =>
+                                        setEvent(event.target.value)
+                                    }
+                                    className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+                                    disabled={events.length === 0}
+                                >
+                                    <option value="">Select an event</option>
+                                    {events.map((event) => (
+                                        <option key={event.id} value={event.id}>
+                                            {event.name} · {event.remaining_slots} slots
+                                            {' '}left
+                                        </option>
+                                    ))}
+                                </select>
+                                <InputError message={form.errors.event_id} />
+                            </div>
+
+                            <div className="grid gap-6 xl:grid-cols-2">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="section_id">Section</Label>
+                                    <select
+                                        id="section_id"
+                                        name="section_id"
+                                        value={form.data.section_id}
+                                        onChange={(event) =>
+                                            changeSection(event.target.value)
+                                        }
+                                        className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+                                    >
+                                        <option value="">Select a section</option>
+                                        {sectionOptions.map((section) => (
+                                            <option key={section.id} value={section.id}>
+                                                {section.name} · {section.district_name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="pastor_id">Pastor or church</Label>
+                                    <select
+                                        id="pastor_id"
+                                        name="pastor_id"
+                                        value={form.data.pastor_id}
+                                        onChange={(event) =>
+                                            changePastor(event.target.value)
+                                        }
+                                        className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+                                        disabled={pastors.length === 0}
+                                    >
+                                        <option value="">Select a pastor or church</option>
+                                        {filteredPastors.map((pastor) => (
+                                            <option key={pastor.id} value={pastor.id}>
+                                                {pastor.church_name} · {pastor.pastor_name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <InputError message={form.errors.pastor_id} />
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="rounded-xl border border-sidebar-border/70 bg-sidebar/30 p-4 text-sm">
-                            <div className="font-medium">Event availability</div>
-                            {selectedEvent ? (
-                                <div className="mt-3 space-y-2 text-muted-foreground">
-                                    <div>{selectedEvent.venue}</div>
-                                    <div>
-                                        {selectedEvent.remaining_slots} slots
-                                        remaining
-                                    </div>
-                                    <div>
-                                        Registration closes{' '}
-                                        {formatDate(
-                                            selectedEvent.registration_close_at,
-                                        )}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="mt-3 text-muted-foreground">
-                                    Choose an event to see remaining capacity.
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label htmlFor="pastor_search">Pastor or church</Label>
-                        <div className="relative">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                id="pastor_search"
-                                value={pastorSearch}
-                                onChange={(event) =>
-                                    setPastorSearch(event.target.value)
-                                }
-                                placeholder="Search by church, pastor, section, or district"
-                                className="pl-9"
-                            />
-                        </div>
-                        <select
-                            id="pastor_id"
-                            name="pastor_id"
-                            value={form.data.pastor_id}
-                            onChange={(event) =>
-                                form.setData('pastor_id', event.target.value)
-                            }
-                            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                            disabled={pastors.length === 0}
-                        >
-                            <option value="">Select a pastor or church</option>
-                            {pastorOptions.map((pastor) => (
-                                <option key={pastor.id} value={pastor.id}>
-                                    {pastor.church_name} · {pastor.pastor_name} ·{' '}
-                                    {pastor.section_name}
-                                </option>
-                            ))}
-                        </select>
-                        {pastorSearch !== '' && pastorOptions.length === 0 && (
-                            <p className="text-sm text-muted-foreground">
-                                No pastors or churches matched your search.
-                            </p>
-                        )}
-                        <InputError message={form.errors.pastor_id} />
+                        <Card className="h-full border-sidebar-border/70">
+                            <CardHeader>
+                                <CardTitle>Event availability</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex flex-1 flex-col gap-2 text-sm text-muted-foreground">
+                                {selectedEvent ? (
+                                    <>
+                                        <div>{selectedEvent.venue}</div>
+                                        <div>
+                                            {selectedEvent.remaining_slots} slots remaining
+                                        </div>
+                                        <div>
+                                            Registration closes{' '}
+                                            {formatDate(selectedEvent.registration_close_at)}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div>Choose an event to see remaining capacity.</div>
+                                )}
+                            </CardContent>
+                        </Card>
                     </div>
 
                     <div className="grid gap-6 lg:grid-cols-2">
@@ -348,6 +402,7 @@ export default function OnsiteRegistrationForm({
                         />
                         <InputError message={form.errors.remarks} />
                     </div>
+                </div>
             </div>
 
             <section className="space-y-4 border-t border-sidebar-border/70 pt-8">
