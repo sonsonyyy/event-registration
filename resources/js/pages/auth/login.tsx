@@ -9,11 +9,10 @@ import AuthLayout from '@/layouts/auth-layout';
 import { store } from '@/routes/login';
 
 type Props = {
-    accessMessage: string;
     status?: string;
 };
 
-export default function Login({ accessMessage, status }: Props) {
+export default function Login({ status }: Props) {
     return (
         <AuthLayout
             title="Log in to your account"
@@ -56,11 +55,6 @@ export default function Login({ accessMessage, status }: Props) {
                                 />
                                 <InputError message={errors.password} />
                             </div>
-
-                            <div className="rounded-lg border border-sidebar-border/70 bg-sidebar/30 px-4 py-3 text-sm text-muted-foreground">
-                                {accessMessage}
-                            </div>
-
                             <Button
                                 type="submit"
                                 className="mt-4 w-full"

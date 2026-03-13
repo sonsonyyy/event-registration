@@ -11,8 +11,7 @@ test('login screen can be rendered', function () {
     $response
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->component('auth/login')
-            ->where('accessMessage', 'Contact the admin for system access.'));
+            ->component('auth/login'));
 });
 
 test('users can authenticate using the login screen', function () {

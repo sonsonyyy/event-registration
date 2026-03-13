@@ -26,12 +26,12 @@ class OnlineRegistrantUserSeeder extends Seeder
         ]);
 
         $district = District::query()
-            ->where('name', 'Demo District')
+            ->where('name', 'Central Luzon')
             ->firstOrFail();
 
         $section = Section::query()
             ->where('district_id', $district->id)
-            ->where('name', 'North Section')
+            ->where('name', 'Section 1')
             ->firstOrFail();
 
         $pastor = Pastor::query()

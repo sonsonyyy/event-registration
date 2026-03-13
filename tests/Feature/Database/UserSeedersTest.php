@@ -24,7 +24,8 @@ test('database seeder creates demo users for each role', function () {
     expect($manager)
         ->and($manager->roleName())->toBe(Role::MANAGER)
         ->and($manager->isActive())->toBeTrue()
-        ->and($manager->section?->name)->toBe('North Section');
+        ->and($manager->district?->name)->toBe('Central Luzon')
+        ->and($manager->section?->name)->toBe('Section 1');
 
     expect($registrationStaff)
         ->and($registrationStaff->roleName())->toBe(Role::REGISTRATION_STAFF)
@@ -36,17 +37,30 @@ test('database seeder creates demo users for each role', function () {
         ->and($onlineRegistrant->roleName())->toBe(Role::ONLINE_REGISTRANT)
         ->and($onlineRegistrant->isActive())->toBeTrue()
         ->and($onlineRegistrant->pastor?->church_name)->toBe('Grace Community Church')
-        ->and($onlineRegistrant->section?->name)->toBe('North Section');
+        ->and($onlineRegistrant->district?->name)->toBe('Central Luzon')
+        ->and($onlineRegistrant->section?->name)->toBe('Section 1');
 
     expect(District::query()->count())->toBe(2)
         ->and(Section::query()->count())->toBe(6)
         ->and(Pastor::query()->count())->toBe(30);
 
+    expect(District::query()->orderBy('name')->pluck('name')->all())
+        ->toBe([
+            'Central Luzon',
+            'National Capital Region',
+        ]);
+
     District::query()
+        ->with(['sections' => fn ($query) => $query->orderBy('name')])
         ->withCount('sections')
         ->get()
         ->each(function (District $district): void {
             expect($district->sections_count)->toBe(3);
+            expect($district->sections->pluck('name')->all())->toBe([
+                'Section 1',
+                'Section 2',
+                'Section 3',
+            ]);
         });
 
     Section::query()

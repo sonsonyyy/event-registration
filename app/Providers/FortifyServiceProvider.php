@@ -47,7 +47,6 @@ class FortifyServiceProvider extends ServiceProvider
     private function configureViews(): void
     {
         Fortify::loginView(fn (Request $request) => Inertia::render('auth/login', [
-            'accessMessage' => 'Contact the admin for system access.',
             'status' => $request->session()->get('status'),
         ]));
 
