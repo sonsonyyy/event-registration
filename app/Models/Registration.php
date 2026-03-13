@@ -13,6 +13,20 @@ class Registration extends Model
     /** @use HasFactory<RegistrationFactory> */
     use HasFactory;
 
+    public const STATUS_DRAFT = 'draft';
+
+    public const STATUS_SUBMITTED = 'submitted';
+
+    public const STATUS_PENDING_VERIFICATION = 'pending verification';
+
+    public const STATUS_VERIFIED = 'verified';
+
+    public const STATUS_COMPLETED = 'completed';
+
+    public const STATUS_REJECTED = 'rejected';
+
+    public const STATUS_CANCELLED = 'cancelled';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -78,5 +92,38 @@ class Registration extends Model
     public function items(): HasMany
     {
         return $this->hasMany(RegistrationItem::class);
+    }
+
+    /**
+     * Get the registration statuses that should reserve event capacity.
+     *
+     * @return array<int, string>
+     */
+    public static function capacityReservedStatuses(): array
+    {
+        return [
+            self::STATUS_SUBMITTED,
+            self::STATUS_PENDING_VERIFICATION,
+            self::STATUS_VERIFIED,
+            self::STATUS_COMPLETED,
+        ];
+    }
+
+    public function reservesCapacity(): bool
+    {
+        return in_array($this->registration_status, self::capacityReservedStatuses(), true);
+    }
+
+    public function totalQuantity(): int
+    {
+        if (array_key_exists('total_quantity', $this->attributes)) {
+            return (int) $this->attributes['total_quantity'];
+        }
+
+        if ($this->relationLoaded('items')) {
+            return (int) $this->items->sum('quantity');
+        }
+
+        return (int) $this->items()->sum('quantity');
     }
 }

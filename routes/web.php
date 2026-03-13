@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\DistrictController;
+use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\PastorController;
 use App\Http\Controllers\Admin\SectionController;
 use App\Models\District;
@@ -18,6 +19,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('admin.')
         ->middleware('can:viewAny,'.District::class)
         ->group(function (): void {
+            Route::resource('events', EventController::class)->except('show');
             Route::resource('districts', DistrictController::class)->except('show');
             Route::resource('sections', SectionController::class)->except('show');
             Route::resource('pastors', PastorController::class)->except('show');

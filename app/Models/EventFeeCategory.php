@@ -35,6 +35,7 @@ class EventFeeCategory extends Model
     {
         return [
             'amount' => 'decimal:2',
+            'slot_limit' => 'integer',
         ];
     }
 
@@ -46,5 +47,34 @@ class EventFeeCategory extends Model
     public function registrationItems(): HasMany
     {
         return $this->hasMany(RegistrationItem::class, 'fee_category_id');
+    }
+
+    public function reservedRegistrationItems(): HasMany
+    {
+        return $this->registrationItems()->whereHas('registration', function ($query): void {
+            $query->whereIn('registration_status', Registration::capacityReservedStatuses());
+        });
+    }
+
+    public function reservedQuantity(): int
+    {
+        if (array_key_exists('reserved_quantity', $this->attributes)) {
+            return (int) $this->attributes['reserved_quantity'];
+        }
+
+        if ($this->relationLoaded('reservedRegistrationItems')) {
+            return (int) $this->reservedRegistrationItems->sum('quantity');
+        }
+
+        return (int) $this->reservedRegistrationItems()->sum('quantity');
+    }
+
+    public function remainingSlots(): ?int
+    {
+        if ($this->slot_limit === null) {
+            return null;
+        }
+
+        return max($this->slot_limit - $this->reservedQuantity(), 0);
     }
 }

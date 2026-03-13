@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Building2, Folder, Layers3, LayoutGrid, Map, Menu, Search } from 'lucide-react';
+import { BookOpen, Building2, CalendarRange, Folder, Layers3, LayoutGrid, Map, Menu, Search } from 'lucide-react';
 import DistrictController from '@/actions/App/Http/Controllers/Admin/DistrictController';
+import EventController from '@/actions/App/Http/Controllers/Admin/EventController';
 import PastorController from '@/actions/App/Http/Controllers/Admin/PastorController';
 import SectionController from '@/actions/App/Http/Controllers/Admin/SectionController';
 import AppLogo from '@/components/app-logo';
@@ -70,6 +71,15 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
             href: dashboard(),
             icon: LayoutGrid,
         },
+        ...(auth.can.manageEvents
+            ? [
+                  {
+                      title: 'Events',
+                      href: EventController.index(),
+                      icon: CalendarRange,
+                  },
+              ]
+            : []),
         ...(auth.can.manageMasterData
             ? [
                   {

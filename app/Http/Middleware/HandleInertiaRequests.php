@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\District;
+use App\Models\Event;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -54,6 +55,7 @@ class HandleInertiaRequests extends Middleware
                     'status' => $user->status,
                 ] : null,
                 'can' => [
+                    'manageEvents' => $user?->can('create', Event::class) ?? false,
                     'manageMasterData' => $user?->can('viewAny', District::class) ?? false,
                 ],
             ],
