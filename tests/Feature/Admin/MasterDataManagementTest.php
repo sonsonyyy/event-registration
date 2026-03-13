@@ -59,7 +59,11 @@ test('admins can browse the master data pages', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/pastors/index')
-            ->has('pastors', 1));
+            ->where('filters.search', '')
+            ->where('filters.per_page', 10)
+            ->has('perPageOptions', 3)
+            ->has('pastors.data', 1)
+            ->where('pastors.meta.total', 1));
 
     $this->actingAs($admin)
         ->get(route('admin.pastors.create'))
@@ -139,6 +143,67 @@ test('admins can create districts sections and pastors', function () {
         'section_id' => $section->id,
         'church_name' => 'Grace Community Church',
     ]);
+});
+
+test('admins can search and paginate the pastor directory', function () {
+    $admin = User::factory()->admin()->create();
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+
+    Pastor::factory()->for($section)->create([
+        'church_name' => 'Grace Beacon Church',
+        'pastor_name' => 'Pastor Alpha',
+        'contact_number' => '09170000001',
+        'email' => 'alpha@example.com',
+    ]);
+
+    Pastor::factory()->for($section)->create([
+        'church_name' => 'Alpha Chapel',
+        'pastor_name' => 'Grace Pastor',
+        'contact_number' => '09170000002',
+        'email' => 'beta@example.com',
+    ]);
+
+    Pastor::factory()->for($section)->create([
+        'church_name' => 'Beta Ministries',
+        'pastor_name' => 'Pastor Beta',
+        'contact_number' => 'GRACE-0003',
+        'email' => 'gamma@example.com',
+    ]);
+
+    Pastor::factory()->for($section)->create([
+        'church_name' => 'Gamma Fellowship',
+        'pastor_name' => 'Pastor Gamma',
+        'contact_number' => '09170000004',
+        'email' => 'grace-match@example.com',
+    ]);
+
+    Pastor::factory()->for($section)->create([
+        'church_name' => 'Delta Outreach',
+        'pastor_name' => 'Pastor Delta',
+        'contact_number' => '09170000005',
+        'email' => 'delta@example.com',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.pastors.index', [
+            'search' => 'grace',
+            'per_page' => 2,
+            'page' => 2,
+        ]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/pastors/index')
+            ->where('filters.search', 'grace')
+            ->where('filters.per_page', 2)
+            ->where('pastors.meta.current_page', 2)
+            ->where('pastors.meta.last_page', 2)
+            ->where('pastors.meta.total', 4)
+            ->where('pastors.meta.from', 3)
+            ->where('pastors.meta.to', 4)
+            ->has('pastors.data', 2)
+            ->where('pastors.data.0.church_name', 'Gamma Fellowship')
+            ->where('pastors.data.1.church_name', 'Grace Beacon Church'));
 });
 
 test('admins must pass the form request validation rules', function () {

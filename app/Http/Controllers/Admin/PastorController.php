@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\IndexPastorRequest;
 use App\Http\Requests\Admin\StorePastorRequest;
 use App\Http\Requests\Admin\UpdatePastorRequest;
 use App\Models\Pastor;
 use App\Models\Section;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -17,31 +19,71 @@ class PastorController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): Response
+    public function index(IndexPastorRequest $request): Response
     {
+        $filters = $request->filters();
+
+        $pastors = Pastor::query()
+            ->with('section:id,name,district_id', 'section.district:id,name')
+            ->when($filters['search'] !== '', function (Builder $query) use ($filters): void {
+                $search = $filters['search'];
+
+                $query->where(function (Builder $query) use ($search): void {
+                    $query
+                        ->where('church_name', 'like', "%{$search}%")
+                        ->orWhere('pastor_name', 'like', "%{$search}%")
+                        ->orWhere('contact_number', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('church_name')
+            ->paginate($filters['per_page'])
+            ->withQueryString();
+
         return Inertia::render('admin/pastors/index', [
-            'pastors' => Pastor::query()
-                ->with('section:id,name,district_id', 'section.district:id,name')
-                ->orderBy('church_name')
-                ->get()
-                ->map(fn (Pastor $pastor): array => [
-                    'id' => $pastor->id,
-                    'pastor_name' => $pastor->pastor_name,
-                    'church_name' => $pastor->church_name,
-                    'contact_number' => $pastor->contact_number,
-                    'email' => $pastor->email,
-                    'address' => $pastor->address,
-                    'status' => $pastor->status,
-                    'section' => [
-                        'id' => $pastor->section->id,
-                        'name' => $pastor->section->name,
-                    ],
-                    'district' => [
-                        'id' => $pastor->section->district->id,
-                        'name' => $pastor->section->district->name,
-                    ],
-                ]),
+            'pastors' => [
+                'data' => $pastors->getCollection()
+                    ->map(fn (Pastor $pastor): array => $this->pastorIndexData($pastor))
+                    ->values()
+                    ->all(),
+                'meta' => [
+                    'current_page' => $pastors->currentPage(),
+                    'last_page' => $pastors->lastPage(),
+                    'per_page' => $pastors->perPage(),
+                    'from' => $pastors->firstItem(),
+                    'to' => $pastors->lastItem(),
+                    'total' => $pastors->total(),
+                ],
+            ],
+            'filters' => $filters,
+            'perPageOptions' => [10, 25, 50],
         ]);
+    }
+
+    /**
+     * Transform a pastor record for the index page.
+     *
+     * @return array<string, mixed>
+     */
+    private function pastorIndexData(Pastor $pastor): array
+    {
+        return [
+            'id' => $pastor->id,
+            'pastor_name' => $pastor->pastor_name,
+            'church_name' => $pastor->church_name,
+            'contact_number' => $pastor->contact_number,
+            'email' => $pastor->email,
+            'address' => $pastor->address,
+            'status' => $pastor->status,
+            'section' => [
+                'id' => $pastor->section->id,
+                'name' => $pastor->section->name,
+            ],
+            'district' => [
+                'id' => $pastor->section->district->id,
+                'name' => $pastor->section->district->name,
+            ],
+        ];
     }
 
     /**

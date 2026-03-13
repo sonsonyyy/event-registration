@@ -1,12 +1,15 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
 import PastorController from '@/actions/App/Http/Controllers/Admin/PastorController';
+import DataTablePagination from '@/components/data-table-pagination';
+import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
-import type { BreadcrumbItem } from '@/types';
+import type { BreadcrumbItem, PaginatedData } from '@/types';
 
 type Pastor = {
     id: number;
@@ -27,7 +30,12 @@ type Pastor = {
 };
 
 type Props = {
-    pastors: Pastor[];
+    pastors: PaginatedData<Pastor>;
+    filters: {
+        search: string;
+        per_page: number;
+    };
+    perPageOptions: number[];
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -41,9 +49,18 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function PastorIndex({ pastors }: Props) {
+export default function PastorIndex({
+    pastors,
+    filters,
+    perPageOptions,
+}: Props) {
     const page = usePage();
     const flash = page.props.flash as { success?: string | null } | undefined;
+    const [search, setSearch] = useState(filters.search);
+
+    useEffect(() => {
+        setSearch(filters.search);
+    }, [filters.search]);
 
     const destroy = (pastor: Pastor): void => {
         if (! window.confirm(`Delete "${pastor.church_name}" and its pastor record?`)) {
@@ -54,6 +71,47 @@ export default function PastorIndex({ pastors }: Props) {
             preserveScroll: true,
         });
     };
+
+    const visitIndex = (query: {
+        search?: string;
+        per_page: number;
+        page?: number;
+    }): void => {
+        router.get(PastorController.index.url({ query }), {}, {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
+    };
+
+    const submitSearch = (): void => {
+        const normalizedSearch = search.trim();
+
+        visitIndex({
+            ...(normalizedSearch !== '' ? { search: normalizedSearch } : {}),
+            per_page: filters.per_page,
+        });
+    };
+
+    const updatePerPage = (value: number): void => {
+        visitIndex({
+            ...(filters.search !== '' ? { search: filters.search } : {}),
+            per_page: value,
+        });
+    };
+
+    const changePage = (pageNumber: number): void => {
+        visitIndex({
+            ...(filters.search !== '' ? { search: filters.search } : {}),
+            per_page: filters.per_page,
+            ...(pageNumber > 1 ? { page: pageNumber } : {}),
+        });
+    };
+
+    const resultLabel =
+        filters.search === ''
+            ? `${pastors.meta.total} total records`
+            : `${pastors.meta.total} match${pastors.meta.total === 1 ? '' : 'es'} for "${filters.search}"`;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -78,117 +136,182 @@ export default function PastorIndex({ pastors }: Props) {
                     </div>
                 )}
 
-                <Card className="border-sidebar-border/70">
+                <DataTableToolbar
+                    searchValue={search}
+                    onSearchValueChange={setSearch}
+                    onSubmit={submitSearch}
+                    perPage={filters.per_page}
+                    perPageOptions={perPageOptions}
+                    onPerPageChange={updatePerPage}
+                    placeholder="Search church, pastor, contact number, or email"
+                    resultLabel={resultLabel}
+                />
+
+                <Card className="overflow-hidden border-sidebar-border/70 shadow-xs">
                     <CardHeader>
-                        <CardTitle>Pastor directory</CardTitle>
-                        <CardDescription>
-                            Each record identifies a pastor, church, section,
-                            and district pairing.
-                        </CardDescription>
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <div>
+                                <CardTitle>Pastor directory</CardTitle>
+                                <CardDescription>
+                                    Search by church, pastor, contact number,
+                                    or email address, then page through the
+                                    directory without leaving the admin
+                                    workspace.
+                                </CardDescription>
+                            </div>
+
+                            {filters.search !== '' && (
+                                <Badge
+                                    variant="outline"
+                                    className="w-fit rounded-full px-3 py-1 text-xs"
+                                >
+                                    Filtered by "{filters.search}"
+                                </Badge>
+                            )}
+                        </div>
                     </CardHeader>
-                    <CardContent className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
-                            <thead>
-                                <tr className="text-left text-muted-foreground">
-                                    <th className="py-3 pr-4 font-medium">
-                                        Church
-                                    </th>
-                                    <th className="py-3 pr-4 font-medium">
-                                        Section
-                                    </th>
-                                    <th className="py-3 pr-4 font-medium">
-                                        Contact
-                                    </th>
-                                    <th className="py-3 pr-4 font-medium">
-                                        Status
-                                    </th>
-                                    <th className="py-3 text-right font-medium">
-                                        Actions
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-sidebar-border/50">
-                                {pastors.length === 0 ? (
-                                    <tr>
-                                        <td
-                                            colSpan={5}
-                                            className="py-10 text-center text-muted-foreground"
-                                        >
-                                            No pastor records yet.
-                                        </td>
+                    <CardContent className="space-y-6 p-0">
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
+                                <thead className="bg-muted/40">
+                                    <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                        <th className="py-3 pr-4 pl-6 font-medium">
+                                            Church
+                                        </th>
+                                        <th className="py-3 pr-4 font-medium">
+                                            Section
+                                        </th>
+                                        <th className="py-3 pr-4 font-medium">
+                                            Contact
+                                        </th>
+                                        <th className="py-3 pr-4 font-medium">
+                                            Status
+                                        </th>
+                                        <th className="py-3 pr-6 text-right font-medium">
+                                            Actions
+                                        </th>
                                     </tr>
-                                ) : (
-                                    pastors.map((pastor) => (
-                                        <tr key={pastor.id}>
-                                            <td className="py-4 pr-4 align-top">
-                                                <div className="font-medium">
-                                                    {pastor.church_name}
-                                                </div>
-                                                <div className="mt-1 text-sm text-muted-foreground">
-                                                    {pastor.pastor_name}
-                                                </div>
-                                                <div className="mt-1 max-w-xl text-sm text-muted-foreground">
-                                                    {pastor.address ||
-                                                        'No address provided.'}
-                                                </div>
-                                            </td>
-                                            <td className="py-4 pr-4 align-top text-muted-foreground">
-                                                <div>{pastor.section.name}</div>
-                                                <div className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
-                                                    {pastor.district.name}
-                                                </div>
-                                            </td>
-                                            <td className="py-4 pr-4 align-top text-muted-foreground">
-                                                <div>{pastor.contact_number}</div>
-                                                <div className="mt-1">
-                                                    {pastor.email ||
-                                                        'No email provided.'}
-                                                </div>
-                                            </td>
-                                            <td className="py-4 pr-4 align-top">
-                                                <Badge
-                                                    variant={
-                                                        pastor.status ===
-                                                        'active'
-                                                            ? 'secondary'
-                                                            : 'outline'
-                                                    }
-                                                    className="capitalize"
-                                                >
-                                                    {pastor.status}
-                                                </Badge>
-                                            </td>
-                                            <td className="py-4 align-top">
-                                                <div className="flex justify-end gap-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        asChild
-                                                    >
-                                                        <Link
-                                                            href={PastorController.edit(
-                                                                pastor.id,
-                                                            )}
-                                                        >
-                                                            Edit
-                                                        </Link>
-                                                    </Button>
-                                                    <Button
-                                                        variant="destructive"
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            destroy(pastor)
-                                                        }
-                                                    >
-                                                        Delete
-                                                    </Button>
+                                </thead>
+                                <tbody className="divide-y divide-sidebar-border/50">
+                                    {pastors.data.length === 0 ? (
+                                        <tr>
+                                            <td
+                                                colSpan={5}
+                                                className="px-6 py-16 text-center"
+                                            >
+                                                <div className="space-y-2">
+                                                    <div className="text-base font-medium">
+                                                        {filters.search === ''
+                                                            ? 'No pastor records yet.'
+                                                            : `No pastors matched "${filters.search}".`}
+                                                    </div>
+                                                    <div className="text-sm text-muted-foreground">
+                                                        {filters.search === ''
+                                                            ? 'Create the first pastor and church record to populate the directory.'
+                                                            : 'Try another church name, pastor name, contact number, or email address.'}
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                                    ) : (
+                                        pastors.data.map((pastor) => (
+                                            <tr
+                                                key={pastor.id}
+                                                className="bg-background transition-colors hover:bg-muted/20"
+                                            >
+                                                <td className="px-6 py-5 align-top">
+                                                    <div className="font-medium text-foreground">
+                                                        {pastor.church_name}
+                                                    </div>
+                                                    <div className="mt-1 text-sm text-muted-foreground">
+                                                        {pastor.pastor_name}
+                                                    </div>
+                                                    <div className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+                                                        {pastor.address ||
+                                                            'No address provided.'}
+                                                    </div>
+                                                </td>
+                                                <td className="py-5 pr-4 align-top">
+                                                    <div className="font-medium text-foreground">
+                                                        {pastor.section.name}
+                                                    </div>
+                                                    <div className="mt-2">
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="rounded-full px-2.5 py-0.5 text-[11px]"
+                                                        >
+                                                            {
+                                                                pastor.district
+                                                                    .name
+                                                            }
+                                                        </Badge>
+                                                    </div>
+                                                </td>
+                                                <td className="py-5 pr-4 align-top text-sm text-muted-foreground">
+                                                    <div className="font-medium text-foreground/90">
+                                                        {
+                                                            pastor.contact_number
+                                                        }
+                                                    </div>
+                                                    <div className="mt-2 break-all">
+                                                        {pastor.email ||
+                                                            'No email provided.'}
+                                                    </div>
+                                                </td>
+                                                <td className="py-5 pr-4 align-top">
+                                                    <Badge
+                                                        variant={
+                                                            pastor.status ===
+                                                            'active'
+                                                                ? 'secondary'
+                                                                : 'outline'
+                                                        }
+                                                        className="rounded-full px-2.5 py-0.5 capitalize"
+                                                    >
+                                                        {pastor.status}
+                                                    </Badge>
+                                                </td>
+                                                <td className="py-5 pr-6 align-top">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            asChild
+                                                        >
+                                                            <Link
+                                                                href={PastorController.edit(
+                                                                    pastor.id,
+                                                                )}
+                                                            >
+                                                                Edit
+                                                            </Link>
+                                                        </Button>
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            onClick={() =>
+                                                                destroy(
+                                                                    pastor,
+                                                                )
+                                                            }
+                                                        >
+                                                            Delete
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="px-6 pb-6">
+                            <DataTablePagination
+                                meta={pastors.meta}
+                                onPageChange={changePage}
+                            />
+                        </div>
                     </CardContent>
                 </Card>
             </div>

@@ -1,0 +1,133 @@
+import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import type { PaginationMeta } from '@/types';
+
+type DataTablePaginationProps = {
+    meta: PaginationMeta;
+    onPageChange: (page: number) => void;
+};
+
+export default function DataTablePagination({
+    meta,
+    onPageChange,
+}: DataTablePaginationProps) {
+    const pages = buildPageWindow(meta.current_page, meta.last_page);
+    const summary = buildSummary(meta);
+
+    return (
+        <div className="flex flex-col gap-4 border-t border-sidebar-border/70 pt-4 md:flex-row md:items-center md:justify-between">
+            <p className="text-sm text-muted-foreground">{summary}</p>
+
+            {meta.last_page > 1 && (
+                <div className="flex items-center gap-1 overflow-x-auto pb-1">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg"
+                        onClick={() => onPageChange(meta.current_page - 1)}
+                        disabled={meta.current_page <= 1}
+                    >
+                        <ChevronLeft className="size-4" />
+                        Previous
+                    </Button>
+
+                    {pages.map((page, index) =>
+                        page === 'ellipsis' ? (
+                            <Button
+                                key={`ellipsis-${index}`}
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="rounded-lg"
+                                disabled
+                            >
+                                <MoreHorizontal className="size-4" />
+                            </Button>
+                        ) : (
+                            <Button
+                                key={page}
+                                type="button"
+                                variant={
+                                    page === meta.current_page
+                                        ? 'default'
+                                        : 'outline'
+                                }
+                                size="sm"
+                                className="min-w-9 rounded-lg"
+                                onClick={() => onPageChange(page)}
+                            >
+                                {page}
+                            </Button>
+                        ),
+                    )}
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg"
+                        onClick={() => onPageChange(meta.current_page + 1)}
+                        disabled={meta.current_page >= meta.last_page}
+                    >
+                        Next
+                        <ChevronRight className="size-4" />
+                    </Button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function buildSummary(meta: PaginationMeta): string {
+    if (meta.total === 0 || meta.from === null || meta.to === null) {
+        return 'No records to display.';
+    }
+
+    return `Showing ${meta.from}-${meta.to} of ${meta.total} records`;
+}
+
+function buildPageWindow(
+    currentPage: number,
+    lastPage: number,
+): Array<number | 'ellipsis'> {
+    if (lastPage <= 7) {
+        return Array.from({ length: lastPage }, (_, index) => index + 1);
+    }
+
+    const visiblePages = new Set([
+        1,
+        lastPage,
+        currentPage - 1,
+        currentPage,
+        currentPage + 1,
+    ]);
+
+    if (currentPage <= 3) {
+        visiblePages.add(2);
+        visiblePages.add(3);
+        visiblePages.add(4);
+    }
+
+    if (currentPage >= lastPage - 2) {
+        visiblePages.add(lastPage - 1);
+        visiblePages.add(lastPage - 2);
+        visiblePages.add(lastPage - 3);
+    }
+
+    const pages = Array.from(visiblePages)
+        .filter((page) => page >= 1 && page <= lastPage)
+        .sort((left, right) => left - right);
+
+    return pages.reduce<Array<number | 'ellipsis'>>((carry, page) => {
+        const previousPage = carry.at(-1);
+
+        if (typeof previousPage === 'number' && page - previousPage > 1) {
+            carry.push('ellipsis');
+        }
+
+        carry.push(page);
+
+        return carry;
+    }, []);
+}
