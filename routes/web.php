@@ -4,7 +4,9 @@ use App\Http\Controllers\Admin\DistrictController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\PastorController;
 use App\Http\Controllers\Admin\SectionController;
+use App\Http\Controllers\OnsiteRegistrationController;
 use App\Models\District;
+use App\Models\Registration;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -14,6 +16,15 @@ Route::inertia('/', 'welcome', [
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
+
+    Route::prefix('registrations/onsite')
+        ->name('registrations.onsite.')
+        ->middleware('can:viewAnyOnsite,'.Registration::class)
+        ->group(function (): void {
+            Route::get('/', [OnsiteRegistrationController::class, 'index'])->name('index');
+            Route::get('create', [OnsiteRegistrationController::class, 'create'])->name('create');
+            Route::post('/', [OnsiteRegistrationController::class, 'store'])->name('store');
+        });
 
     Route::prefix('admin')
         ->name('admin.')

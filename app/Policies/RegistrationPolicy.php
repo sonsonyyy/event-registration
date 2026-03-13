@@ -18,6 +18,12 @@ class RegistrationPolicy
         );
     }
 
+    public function viewAnyOnsite(User $user): bool
+    {
+        return $user->isRegistrationStaff()
+            || ($user->isManager() && $user->section_id !== null);
+    }
+
     public function view(User $user, Registration $registration): bool
     {
         return $user->canAccessRegistration($registration);
@@ -35,7 +41,7 @@ class RegistrationPolicy
         }
 
         if ($user->isRegistrationStaff()) {
-            return $registration->registration_mode === 'onsite'
+            return $registration->registration_mode === Registration::MODE_ONSITE
                 && $registration->encoded_by_user_id === $user->getKey();
         }
 
@@ -47,13 +53,17 @@ class RegistrationPolicy
         return $user->isManager() && $user->canAccessRegistration($registration);
     }
 
-    public function createOnsite(User $user, Pastor $pastor): bool
+    public function createOnsite(User $user, ?Pastor $pastor = null): bool
     {
         if ($user->isRegistrationStaff()) {
             return true;
         }
 
         if ($user->isManager()) {
+            if ($pastor === null) {
+                return $user->section_id !== null;
+            }
+
             return $user->managesSection($pastor->section_id);
         }
 
@@ -67,14 +77,14 @@ class RegistrationPolicy
 
     public function uploadReceipt(User $user, Registration $registration): bool
     {
-        return $registration->registration_mode === 'online'
+        return $registration->registration_mode === Registration::MODE_ONLINE
             && $user->belongsToPastor($registration->pastor_id);
     }
 
     public function verifyReceipt(User $user, Registration $registration): bool
     {
         return $user->isManager()
-            && $registration->registration_mode === 'online'
+            && $registration->registration_mode === Registration::MODE_ONLINE
             && $user->canAccessRegistration($registration);
     }
 }

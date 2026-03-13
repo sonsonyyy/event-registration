@@ -1,9 +1,10 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Building2, CalendarRange, Folder, Layers3, LayoutGrid, Map, Menu, Search } from 'lucide-react';
+import { BookOpen, Building2, CalendarRange, Folder, Layers3, LayoutGrid, Map, Menu, ReceiptText, Search } from 'lucide-react';
 import DistrictController from '@/actions/App/Http/Controllers/Admin/DistrictController';
 import EventController from '@/actions/App/Http/Controllers/Admin/EventController';
 import PastorController from '@/actions/App/Http/Controllers/Admin/PastorController';
 import SectionController from '@/actions/App/Http/Controllers/Admin/SectionController';
+import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -71,6 +72,15 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
             href: dashboard(),
             icon: LayoutGrid,
         },
+        ...(auth.can.manageOnsiteRegistrations
+            ? [
+                  {
+                      title: 'Onsite Registration',
+                      href: OnsiteRegistrationController.index(),
+                      icon: ReceiptText,
+                  },
+              ]
+            : []),
         ...(auth.can.manageEvents
             ? [
                   {

@@ -13,6 +13,16 @@ class Registration extends Model
     /** @use HasFactory<RegistrationFactory> */
     use HasFactory;
 
+    public const MODE_ONSITE = 'onsite';
+
+    public const MODE_ONLINE = 'online';
+
+    public const PAYMENT_STATUS_PAID = 'paid';
+
+    public const PAYMENT_STATUS_UNPAID = 'unpaid';
+
+    public const PAYMENT_STATUS_PARTIAL = 'partial';
+
     public const STATUS_DRAFT = 'draft';
 
     public const STATUS_SUBMITTED = 'submitted';
@@ -95,6 +105,33 @@ class Registration extends Model
     }
 
     /**
+     * Get the supported registration modes.
+     *
+     * @return array<int, string>
+     */
+    public static function modes(): array
+    {
+        return [
+            self::MODE_ONSITE,
+            self::MODE_ONLINE,
+        ];
+    }
+
+    /**
+     * Get the supported payment statuses.
+     *
+     * @return array<int, string>
+     */
+    public static function paymentStatuses(): array
+    {
+        return [
+            self::PAYMENT_STATUS_PAID,
+            self::PAYMENT_STATUS_UNPAID,
+            self::PAYMENT_STATUS_PARTIAL,
+        ];
+    }
+
+    /**
      * Get the registration statuses that should reserve event capacity.
      *
      * @return array<int, string>
@@ -125,5 +162,18 @@ class Registration extends Model
         }
 
         return (int) $this->items()->sum('quantity');
+    }
+
+    public function totalAmount(): string
+    {
+        if (array_key_exists('total_amount', $this->attributes)) {
+            return number_format((float) $this->attributes['total_amount'], 2, '.', '');
+        }
+
+        if ($this->relationLoaded('items')) {
+            return number_format((float) $this->items->sum('subtotal_amount'), 2, '.', '');
+        }
+
+        return number_format((float) $this->items()->sum('subtotal_amount'), 2, '.', '');
     }
 }
