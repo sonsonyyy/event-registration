@@ -40,14 +40,13 @@ test('database seeder creates demo users for each role', function () {
         ->and($onlineRegistrant->district?->name)->toBe('Central Luzon')
         ->and($onlineRegistrant->section?->name)->toBe('Section 1');
 
-    expect(District::query()->count())->toBe(2)
-        ->and(Section::query()->count())->toBe(6)
-        ->and(Pastor::query()->count())->toBe(30);
+    expect(District::query()->count())->toBe(1)
+        ->and(Section::query()->count())->toBe(3)
+        ->and(Pastor::query()->count())->toBe(6);
 
     expect(District::query()->orderBy('name')->pluck('name')->all())
         ->toBe([
             'Central Luzon',
-            'National Capital Region',
         ]);
 
     District::query()
@@ -67,6 +66,6 @@ test('database seeder creates demo users for each role', function () {
         ->withCount('pastors')
         ->get()
         ->each(function (Section $section): void {
-            expect($section->pastors_count)->toBe(5);
+            expect($section->pastors_count)->toBe(2);
         });
 });

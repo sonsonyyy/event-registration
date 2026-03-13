@@ -61,12 +61,14 @@ class DemoChurchHierarchySeeder extends Seeder
                     'status' => 'active',
                 ])->save();
 
-                foreach ($this->pastorDefinitions(
+                $pastorDefinitions = $this->pastorDefinitions(
                     $district->name,
                     $section->name,
                     $districtDefinition['legacy_name'],
                     $sectionDefinition['legacy_name'],
-                ) as $pastorDefinition) {
+                );
+
+                foreach ($pastorDefinitions as $pastorDefinition) {
                     $pastor = Pastor::query()
                         ->where('section_id', $section->id)
                         ->where(function ($query) use ($pastorDefinition): void {
@@ -94,8 +96,20 @@ class DemoChurchHierarchySeeder extends Seeder
                         'status' => 'active',
                     ])->save();
                 }
+
+                $this->deleteObsoleteManagedPastors(
+                    $section,
+                    $district->name,
+                    $section->name,
+                    $districtDefinition['legacy_name'],
+                    $sectionDefinition['legacy_name'],
+                );
             }
+
+            $this->deleteObsoleteManagedSections($district, $districtDefinition);
         }
+
+        $this->deleteObsoleteManagedDistricts();
     }
 
     /**
@@ -131,28 +145,6 @@ class DemoChurchHierarchySeeder extends Seeder
                     ],
                 ],
             ],
-            [
-                'name' => 'National Capital Region',
-                'legacy_name' => 'Mission District',
-                'description' => 'Secondary seeded district for admin CRUD testing.',
-                'sections' => [
-                    [
-                        'name' => 'Section 1',
-                        'legacy_name' => 'East Section',
-                        'description' => 'Seeded section under National Capital Region.',
-                    ],
-                    [
-                        'name' => 'Section 2',
-                        'legacy_name' => 'West Section',
-                        'description' => 'Seeded section under National Capital Region.',
-                    ],
-                    [
-                        'name' => 'Section 3',
-                        'legacy_name' => 'Valley Section',
-                        'description' => 'Seeded section under National Capital Region.',
-                    ],
-                ],
-            ],
         ];
     }
 
@@ -174,7 +166,7 @@ class DemoChurchHierarchySeeder extends Seeder
     ): array {
         $pastors = [];
 
-        for ($index = 1; $index <= 5; $index++) {
+        for ($index = 1; $index <= 2; $index++) {
             $slug = Str::slug(sprintf('%s %s %d', $districtName, $sectionName, $index));
             $legacyChurchName = null;
 
@@ -204,5 +196,95 @@ class DemoChurchHierarchySeeder extends Seeder
         }
 
         return $pastors;
+    }
+
+    private function deleteObsoleteManagedPastors(
+        Section $section,
+        string $districtName,
+        string $sectionName,
+        ?string $legacyDistrictName,
+        ?string $legacySectionName,
+    ): void {
+        $managedChurchNames = $this->managedChurchNames(
+            $districtName,
+            $sectionName,
+            $legacyDistrictName,
+            $legacySectionName,
+        );
+
+        $desiredChurchNames = collect($this->pastorDefinitions(
+            $districtName,
+            $sectionName,
+            $legacyDistrictName,
+            $legacySectionName,
+        ))->flatMap(fn (array $definition): array => array_filter([
+            $definition['church_name'],
+            $definition['legacy_church_name'],
+        ]))
+            ->unique()
+            ->values()
+            ->all();
+
+        Pastor::query()
+            ->where('section_id', $section->id)
+            ->whereIn('church_name', $managedChurchNames)
+            ->whereNotIn('church_name', $desiredChurchNames)
+            ->delete();
+    }
+
+    /**
+     * @param  array{name: string, legacy_name: string|null, description: string, sections: array<int, array{name: string, legacy_name: string|null, description: string}>}  $districtDefinition
+     */
+    private function deleteObsoleteManagedSections(District $district, array $districtDefinition): void
+    {
+        $desiredSectionNames = collect($districtDefinition['sections'])
+            ->pluck('name')
+            ->all();
+
+        $legacySectionNames = collect($districtDefinition['sections'])
+            ->pluck('legacy_name')
+            ->filter()
+            ->all();
+
+        Section::query()
+            ->where('district_id', $district->id)
+            ->whereIn('name', $legacySectionNames)
+            ->whereNotIn('name', $desiredSectionNames)
+            ->delete();
+    }
+
+    private function deleteObsoleteManagedDistricts(): void
+    {
+        District::query()
+            ->whereIn('name', [
+                'Demo District',
+                'Mission District',
+                'National Capital Region',
+            ])
+            ->delete();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function managedChurchNames(
+        string $districtName,
+        string $sectionName,
+        ?string $legacyDistrictName,
+        ?string $legacySectionName,
+    ): array {
+        $churchNames = [];
+
+        for ($index = 1; $index <= 5; $index++) {
+            $churchNames[] = sprintf('%s %s Church %d', $districtName, $sectionName, $index);
+
+            if ($legacyDistrictName !== null && $legacySectionName !== null) {
+                $churchNames[] = sprintf('%s %s Church %d', $legacyDistrictName, $legacySectionName, $index);
+            }
+        }
+
+        $churchNames[] = 'Grace Community Church';
+
+        return array_values(array_unique($churchNames));
     }
 }
