@@ -48,6 +48,7 @@ export default function CreatePastor({ sections, statusOptions }: Props) {
                     description="Add the church account owner record used for registration and reporting."
                 />
                 <PastorForm
+                    minimalLayout
                     sections={sections}
                     statusOptions={statusOptions}
                 />

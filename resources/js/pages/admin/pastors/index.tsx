@@ -4,6 +4,7 @@ import PastorController from '@/actions/App/Http/Controllers/Admin/PastorControl
 import DataTablePagination from '@/components/data-table-pagination';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -114,6 +115,7 @@ export default function PastorIndex({
                 <Heading
                     title="Pastors and churches"
                     description="Maintain the pastor and church records used by onsite staff and online registrants."
+                    className="mb-4"
                 />
 
                 {flash?.success && (
@@ -214,9 +216,16 @@ export default function PastorIndex({
                                             </div>
                                         </td>
                                         <td className="py-3.5 pr-3 align-middle">
-                                            <span className="inline-flex rounded-full border border-sidebar-border/70 px-2.5 py-0.5 text-xs font-medium capitalize text-foreground">
+                                            <Badge
+                                                variant={
+                                                    pastor.status === 'active'
+                                                        ? 'secondary'
+                                                        : 'destructive'
+                                                }
+                                                className="capitalize"
+                                            >
                                                 {pastor.status}
-                                            </span>
+                                            </Badge>
                                         </td>
                                         <td className="py-3.5 pr-4 align-middle">
                                             <div className="flex justify-end gap-2">

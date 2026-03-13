@@ -69,6 +69,7 @@ export default function EditPastor({
                 />
                 <PastorForm
                     pastor={pastor}
+                    minimalLayout
                     sections={sections}
                     statusOptions={statusOptions}
                 />
