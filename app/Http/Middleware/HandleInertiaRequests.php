@@ -61,6 +61,7 @@ class HandleInertiaRequests extends Middleware
                     'manageMasterData' => $user?->can('viewAny', District::class) ?? false,
                     'manageOnlineRegistrations' => $user?->isOnlineRegistrant() && $user->pastor_id !== null,
                     'manageOnsiteRegistrations' => $user?->can('viewAnyOnsite', Registration::class) ?? false,
+                    'viewReports' => $user?->can('viewReports') ?? false,
                     'reviewOnlineRegistrations' => $user?->can('viewAnyVerification', Registration::class) ?? false,
                     'manageUsers' => $user?->can('viewAny', User::class) ?? false,
                 ],

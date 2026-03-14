@@ -19,6 +19,7 @@ export type Auth = {
         manageMasterData: boolean;
         manageOnlineRegistrations: boolean;
         manageOnsiteRegistrations: boolean;
+        viewReports: boolean;
         reviewOnlineRegistrations: boolean;
         manageUsers: boolean;
     };

@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Building2, CalendarRange, Layers3, LayoutGrid, Map, Menu, ReceiptText, Search, ShieldCheck, Users } from 'lucide-react';
+import { BarChart3, Building2, CalendarRange, Layers3, LayoutGrid, Map, Menu, ReceiptText, Search, ShieldCheck, Users } from 'lucide-react';
 import DistrictController from '@/actions/App/Http/Controllers/Admin/DistrictController';
 import EventController from '@/actions/App/Http/Controllers/Admin/EventController';
 import PastorController from '@/actions/App/Http/Controllers/Admin/PastorController';
@@ -7,6 +7,7 @@ import SectionController from '@/actions/App/Http/Controllers/Admin/SectionContr
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
 import OnlineRegistrationController from '@/actions/App/Http/Controllers/OnlineRegistrationController';
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
+import ReportsController from '@/actions/App/Http/Controllers/ReportsController';
 import RegistrationVerificationController from '@/actions/App/Http/Controllers/RegistrationVerificationController';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
@@ -80,6 +81,15 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                       title: 'Verification',
                       href: RegistrationVerificationController.index(),
                       icon: ShieldCheck,
+                  },
+              ]
+            : []),
+        ...(auth.can.viewReports
+            ? [
+                  {
+                      title: 'Reports',
+                      href: ReportsController(),
+                      icon: BarChart3,
                   },
               ]
             : []),

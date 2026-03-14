@@ -10,6 +10,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OnlineRegistrationController;
 use App\Http\Controllers\OnsiteRegistrationController;
 use App\Http\Controllers\RegistrationVerificationController;
+use App\Http\Controllers\ReportsController;
 use App\Models\District;
 use App\Models\Registration;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +19,9 @@ Route::get('/', HomeController::class)->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('reports', ReportsController::class)
+        ->middleware('can:viewReports')
+        ->name('reports.index');
 
     Route::prefix('registrations/online')
         ->name('registrations.online.')

@@ -1,0 +1,261 @@
+<?php
+
+use App\Models\District;
+use App\Models\Event;
+use App\Models\EventFeeCategory;
+use App\Models\Pastor;
+use App\Models\Registration;
+use App\Models\RegistrationItem;
+use App\Models\Section;
+use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
+
+test('admins can view event total registration and no registration reports', function () {
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $sectionOne = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $sectionTwo = Section::factory()->for($district)->create([
+        'name' => 'Section 2',
+    ]);
+    $sectionThree = Section::factory()->for($district)->create([
+        'name' => 'Section 3',
+    ]);
+    $pastorOne = Pastor::factory()->for($sectionOne)->create([
+        'church_name' => 'Grace Community Church',
+        'pastor_name' => 'Pastor Jane Doe',
+    ]);
+    $pastorTwo = Pastor::factory()->for($sectionOne)->create([
+        'church_name' => 'Faith Harvest Church',
+        'pastor_name' => 'Pastor Mark Lim',
+    ]);
+    $pastorThree = Pastor::factory()->for($sectionTwo)->create([
+        'church_name' => 'River of Life Church',
+        'pastor_name' => 'Pastor Joel Cruz',
+    ]);
+    $pastorFour = Pastor::factory()->for($sectionThree)->create([
+        'church_name' => 'Hope Chapel',
+        'pastor_name' => 'Pastor Anne Reyes',
+    ]);
+    $admin = User::factory()->admin()->create();
+    $encoder = User::factory()->registrationStaff()->create();
+    $event = reportEvent();
+    $regular = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+    ]);
+    $oneDayPass = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'One-day Pass',
+        'amount' => '600.00',
+    ]);
+
+    createReportedRegistration(
+        $event,
+        $pastorOne,
+        $encoder,
+        $regular,
+        Registration::MODE_ONLINE,
+        Registration::STATUS_PENDING_VERIFICATION,
+        3,
+    );
+
+    createReportedRegistration(
+        $event,
+        $pastorOne,
+        $encoder,
+        $oneDayPass,
+        Registration::MODE_ONLINE,
+        Registration::STATUS_VERIFIED,
+        2,
+    );
+
+    createReportedRegistration(
+        $event,
+        $pastorThree,
+        $encoder,
+        $regular,
+        Registration::MODE_ONSITE,
+        Registration::STATUS_COMPLETED,
+        5,
+    );
+
+    $this->actingAs($admin)
+        ->get(route('reports.index', [
+            'event_id' => $event->id,
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('reports/index')
+            ->where('scopeSummary', 'All sections and churches')
+            ->where('filters.event_id', $event->id)
+            ->where('filters.section_id', null)
+            ->where('selectedEvent.name', 'CLD Youth Conference 2026')
+            ->where('eventTotalRegistration.total_registered_quantity', 10)
+            ->where('eventTotalRegistration.registration_count', 3)
+            ->where('eventTotalRegistration.verified_online_quantity', 2)
+            ->where('eventTotalRegistration.pending_online_quantity', 3)
+            ->where('eventTotalRegistration.fee_categories.0.category_name', 'Regular (Online)')
+            ->where('eventTotalRegistration.fee_categories.0.registered_quantity', 8)
+            ->where('eventTotalRegistration.fee_categories.1.registered_quantity', 2)
+            ->has('noRegistrationReport.sections', 1)
+            ->where('noRegistrationReport.sections.0.name', 'Section 3')
+            ->has('noRegistrationReport.pastors', 2)
+            ->where('noRegistrationReport.pastors.0.church_name', 'Faith Harvest Church')
+            ->where('noRegistrationReport.pastors.1.church_name', 'Hope Chapel'));
+
+    expect($pastorTwo->church_name)->not->toBe($pastorFour->church_name);
+});
+
+test('managers only see report data inside their assigned section', function () {
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $sectionOne = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $sectionTwo = Section::factory()->for($district)->create([
+        'name' => 'Section 2',
+    ]);
+    $pastorOne = Pastor::factory()->for($sectionOne)->create([
+        'church_name' => 'Grace Community Church',
+        'pastor_name' => 'Pastor Jane Doe',
+    ]);
+    $pastorTwo = Pastor::factory()->for($sectionOne)->create([
+        'church_name' => 'Faith Harvest Church',
+        'pastor_name' => 'Pastor Mark Lim',
+    ]);
+    $pastorThree = Pastor::factory()->for($sectionTwo)->create([
+        'church_name' => 'River of Life Church',
+        'pastor_name' => 'Pastor Joel Cruz',
+    ]);
+    $manager = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $sectionOne->id,
+    ]);
+    $encoder = User::factory()->registrationStaff()->create();
+    $event = reportEvent();
+    $regular = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+    ]);
+    $oneDayPass = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'One-day Pass',
+        'amount' => '600.00',
+    ]);
+
+    createReportedRegistration(
+        $event,
+        $pastorOne,
+        $encoder,
+        $regular,
+        Registration::MODE_ONLINE,
+        Registration::STATUS_PENDING_VERIFICATION,
+        3,
+    );
+
+    createReportedRegistration(
+        $event,
+        $pastorOne,
+        $encoder,
+        $oneDayPass,
+        Registration::MODE_ONLINE,
+        Registration::STATUS_VERIFIED,
+        2,
+    );
+
+    createReportedRegistration(
+        $event,
+        $pastorThree,
+        $encoder,
+        $regular,
+        Registration::MODE_ONSITE,
+        Registration::STATUS_COMPLETED,
+        5,
+    );
+
+    $this->actingAs($manager)
+        ->get(route('reports.index', [
+            'event_id' => $event->id,
+            'section_id' => $sectionTwo->id,
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('reports/index')
+            ->where('scopeSummary', 'Central Luzon • Section 1')
+            ->where('canFilterBySection', false)
+            ->where('filters.section_id', $sectionOne->id)
+            ->where('selectedSection.name', 'Section 1')
+            ->where('eventTotalRegistration.total_registered_quantity', 5)
+            ->where('eventTotalRegistration.registration_count', 2)
+            ->where('eventTotalRegistration.verified_online_quantity', 2)
+            ->where('eventTotalRegistration.pending_online_quantity', 3)
+            ->where('eventTotalRegistration.fee_categories.0.registered_quantity', 3)
+            ->where('eventTotalRegistration.fee_categories.1.registered_quantity', 2)
+            ->has('noRegistrationReport.sections', 0)
+            ->has('noRegistrationReport.pastors', 1)
+            ->where('noRegistrationReport.pastors.0.church_name', 'Faith Harvest Church'));
+
+    expect($pastorTwo->church_name)->not->toBe($pastorThree->church_name);
+});
+
+test('users without report access cannot open the reports page', function () {
+    $staff = User::factory()->registrationStaff()->create();
+    $registrant = User::factory()->onlineRegistrant()->create();
+    $unassignedManager = User::factory()->manager()->create();
+
+    foreach ([$staff, $registrant, $unassignedManager] as $user) {
+        $this->actingAs($user)
+            ->get(route('reports.index'))
+            ->assertForbidden();
+    }
+});
+
+function reportEvent(array $attributes = []): Event
+{
+    return Event::factory()->create([
+        'name' => 'CLD Youth Conference 2026',
+        'status' => Event::STATUS_OPEN,
+        'total_capacity' => 2000,
+        'registration_open_at' => now()->subDays(3),
+        'registration_close_at' => now()->addDays(30),
+        ...$attributes,
+    ]);
+}
+
+function createReportedRegistration(
+    Event $event,
+    Pastor $pastor,
+    User $encodedByUser,
+    EventFeeCategory $feeCategory,
+    string $mode,
+    string $status,
+    int $quantity,
+): Registration {
+    $registration = Registration::factory()
+        ->for($event)
+        ->for($pastor)
+        ->for($encodedByUser, 'encodedByUser')
+        ->create([
+            'registration_mode' => $mode,
+            'payment_status' => Registration::PAYMENT_STATUS_PAID,
+            'registration_status' => $status,
+            'payment_reference' => fake()->bothify('REF-####'),
+            'submitted_at' => now()->subHour(),
+            'verified_at' => $status === Registration::STATUS_VERIFIED ? now()->subMinutes(30) : null,
+            'verified_by_user_id' => $status === Registration::STATUS_VERIFIED ? $encodedByUser->id : null,
+        ]);
+
+    RegistrationItem::factory()
+        ->for($registration)
+        ->for($feeCategory, 'feeCategory')
+        ->create([
+            'quantity' => $quantity,
+            'unit_amount' => $feeCategory->amount,
+            'subtotal_amount' => number_format((float) $feeCategory->amount * $quantity, 2, '.', ''),
+            'remarks' => null,
+        ]);
+
+    return $registration;
+}
