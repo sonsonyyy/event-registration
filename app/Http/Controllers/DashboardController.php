@@ -220,7 +220,7 @@ class DashboardController extends Controller
                 'items' => [
                     ['label' => 'Role', 'value' => Role::ADMIN],
                     ['label' => 'Coverage', 'value' => 'System-wide'],
-                    ['label' => 'Registrations', 'value' => 'All online and onsite transactions'],
+                    ['label' => 'Registrations', 'value' => 'All types of transactions'],
                 ],
             ];
         }
