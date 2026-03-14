@@ -13,3 +13,15 @@ test('two factor settings page is not available', function () {
 test('guests cannot access the disabled two factor settings page', function () {
     $this->get('/settings/two-factor')->assertNotFound();
 });
+
+test('appearance settings page is not available', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get('/settings/appearance')
+        ->assertNotFound();
+});
+
+test('guests cannot access the disabled appearance settings page', function () {
+    $this->get('/settings/appearance')->assertNotFound();
+});
