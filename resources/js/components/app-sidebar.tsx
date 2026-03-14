@@ -5,6 +5,7 @@ import EventController from '@/actions/App/Http/Controllers/Admin/EventControlle
 import PastorController from '@/actions/App/Http/Controllers/Admin/PastorController';
 import SectionController from '@/actions/App/Http/Controllers/Admin/SectionController';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
+import OnlineRegistrationController from '@/actions/App/Http/Controllers/OnlineRegistrationController';
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -29,6 +30,15 @@ export function AppSidebar() {
             href: dashboard(),
             icon: LayoutGrid,
         },
+        ...(auth.can.manageOnlineRegistrations
+            ? [
+                  {
+                      title: 'Online Registration',
+                      href: OnlineRegistrationController.index(),
+                      icon: ReceiptText,
+                  },
+              ]
+            : []),
         ...(auth.can.manageOnsiteRegistrations
             ? [
                   {

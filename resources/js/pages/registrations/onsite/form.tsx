@@ -1,11 +1,10 @@
 import { Link, useForm } from '@inertiajs/react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Building2, Plus, ReceiptText, Trash2, UsersRound } from 'lucide-react';
 import type { FormEvent } from 'react';
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -75,6 +74,8 @@ type Props = {
 
 const textareaClassName =
     'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-28 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50';
+const summaryCardClassName =
+    'rounded-[24px] border px-5 py-5 shadow-sm transition-colors';
 
 const formatCurrency = (value: number | string): string =>
     new Intl.NumberFormat(undefined, {
@@ -86,6 +87,11 @@ const formatDate = (value: string): string =>
     new Intl.DateTimeFormat(undefined, {
         dateStyle: 'medium',
         timeStyle: 'short',
+    }).format(new Date(value));
+
+const formatEventDate = (value: string): string =>
+    new Intl.DateTimeFormat(undefined, {
+        dateStyle: 'medium',
     }).format(new Date(value));
 
 function emptyLineItem(): LineItemFormValue {
@@ -318,27 +324,63 @@ export default function OnsiteRegistrationForm({
                             </div>
                         </div>
 
-                        <Card className="h-full border-sidebar-border/70">
-                            <CardHeader>
-                                <CardTitle>Event availability</CardTitle>
-                            </CardHeader>
-                            <CardContent className="flex flex-1 flex-col gap-2 text-sm text-muted-foreground">
+                        <div className="overflow-hidden rounded-[28px] border border-[#184d47]/20 bg-[#184d47] px-5 py-5 text-white shadow-sm shadow-[#184d47]/20">
+                            <div className="flex h-full flex-col justify-between gap-4">
+                                <div className="space-y-1.5">
+                                    <div className="text-xs font-semibold tracking-[0.18em] text-white/70 uppercase">
+                                        Event availability
+                                    </div>
+                                    <div className="text-lg font-semibold">
+                                        {selectedEvent?.name ?? 'Choose an event'}
+                                    </div>
+                                </div>
+
                                 {selectedEvent ? (
-                                    <>
-                                        <div>{selectedEvent.venue}</div>
-                                        <div>
-                                            {selectedEvent.remaining_slots} slots remaining
+                                    <div className="space-y-4 border-t border-white/10 pt-4 text-sm">
+                                        <div className="space-y-1">
+                                            <div className="text-[11px] font-semibold tracking-[0.16em] text-white/65 uppercase">
+                                                Venue
+                                            </div>
+                                            <div className="font-semibold text-white">
+                                                {selectedEvent.venue}
+                                            </div>
                                         </div>
-                                        <div>
-                                            Registration closes{' '}
-                                            {formatDate(selectedEvent.registration_close_at)}
+
+                                        <div className="space-y-1">
+                                            <div className="text-[11px] font-semibold tracking-[0.16em] text-white/65 uppercase">
+                                                Event dates
+                                            </div>
+                                            <div className="font-semibold text-white">
+                                                {formatEventDate(selectedEvent.date_from)} to{' '}
+                                                {formatEventDate(selectedEvent.date_to)}
+                                            </div>
                                         </div>
-                                    </>
+
+                                        <div className="space-y-1">
+                                            <div className="text-[11px] font-semibold tracking-[0.16em] text-white/65 uppercase">
+                                                Remaining slots
+                                            </div>
+                                            <div className="font-semibold text-white">
+                                                {selectedEvent.remaining_slots} slots available
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <div className="text-[11px] font-semibold tracking-[0.16em] text-white/65 uppercase">
+                                                Registration closes
+                                            </div>
+                                            <div className="font-semibold text-white">
+                                                {formatDate(selectedEvent.registration_close_at)}
+                                            </div>
+                                        </div>
+                                    </div>
                                 ) : (
-                                    <div>Choose an event to see remaining capacity.</div>
+                                    <div className="border-t border-white/10 pt-4 text-sm text-white/75">
+                                        Choose an event from the dropdown to review its venue, schedule, and available slots before adding your registration items.
+                                    </div>
                                 )}
-                            </CardContent>
-                        </Card>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="grid gap-6 lg:grid-cols-2">
@@ -576,42 +618,57 @@ export default function OnsiteRegistrationForm({
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3">
-                    <div className="rounded-xl border border-sidebar-border/70 bg-background p-4">
-                        <div className="text-sm text-muted-foreground">
-                            Selected church
+                    <div className={`${summaryCardClassName} border-[#d6e2de] bg-[linear-gradient(145deg,_rgba(24,77,71,0.10),_rgba(255,255,255,0.98))] shadow-[#184d47]/8`}>
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="text-sm font-medium text-slate-600">
+                                Selected church
+                            </div>
+                            <div className="flex size-10 items-center justify-center rounded-2xl bg-[#184d47] text-white shadow-sm shadow-[#184d47]/15">
+                                <Building2 className="size-[18px]" />
+                            </div>
                         </div>
-                        <div className="mt-2 font-medium">
+                        <div className="mt-5 text-lg font-semibold text-slate-900">
                             {selectedPastor?.church_name ?? 'No church selected'}
                         </div>
-                        <div className="mt-1 text-sm text-muted-foreground">
+                        <div className="mt-2 text-sm text-slate-600">
                             {selectedPastor
                                 ? `${selectedPastor.pastor_name} · ${selectedPastor.section_name}`
                                 : 'Choose a pastor or church to continue.'}
                         </div>
                     </div>
 
-                    <div className="rounded-xl border border-sidebar-border/70 bg-background p-4">
-                        <div className="text-sm text-muted-foreground">
-                            Total quantity
+                    <div className={`${summaryCardClassName} border-[#dfe4e8] bg-[linear-gradient(145deg,_rgba(248,250,252,0.96),_rgba(255,255,255,1))] shadow-slate-200/70`}>
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="text-sm font-medium text-slate-600">
+                                Total quantity
+                            </div>
+                            <div className="flex size-10 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm shadow-slate-300/70">
+                                <UsersRound className="size-[18px]" />
+                            </div>
                         </div>
-                        <div className="mt-2 text-2xl font-semibold">
+                        <div className="mt-5 text-3xl font-semibold text-slate-900">
                             {totalQuantity}
                         </div>
-                        <div className="mt-1 text-sm text-muted-foreground">
+                        <div className="mt-2 text-sm text-slate-600">
                             Across {form.data.line_items.length} fee-category
                             item
                             {form.data.line_items.length === 1 ? '' : 's'}
                         </div>
                     </div>
 
-                    <div className="rounded-xl border border-sidebar-border/70 bg-background p-4">
-                        <div className="text-sm text-muted-foreground">
-                            Estimated total
+                    <div className={`${summaryCardClassName} border-[#184d47]/20 bg-[#184d47] text-white shadow-[#184d47]/20`}>
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="text-sm font-medium text-white/75">
+                                Estimated total
+                            </div>
+                            <div className="flex size-10 items-center justify-center rounded-2xl bg-white/14 text-white ring-1 ring-white/15">
+                                <ReceiptText className="size-[18px]" />
+                            </div>
                         </div>
-                        <div className="mt-2 text-2xl font-semibold">
+                        <div className="mt-5 text-3xl font-semibold">
                             {formatCurrency(totalAmount)}
                         </div>
-                        <div className="mt-1 text-sm text-muted-foreground">
+                        <div className="mt-2 text-sm text-white/75">
                             Computed from the selected fee category rates.
                         </div>
                     </div>

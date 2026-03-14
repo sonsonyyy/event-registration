@@ -17,6 +17,7 @@ export type Auth = {
     can: {
         manageEvents: boolean;
         manageMasterData: boolean;
+        manageOnlineRegistrations: boolean;
         manageOnsiteRegistrations: boolean;
         manageUsers: boolean;
     };

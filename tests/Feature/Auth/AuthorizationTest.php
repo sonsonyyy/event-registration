@@ -82,6 +82,7 @@ test('registration staff can encode onsite registrations without master data acc
     expect($gate->allows('view', $context['pastorInSection']))->toBeTrue();
     expect($gate->allows('view', $context['pastorOutsideSection']))->toBeTrue();
     expect($gate->allows('createOnsite', [Registration::class, $context['pastorInSection']]))->toBeTrue();
+    expect($gate->allows('viewAnyOnline', Registration::class))->toBeFalse();
     expect($gate->allows('createOnline', [Registration::class, $context['pastorInSection']]))->toBeFalse();
     expect($gate->allows('view', $ownOnsiteRegistration))->toBeTrue();
     expect($gate->allows('view', $otherOnsiteRegistration))->toBeFalse();
@@ -117,6 +118,7 @@ test('online registrants are limited to their assigned pastor', function () {
 
     expect($gate->allows('viewAny', Event::class))->toBeTrue();
     expect($gate->allows('viewAny', EventFeeCategory::class))->toBeTrue();
+    expect($gate->allows('viewAnyOnline', Registration::class))->toBeTrue();
     expect($gate->allows('viewAny', Pastor::class))->toBeFalse();
     expect($gate->allows('view', $context['pastorInSection']))->toBeTrue();
     expect($gate->allows('view', $context['pastorOutsideSection']))->toBeFalse();

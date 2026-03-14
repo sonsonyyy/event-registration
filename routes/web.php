@@ -5,18 +5,26 @@ use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\PastorController;
 use App\Http\Controllers\Admin\SectionController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\OnlineRegistrationController;
 use App\Http\Controllers\OnsiteRegistrationController;
 use App\Models\District;
 use App\Models\Registration;
 use Illuminate\Support\Facades\Route;
-use Laravel\Fortify\Features;
 
-Route::inertia('/', 'welcome', [
-    'canRegister' => Features::enabled(Features::registration()),
-])->name('home');
+Route::get('/', HomeController::class)->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
+
+    Route::prefix('registrations/online')
+        ->name('registrations.online.')
+        ->middleware('can:viewAnyOnline,'.Registration::class)
+        ->group(function (): void {
+            Route::get('/', [OnlineRegistrationController::class, 'index'])->name('index');
+            Route::get('create', [OnlineRegistrationController::class, 'create'])->name('create');
+            Route::post('/', [OnlineRegistrationController::class, 'store'])->name('store');
+        });
 
     Route::prefix('registrations/onsite')
         ->name('registrations.onsite.')
