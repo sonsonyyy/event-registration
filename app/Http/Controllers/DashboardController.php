@@ -38,6 +38,7 @@ class DashboardController extends Controller
             'dashboard' => [
                 'role_name' => $user->roleName(),
                 'hero' => $this->hero($user),
+                'account_notice' => $this->accountNotice($user),
                 'actions' => $this->actions($user),
                 'links' => $this->links($user),
                 'scope' => $this->scope($user),
@@ -121,7 +122,7 @@ class DashboardController extends Controller
             ];
         }
 
-        if ($user->isOnlineRegistrant() && $user->pastor_id !== null) {
+        if ($user->hasApprovedOnlineRegistrationAccess()) {
             return [
                 [
                     'label' => 'New online registration',
@@ -175,7 +176,7 @@ class DashboardController extends Controller
             ];
         }
 
-        if ($user->isOnlineRegistrant() && $user->pastor_id !== null) {
+        if ($user->hasApprovedOnlineRegistrationAccess()) {
             return [
                 'open_events' => [
                     'label' => 'Open online registration',
@@ -197,6 +198,32 @@ class DashboardController extends Controller
                 'label' => 'Go to dashboard',
                 'href' => route('dashboard', absolute: false),
             ],
+        ];
+    }
+
+    /**
+     * Build the account approval notice for pending or rejected registrant accounts.
+     *
+     * @return array{status: string, title: string, description: string}|null
+     */
+    private function accountNotice(User $user): ?array
+    {
+        if (! $user->isOnlineRegistrant() || $user->pastor_id === null || $user->isApprovalApproved()) {
+            return null;
+        }
+
+        if ($user->isApprovalRejected()) {
+            return [
+                'status' => User::APPROVAL_REJECTED,
+                'title' => 'Registrant access is awaiting follow-up',
+                'description' => 'Your church representative account is not yet approved for online registration. Contact the district admin or your section manager for the next review step.',
+            ];
+        }
+
+        return [
+            'status' => User::APPROVAL_PENDING,
+            'title' => 'Registrant access is pending approval',
+            'description' => 'You can sign in and review your assigned church scope now, but online registration will stay locked until an admin or manager approves this account request.',
         ];
     }
 

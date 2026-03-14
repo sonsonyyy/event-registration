@@ -13,6 +13,20 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable
 {
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_INACTIVE = 'inactive';
+
+    public const APPROVAL_PENDING = 'pending';
+
+    public const APPROVAL_APPROVED = 'approved';
+
+    public const APPROVAL_REJECTED = 'rejected';
+
+    public const ACCOUNT_SOURCE_ADMIN = 'admin';
+
+    public const ACCOUNT_SOURCE_SELF_SERVICE = 'self_service';
+
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
@@ -30,6 +44,10 @@ class User extends Authenticatable
         'section_id',
         'pastor_id',
         'status',
+        'approval_status',
+        'account_source',
+        'approval_reviewed_by_user_id',
+        'approval_reviewed_at',
     ];
 
     /**
@@ -54,6 +72,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'approval_reviewed_at' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
         ];
     }
@@ -78,6 +97,11 @@ class User extends Authenticatable
         return $this->belongsTo(Pastor::class);
     }
 
+    public function approvalReviewer(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'approval_reviewed_by_user_id');
+    }
+
     public function encodedRegistrations(): HasMany
     {
         return $this->hasMany(Registration::class, 'encoded_by_user_id');
@@ -95,7 +119,7 @@ class User extends Authenticatable
 
     public function isActive(): bool
     {
-        return $this->status === 'active';
+        return $this->status === self::STATUS_ACTIVE;
     }
 
     public function roleName(): ?string
@@ -135,6 +159,33 @@ class User extends Authenticatable
     public function isOnlineRegistrant(): bool
     {
         return $this->hasRole(Role::ONLINE_REGISTRANT);
+    }
+
+    public function isApprovalPending(): bool
+    {
+        return $this->approval_status === self::APPROVAL_PENDING;
+    }
+
+    public function isApprovalApproved(): bool
+    {
+        return $this->approval_status === self::APPROVAL_APPROVED;
+    }
+
+    public function isApprovalRejected(): bool
+    {
+        return $this->approval_status === self::APPROVAL_REJECTED;
+    }
+
+    public function isSelfServiceAccount(): bool
+    {
+        return $this->account_source === self::ACCOUNT_SOURCE_SELF_SERVICE;
+    }
+
+    public function hasApprovedOnlineRegistrationAccess(): bool
+    {
+        return $this->isOnlineRegistrant()
+            && $this->pastor_id !== null
+            && $this->isApprovalApproved();
     }
 
     public function managesSection(int $sectionId): bool
@@ -180,5 +231,19 @@ class User extends Authenticatable
         }
 
         return $this->belongsToPastor($registration->pastor_id);
+    }
+
+    /**
+     * Get the supported approval status values.
+     *
+     * @return array<int, string>
+     */
+    public static function approvalStatuses(): array
+    {
+        return [
+            self::APPROVAL_PENDING,
+            self::APPROVAL_APPROVED,
+            self::APPROVAL_REJECTED,
+        ];
     }
 }

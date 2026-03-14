@@ -54,6 +54,11 @@ type Props = {
             title: string;
             description: string;
         };
+        account_notice: {
+            status: string;
+            title: string;
+            description: string;
+        } | null;
         links: {
             open_events: {
                 label: string;
@@ -162,6 +167,11 @@ const registrationModeLabel = (mode: string): string =>
     mode === 'online' ? 'Online' : 'Onsite';
 
 export default function Dashboard({ dashboard }: Props) {
+    const noticeClassName =
+        dashboard.account_notice?.status === 'rejected'
+            ? 'border border-rose-200 border-t-4 border-t-rose-500 bg-white shadow-sm dark:border-rose-950/60 dark:border-t-rose-500 dark:bg-slate-950'
+            : 'border border-amber-200 border-t-4 border-t-amber-500 bg-white shadow-sm dark:border-amber-950/60 dark:border-t-amber-500 dark:bg-slate-950';
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
@@ -172,6 +182,24 @@ export default function Dashboard({ dashboard }: Props) {
                     description="Role-aware overview of event availability, scope, and recent registration activity."
                     className="mb-4"
                 />
+
+                {dashboard.account_notice && (
+                    <Card className={`overflow-hidden py-0 ${noticeClassName}`}>
+                        <CardContent className="p-5">
+                            <div className="space-y-2">
+                                <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                                    Account status
+                                </div>
+                                <div className="text-xl font-semibold tracking-[-0.03em] text-slate-900 dark:text-slate-100">
+                                    {dashboard.account_notice.title}
+                                </div>
+                                <p className="max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                                    {dashboard.account_notice.description}
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_360px]">
                     <Card className="overflow-hidden border border-[#29544e] border-t-4 border-t-[#8bc4b5] bg-[#123630] py-0 text-white shadow-2xl shadow-[#123630]/20">

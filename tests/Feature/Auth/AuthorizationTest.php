@@ -138,6 +138,24 @@ test('online registrants are limited to their assigned pastor', function () {
     expect($gate->allows('update', $context['pastorInSection']))->toBeFalse();
 });
 
+test('pending online registrants cannot access the online registration area until approved', function () {
+    $context = authorizationContext();
+    $pendingRegistrant = User::factory()
+        ->onlineRegistrant()
+        ->pendingApproval()
+        ->create([
+            'pastor_id' => $context['pastorInSection']->id,
+            'section_id' => $context['section']->id,
+            'district_id' => $context['district']->id,
+        ]);
+
+    $gate = Gate::forUser($pendingRegistrant);
+
+    expect($gate->allows('viewAnyOnline', Registration::class))->toBeFalse();
+    expect($gate->allows('createOnline', [Registration::class, $context['pastorInSection']]))->toBeFalse();
+    expect($gate->allows('view', $context['pastorInSection']))->toBeTrue();
+});
+
 test('inactive users fail authorization checks even when their role would normally allow access', function () {
     $context = authorizationContext();
     $inactiveManager = User::factory()->manager()->inactive()->create([

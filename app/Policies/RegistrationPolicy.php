@@ -26,7 +26,7 @@ class RegistrationPolicy
 
     public function viewAnyOnline(User $user): bool
     {
-        return $user->isOnlineRegistrant() && $user->pastor_id !== null;
+        return $user->hasApprovedOnlineRegistrationAccess();
     }
 
     public function viewAnyVerification(User $user): bool
@@ -82,7 +82,8 @@ class RegistrationPolicy
 
     public function createOnline(User $user, Pastor $pastor): bool
     {
-        return $user->belongsToPastor($pastor->getKey());
+        return $user->hasApprovedOnlineRegistrationAccess()
+            && $user->belongsToPastor($pastor->getKey());
     }
 
     public function uploadReceipt(User $user, Registration $registration): bool

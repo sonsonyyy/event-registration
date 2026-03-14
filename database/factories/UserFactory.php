@@ -36,7 +36,11 @@ class UserFactory extends Factory
             'district_id' => null,
             'section_id' => null,
             'pastor_id' => null,
-            'status' => 'active',
+            'status' => User::STATUS_ACTIVE,
+            'approval_status' => User::APPROVAL_APPROVED,
+            'account_source' => User::ACCOUNT_SOURCE_ADMIN,
+            'approval_reviewed_by_user_id' => null,
+            'approval_reviewed_at' => null,
             'remember_token' => Str::random(10),
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
@@ -98,7 +102,28 @@ class UserFactory extends Factory
     public function inactive(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => 'inactive',
+            'status' => User::STATUS_INACTIVE,
+        ]);
+    }
+
+    public function pendingApproval(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'approval_status' => User::APPROVAL_PENDING,
+        ]);
+    }
+
+    public function rejectedApproval(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'approval_status' => User::APPROVAL_REJECTED,
+        ]);
+    }
+
+    public function selfServiceAccount(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'account_source' => User::ACCOUNT_SOURCE_SELF_SERVICE,
         ]);
     }
 }

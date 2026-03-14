@@ -16,8 +16,8 @@ export default function AuthSimpleLayout({
             style={{ fontFamily: 'Manrope, sans-serif' }}
         >
             <div className="mx-auto flex min-h-[calc(100svh-3rem)] w-full max-w-6xl items-center">
-                <div className="grid w-full gap-6 lg:grid-cols-[minmax(0,1.05fr)_420px] lg:items-stretch">
-                    <div className="hidden rounded-[32px] border border-white/70 bg-[linear-gradient(145deg,_rgba(255,255,255,0.88),_rgba(244,249,247,0.94))] p-8 shadow-2xl shadow-[#184d47]/10 backdrop-blur lg:flex lg:flex-col lg:justify-between">
+                <div className="grid w-full gap-6 lg:grid-cols-[minmax(0,1.05fr)_420px] lg:items-start">
+                    <div className="hidden self-start rounded-[32px] border border-white/70 bg-[linear-gradient(145deg,_rgba(255,255,255,0.88),_rgba(244,249,247,0.94))] p-8 shadow-2xl shadow-[#184d47]/10 backdrop-blur lg:flex lg:flex-col lg:gap-10">
                         <div className="space-y-8">
                             <Link href={home()} className="inline-flex items-center gap-3 text-slate-900">
                                 <AppLogo />

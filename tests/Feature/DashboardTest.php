@@ -135,6 +135,40 @@ test('online registrant dashboard is limited to the assigned church scope', func
         ->where('dashboard.open_events.0.id', $event->id));
 });
 
+test('pending online registrants see an approval notice and no online registration access flag', function () {
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $section = Section::factory()->create([
+        'district_id' => $district->id,
+        'name' => 'Section 1',
+    ]);
+    $pastor = Pastor::factory()->create([
+        'section_id' => $section->id,
+        'church_name' => 'Grace Community Church',
+        'pastor_name' => 'Pastor Jane Doe',
+    ]);
+    $registrant = User::factory()
+        ->onlineRegistrant()
+        ->selfServiceAccount()
+        ->pendingApproval()
+        ->create([
+            'district_id' => $district->id,
+            'section_id' => $section->id,
+            'pastor_id' => $pastor->id,
+        ]);
+
+    $this->actingAs($registrant)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->where('auth.can.manageOnlineRegistrations', false)
+            ->where('dashboard.account_notice.status', User::APPROVAL_PENDING)
+            ->where('dashboard.links.open_events.href', route('dashboard', absolute: false))
+            ->where('dashboard.links.recent_activity.href', route('dashboard', absolute: false)));
+});
+
 function createDashboardEvent(): Event
 {
     $event = Event::factory()->create([

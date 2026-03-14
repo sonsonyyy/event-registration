@@ -176,6 +176,43 @@ test('non-registrant roles cannot access online registration routes', function (
     }
 });
 
+test('pending registrant accounts cannot access online registration routes', function () {
+    $pastor = Pastor::factory()->create();
+    $pendingRegistrant = User::factory()
+        ->onlineRegistrant()
+        ->pendingApproval()
+        ->create([
+            'district_id' => $pastor->section->district_id,
+            'section_id' => $pastor->section_id,
+            'pastor_id' => $pastor->id,
+        ]);
+    $event = onlineRegistrationEvent();
+    $feeCategory = EventFeeCategory::factory()->for($event)->create();
+
+    $this->actingAs($pendingRegistrant)
+        ->get(route('registrations.online.index'))
+        ->assertForbidden();
+
+    $this->actingAs($pendingRegistrant)
+        ->get(route('registrations.online.create'))
+        ->assertForbidden();
+
+    $this->actingAs($pendingRegistrant)
+        ->post(route('registrations.online.store'), [
+            'event_id' => $event->id,
+            'payment_reference' => '',
+            'receipt' => UploadedFile::fake()->create('receipt.pdf', 256, 'application/pdf'),
+            'remarks' => '',
+            'line_items' => [
+                [
+                    'fee_category_id' => $feeCategory->id,
+                    'quantity' => 1,
+                ],
+            ],
+        ])
+        ->assertForbidden();
+});
+
 function onlineRegistrationEvent(array $attributes = []): Event
 {
     return Event::factory()->create([

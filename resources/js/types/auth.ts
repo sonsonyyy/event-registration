@@ -9,6 +9,7 @@ export type User = {
     updated_at: string;
     role_name?: string | null;
     status?: string;
+    approval_status?: string;
     [key: string]: unknown;
 };
 
@@ -22,6 +23,7 @@ export type Auth = {
         viewReports: boolean;
         reviewOnlineRegistrations: boolean;
         manageUsers: boolean;
+        reviewRegistrantAccounts: boolean;
     };
 };
 

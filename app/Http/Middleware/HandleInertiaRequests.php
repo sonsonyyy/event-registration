@@ -55,15 +55,18 @@ class HandleInertiaRequests extends Middleware
                     'updated_at' => $user->updated_at,
                     'role_name' => $user->roleName(),
                     'status' => $user->status,
+                    'approval_status' => $user->approval_status,
                 ] : null,
                 'can' => [
                     'manageEvents' => $user?->can('create', Event::class) ?? false,
                     'manageMasterData' => $user?->can('viewAny', District::class) ?? false,
-                    'manageOnlineRegistrations' => $user?->isOnlineRegistrant() && $user->pastor_id !== null,
+                    'manageOnlineRegistrations' => ($user?->isOnlineRegistrant() ?? false)
+                        && ($user?->can('viewAnyOnline', Registration::class) ?? false),
                     'manageOnsiteRegistrations' => $user?->can('viewAnyOnsite', Registration::class) ?? false,
                     'viewReports' => $user?->can('viewReports') ?? false,
                     'reviewOnlineRegistrations' => $user?->can('viewAnyVerification', Registration::class) ?? false,
                     'manageUsers' => $user?->can('viewAny', User::class) ?? false,
+                    'reviewRegistrantAccounts' => $user?->can('viewAnyApprovalQueue', User::class) ?? false,
                 ],
             ],
             'flash' => [

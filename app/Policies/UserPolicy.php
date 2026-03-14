@@ -30,4 +30,18 @@ class UserPolicy
     {
         return $user->isAdmin();
     }
+
+    public function viewAnyApprovalQueue(User $user): bool
+    {
+        return $user->isManager() && $user->section_id !== null;
+    }
+
+    public function reviewRegistrantRequest(User $user, User $model): bool
+    {
+        return $user->isManager()
+            && $model->isOnlineRegistrant()
+            && $model->isSelfServiceAccount()
+            && $model->section_id !== null
+            && $user->managesSection($model->section_id);
+    }
 }

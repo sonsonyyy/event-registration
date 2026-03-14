@@ -9,13 +9,23 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OnlineRegistrationController;
 use App\Http\Controllers\OnsiteRegistrationController;
+use App\Http\Controllers\RegistrantAccessController;
+use App\Http\Controllers\RegistrantApprovalController;
 use App\Http\Controllers\RegistrationVerificationController;
 use App\Http\Controllers\ReportsController;
 use App\Models\District;
 use App\Models\Registration;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
+
+Route::middleware('guest')->group(function (): void {
+    Route::get(config('registration.registrant_access_path'), [RegistrantAccessController::class, 'create'])
+        ->name('registrant-access.create');
+    Route::post(config('registration.registrant_access_path'), [RegistrantAccessController::class, 'store'])
+        ->name('registrant-access.store');
+});
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
@@ -48,6 +58,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/', [RegistrationVerificationController::class, 'index'])->name('index');
             Route::get('{registration}/receipt', [RegistrationVerificationController::class, 'receipt'])->name('receipt');
             Route::patch('{registration}', [RegistrationVerificationController::class, 'update'])->name('update');
+        });
+
+    Route::prefix('account-requests')
+        ->name('account-requests.')
+        ->middleware('can:viewAnyApprovalQueue,'.User::class)
+        ->group(function (): void {
+            Route::get('/', [RegistrantApprovalController::class, 'index'])->name('index');
+            Route::patch('{user}', [RegistrantApprovalController::class, 'update'])->name('update');
         });
 
     Route::prefix('admin')

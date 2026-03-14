@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BarChart3, Building2, CalendarRange, Layers3, LayoutGrid, Map, ReceiptText, ShieldCheck, Users } from 'lucide-react';
+import { BarChart3, Building2, CalendarRange, Layers3, LayoutGrid, Map, ReceiptText, ShieldCheck, UserRoundCheck, Users } from 'lucide-react';
 import DistrictController from '@/actions/App/Http/Controllers/Admin/DistrictController';
 import EventController from '@/actions/App/Http/Controllers/Admin/EventController';
 import PastorController from '@/actions/App/Http/Controllers/Admin/PastorController';
@@ -9,6 +9,7 @@ import OnlineRegistrationController from '@/actions/App/Http/Controllers/OnlineR
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
 import ReportsController from '@/actions/App/Http/Controllers/ReportsController';
 import RegistrationVerificationController from '@/actions/App/Http/Controllers/RegistrationVerificationController';
+import RegistrantApprovalController from '@/actions/App/Http/Controllers/RegistrantApprovalController';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -56,6 +57,15 @@ export function AppSidebar() {
                       title: 'Verification',
                       href: RegistrationVerificationController.index(),
                       icon: ShieldCheck,
+                  },
+              ]
+            : []),
+        ...(auth.can.reviewRegistrantAccounts
+            ? [
+                  {
+                      title: 'Account Requests',
+                      href: RegistrantApprovalController.index(),
+                      icon: UserRoundCheck,
                   },
               ]
             : []),
