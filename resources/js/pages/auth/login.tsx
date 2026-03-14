@@ -16,9 +16,15 @@ export default function Login({ status }: Props) {
     return (
         <AuthLayout
             title="Log in to your account"
-            description="Enter your email and password below to log in."
+            description="Enter your assigned credentials to access the registration workspace."
         >
-            <Head title="Log in" />
+            <Head title="Log in">
+                <link rel="preconnect" href="https://fonts.bunny.net" />
+                <link
+                    href="https://fonts.bunny.net/css?family=manrope:400,500,600,700,800"
+                    rel="stylesheet"
+                />
+            </Head>
 
             <Form
                 {...store.form()}
@@ -39,6 +45,7 @@ export default function Login({ status }: Props) {
                                     tabIndex={1}
                                     autoComplete="email"
                                     placeholder="email@example.com"
+                                    className="h-11 rounded-xl"
                                 />
                                 <InputError message={errors.email} />
                             </div>
@@ -52,12 +59,13 @@ export default function Login({ status }: Props) {
                                     tabIndex={2}
                                     autoComplete="current-password"
                                     placeholder="Password"
+                                    className="h-11 rounded-xl"
                                 />
                                 <InputError message={errors.password} />
                             </div>
                             <Button
                                 type="submit"
-                                className="mt-4 w-full"
+                                className="mt-4 h-11 w-full rounded-xl bg-[#184d47] text-white hover:bg-[#143f3a]"
                                 tabIndex={3}
                                 disabled={processing}
                                 data-test="login-button"

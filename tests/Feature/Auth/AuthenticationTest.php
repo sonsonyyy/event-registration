@@ -11,7 +11,8 @@ test('login screen can be rendered', function () {
     $response
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->component('auth/login'));
+            ->component('auth/login')
+            ->where('name', config('app.name')));
 });
 
 test('users can authenticate using the login screen', function () {
