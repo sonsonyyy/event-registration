@@ -2,6 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import EventController from '@/actions/App/Http/Controllers/Admin/EventController';
 import DataTablePagination from '@/components/data-table-pagination';
+import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
@@ -154,72 +155,104 @@ export default function EventIndex({
                     </div>
                 )}
 
-                <DataTableToolbar
-                    searchValue={search}
-                    onSearchValueChange={setSearch}
-                    onSubmit={submitSearch}
-                    placeholder="Search event name, venue, or description"
-                    action={(
-                        <Button asChild className="h-11 rounded-xl">
-                            <Link href={EventController.create()}>
-                                New event
-                            </Link>
-                        </Button>
-                    )}
-                />
+                <div className={elevatedIndexTableStyles.shell}>
+                    <div className={elevatedIndexTableStyles.band}>
+                        <DataTableToolbar
+                            searchValue={search}
+                            onSearchValueChange={setSearch}
+                            onSubmit={submitSearch}
+                            placeholder="Search event name, venue, or description"
+                            className={elevatedIndexTableStyles.toolbar}
+                            searchWrapperClassName={
+                                elevatedIndexTableStyles.searchWrapper
+                            }
+                            inputClassName={elevatedIndexTableStyles.input}
+                            actionClassName={elevatedIndexTableStyles.action}
+                            action={(
+                                <Button
+                                    asChild
+                                    className={
+                                        elevatedIndexTableStyles.primaryButton
+                                    }
+                                >
+                                    <Link href={EventController.create()}>
+                                        New event
+                                    </Link>
+                                </Button>
+                            )}
+                        />
+                    </div>
 
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
-                        <thead className="bg-muted/40">
-                            <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                                <th className="py-2.5 pr-3 pl-4 font-medium">
+                    <div className="overflow-x-auto">
+                        <table className={elevatedIndexTableStyles.table}>
+                            <thead className={elevatedIndexTableStyles.thead}>
+                                <tr className={elevatedIndexTableStyles.headerRow}>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.firstHeaderCell
+                                        }
+                                    >
                                     Event
-                                </th>
-                                <th className="py-2.5 pr-3 font-medium">
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
                                     Schedule
-                                </th>
-                                <th className="py-2.5 pr-3 font-medium">
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
                                     Registration
-                                </th>
-                                <th className="py-2.5 pr-3 font-medium">
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
                                     Capacity
-                                </th>
-                                <th className="py-2.5 pr-3 font-medium">
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
                                     Fees
-                                </th>
-                                <th className="py-2.5 pr-4 text-right font-medium">
+                                    </th>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.lastHeaderCellRight
+                                        }
+                                    >
                                     Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-sidebar-border/50">
-                            {events.data.length === 0 ? (
-                                <tr>
-                                    <td
-                                        colSpan={6}
-                                        className="px-4 py-14 text-center"
-                                    >
-                                        <div className="space-y-2">
-                                            <div className="text-base font-medium">
-                                                {filters.search === ''
-                                                    ? 'No events yet.'
-                                                    : `No events matched "${filters.search}".`}
-                                            </div>
-                                            <div className="text-sm text-muted-foreground">
-                                                {filters.search === ''
-                                                    ? 'Create the first event to start accepting registrations.'
-                                                    : 'Try another event name, venue, or description.'}
-                                            </div>
-                                        </div>
-                                    </td>
+                                    </th>
                                 </tr>
-                            ) : (
-                                events.data.map((event) => (
-                                    <tr
-                                        key={event.id}
-                                        className="bg-background transition-colors hover:bg-muted/20"
-                                    >
-                                        <td className="px-4 py-3.5 align-middle">
+                            </thead>
+                            <tbody className={elevatedIndexTableStyles.tbody}>
+                                {events.data.length === 0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan={6}
+                                            className={
+                                                elevatedIndexTableStyles.emptyCell
+                                            }
+                                        >
+                                            <div className="space-y-2">
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.emptyTitle
+                                                    }
+                                                >
+                                                    {filters.search === ''
+                                                        ? 'No events yet.'
+                                                        : `No events matched "${filters.search}".`}
+                                                </div>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.emptyDescription
+                                                    }
+                                                >
+                                                    {filters.search === ''
+                                                        ? 'Create the first event to start accepting registrations.'
+                                                        : 'Try another event name, venue, or description.'}
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    events.data.map((event) => (
+                                        <tr
+                                            key={event.id}
+                                            className={elevatedIndexTableStyles.row}
+                                        >
+                                            <td className={elevatedIndexTableStyles.firstCell}>
                                             <div className="font-medium text-foreground">
                                                 {event.name}
                                             </div>
@@ -230,8 +263,10 @@ export default function EventIndex({
                                                 {event.description ||
                                                     'No description provided.'}
                                             </div>
-                                        </td>
-                                        <td className="py-3.5 pr-3 align-middle text-sm text-muted-foreground">
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} text-sm text-muted-foreground`}
+                                            >
                                             <div>
                                                 {formatDate(event.date_from)} to{' '}
                                                 {formatDate(event.date_to)}
@@ -248,8 +283,8 @@ export default function EventIndex({
                                                     event.registration_close_at,
                                                 )}
                                             </div>
-                                        </td>
-                                        <td className="py-3.5 pr-3 align-middle">
+                                            </td>
+                                            <td className={elevatedIndexTableStyles.cell}>
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <Badge
                                                     variant={eventStatusVariant(
@@ -275,8 +310,10 @@ export default function EventIndex({
                                                 {event.status_reason ||
                                                     'Registration rules are satisfied.'}
                                             </div>
-                                        </td>
-                                        <td className="py-3.5 pr-3 align-middle text-sm text-muted-foreground">
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} text-sm text-muted-foreground`}
+                                            >
                                             <div>
                                                 Reserved {event.reserved_quantity}
                                             </div>
@@ -284,11 +321,15 @@ export default function EventIndex({
                                                 Remaining {event.remaining_slots}{' '}
                                                 / {event.total_capacity}
                                             </div>
-                                        </td>
-                                        <td className="py-3.5 pr-3 align-middle text-muted-foreground">
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} text-muted-foreground`}
+                                            >
                                             {event.fee_categories_count}
-                                        </td>
-                                        <td className="py-3.5 pr-4 align-middle">
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
+                                            >
                                             <div className="flex justify-end gap-2">
                                                 <Button
                                                     variant="outline"
@@ -313,21 +354,48 @@ export default function EventIndex({
                                                     Delete
                                                 </Button>
                                             </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
 
-                <DataTablePagination
-                    meta={events.meta}
-                    onPageChange={changePage}
-                    rowsPerPage={filters.per_page}
-                    rowOptions={perPageOptions}
-                    onRowsPerPageChange={updatePerPage}
-                />
+                    <div className={elevatedIndexTableStyles.paginationWrapper}>
+                        <DataTablePagination
+                            meta={events.meta}
+                            onPageChange={changePage}
+                            rowsPerPage={filters.per_page}
+                            rowOptions={perPageOptions}
+                            onRowsPerPageChange={updatePerPage}
+                            className={elevatedIndexTableStyles.pagination}
+                            topRowClassName={
+                                elevatedIndexTableStyles.paginationTopRow
+                            }
+                            rowsTriggerClassName={
+                                elevatedIndexTableStyles.rowsTrigger
+                            }
+                            summaryClassName={elevatedIndexTableStyles.summary}
+                            navigationWrapperClassName={
+                                elevatedIndexTableStyles.navigationWrapper
+                            }
+                            previousButtonClassName={
+                                elevatedIndexTableStyles.previousButton
+                            }
+                            nextButtonClassName={
+                                elevatedIndexTableStyles.nextButton
+                            }
+                            activePageButtonClassName={
+                                elevatedIndexTableStyles.activePageButton
+                            }
+                            inactivePageButtonClassName={
+                                elevatedIndexTableStyles.inactivePageButton
+                            }
+                            ellipsisClassName={elevatedIndexTableStyles.ellipsis}
+                        />
+                    </div>
+                </div>
             </div>
         </AppLayout>
     );

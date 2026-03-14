@@ -2,6 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
 import DataTablePagination from '@/components/data-table-pagination';
+import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
@@ -161,69 +162,101 @@ export default function UserIndex({
                     </div>
                 )}
 
-                <DataTableToolbar
-                    searchValue={search}
-                    onSearchValueChange={setSearch}
-                    onSubmit={submitSearch}
-                    placeholder="Search name, email, role, or scope"
-                    action={(
-                        <Button asChild className="h-11 rounded-xl">
-                            <Link href={UserController.create()}>
-                                New user
-                            </Link>
-                        </Button>
-                    )}
-                />
+                <div className={elevatedIndexTableStyles.shell}>
+                    <div className={elevatedIndexTableStyles.band}>
+                        <DataTableToolbar
+                            searchValue={search}
+                            onSearchValueChange={setSearch}
+                            onSubmit={submitSearch}
+                            placeholder="Search name, email, role, or scope"
+                            className={elevatedIndexTableStyles.toolbar}
+                            searchWrapperClassName={
+                                elevatedIndexTableStyles.searchWrapper
+                            }
+                            inputClassName={elevatedIndexTableStyles.input}
+                            actionClassName={elevatedIndexTableStyles.action}
+                            action={(
+                                <Button
+                                    asChild
+                                    className={
+                                        elevatedIndexTableStyles.primaryButton
+                                    }
+                                >
+                                    <Link href={UserController.create()}>
+                                        New user
+                                    </Link>
+                                </Button>
+                            )}
+                        />
+                    </div>
 
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
-                        <thead className="bg-muted/40">
-                            <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                                <th className="py-2.5 pr-3 pl-4 font-medium">
+                    <div className="overflow-x-auto">
+                        <table className={elevatedIndexTableStyles.table}>
+                            <thead className={elevatedIndexTableStyles.thead}>
+                                <tr className={elevatedIndexTableStyles.headerRow}>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.firstHeaderCell
+                                        }
+                                    >
                                     User
-                                </th>
-                                <th className="py-2.5 pr-3 font-medium">
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
                                     Role
-                                </th>
-                                <th className="py-2.5 pr-3 font-medium">
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
                                     Scope
-                                </th>
-                                <th className="py-2.5 pr-3 font-medium">
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
                                     Status
-                                </th>
-                                <th className="py-2.5 pr-4 text-right font-medium">
+                                    </th>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.lastHeaderCellRight
+                                        }
+                                    >
                                     Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-sidebar-border/50">
-                            {users.data.length === 0 ? (
-                                <tr>
-                                    <td
-                                        colSpan={5}
-                                        className="px-4 py-14 text-center"
-                                    >
-                                        <div className="space-y-2">
-                                            <div className="text-base font-medium">
-                                                {filters.search === ''
-                                                    ? 'No user accounts yet.'
-                                                    : `No users matched "${filters.search}".`}
-                                            </div>
-                                            <div className="text-sm text-muted-foreground">
-                                                {filters.search === ''
-                                                    ? 'Create the first user account to assign system access.'
-                                                    : 'Try another name, email, role, or scope term.'}
-                                            </div>
-                                        </div>
-                                    </td>
+                                    </th>
                                 </tr>
-                            ) : (
-                                users.data.map((user) => (
-                                    <tr
-                                        key={user.id}
-                                        className="bg-background transition-colors hover:bg-muted/20"
-                                    >
-                                        <td className="px-4 py-3.5 align-middle">
+                            </thead>
+                            <tbody className={elevatedIndexTableStyles.tbody}>
+                                {users.data.length === 0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan={5}
+                                            className={
+                                                elevatedIndexTableStyles.emptyCell
+                                            }
+                                        >
+                                            <div className="space-y-2">
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.emptyTitle
+                                                    }
+                                                >
+                                                    {filters.search === ''
+                                                        ? 'No user accounts yet.'
+                                                        : `No users matched "${filters.search}".`}
+                                                </div>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.emptyDescription
+                                                    }
+                                                >
+                                                    {filters.search === ''
+                                                        ? 'Create the first user account to assign system access.'
+                                                        : 'Try another name, email, role, or scope term.'}
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    users.data.map((user) => (
+                                        <tr
+                                            key={user.id}
+                                            className={elevatedIndexTableStyles.row}
+                                        >
+                                            <td className={elevatedIndexTableStyles.firstCell}>
                                             <div className="font-medium text-foreground">
                                                 {user.name}
                                             </div>
@@ -237,8 +270,8 @@ export default function UserIndex({
                                                     </Badge>
                                                 </div>
                                             )}
-                                        </td>
-                                        <td className="py-3.5 pr-3 align-middle">
+                                            </td>
+                                            <td className={elevatedIndexTableStyles.cell}>
                                             <Badge
                                                 variant={roleVariant(
                                                     user.role.name,
@@ -246,8 +279,10 @@ export default function UserIndex({
                                             >
                                                 {user.role.name ?? 'No role'}
                                             </Badge>
-                                        </td>
-                                        <td className="py-3.5 pr-3 align-middle text-muted-foreground">
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} text-muted-foreground`}
+                                            >
                                             <div>{user.scope_summary}</div>
                                             {user.pastor && (
                                                 <div className="mt-2 text-xs uppercase tracking-wide">
@@ -259,8 +294,8 @@ export default function UserIndex({
                                                     {user.section.district_name}
                                                 </div>
                                             )}
-                                        </td>
-                                        <td className="py-3.5 pr-3 align-middle">
+                                            </td>
+                                            <td className={elevatedIndexTableStyles.cell}>
                                             <Badge
                                                 variant={
                                                     user.status === 'active'
@@ -271,8 +306,10 @@ export default function UserIndex({
                                             >
                                                 {user.status}
                                             </Badge>
-                                        </td>
-                                        <td className="py-3.5 pr-4 align-middle">
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
+                                            >
                                             <div className="flex justify-end gap-2">
                                                 <Button
                                                     variant="outline"
@@ -307,21 +344,48 @@ export default function UserIndex({
                                                     </Button>
                                                 )}
                                             </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
 
-                <DataTablePagination
-                    meta={users.meta}
-                    onPageChange={changePage}
-                    rowsPerPage={filters.per_page}
-                    rowOptions={perPageOptions}
-                    onRowsPerPageChange={updatePerPage}
-                />
+                    <div className={elevatedIndexTableStyles.paginationWrapper}>
+                        <DataTablePagination
+                            meta={users.meta}
+                            onPageChange={changePage}
+                            rowsPerPage={filters.per_page}
+                            rowOptions={perPageOptions}
+                            onRowsPerPageChange={updatePerPage}
+                            className={elevatedIndexTableStyles.pagination}
+                            topRowClassName={
+                                elevatedIndexTableStyles.paginationTopRow
+                            }
+                            rowsTriggerClassName={
+                                elevatedIndexTableStyles.rowsTrigger
+                            }
+                            summaryClassName={elevatedIndexTableStyles.summary}
+                            navigationWrapperClassName={
+                                elevatedIndexTableStyles.navigationWrapper
+                            }
+                            previousButtonClassName={
+                                elevatedIndexTableStyles.previousButton
+                            }
+                            nextButtonClassName={
+                                elevatedIndexTableStyles.nextButton
+                            }
+                            activePageButtonClassName={
+                                elevatedIndexTableStyles.activePageButton
+                            }
+                            inactivePageButtonClassName={
+                                elevatedIndexTableStyles.inactivePageButton
+                            }
+                            ellipsisClassName={elevatedIndexTableStyles.ellipsis}
+                        />
+                    </div>
+                </div>
             </div>
         </AppLayout>
     );

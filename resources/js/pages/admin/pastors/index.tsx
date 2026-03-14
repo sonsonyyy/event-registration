@@ -2,6 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import PastorController from '@/actions/App/Http/Controllers/Admin/PastorController';
 import DataTablePagination from '@/components/data-table-pagination';
+import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
@@ -124,69 +125,101 @@ export default function PastorIndex({
                     </div>
                 )}
 
-                <DataTableToolbar
-                    searchValue={search}
-                    onSearchValueChange={setSearch}
-                    onSubmit={submitSearch}
-                    placeholder="Search church, pastor, contact number, or email"
-                    action={(
-                        <Button asChild className="h-11 rounded-xl">
-                            <Link href={PastorController.create()}>
-                                New pastor record
-                            </Link>
-                        </Button>
-                    )}
-                />
+                <div className={elevatedIndexTableStyles.shell}>
+                    <div className={elevatedIndexTableStyles.band}>
+                        <DataTableToolbar
+                            searchValue={search}
+                            onSearchValueChange={setSearch}
+                            onSubmit={submitSearch}
+                            placeholder="Search church, pastor, contact number, or email"
+                            className={elevatedIndexTableStyles.toolbar}
+                            searchWrapperClassName={
+                                elevatedIndexTableStyles.searchWrapper
+                            }
+                            inputClassName={elevatedIndexTableStyles.input}
+                            actionClassName={elevatedIndexTableStyles.action}
+                            action={(
+                                <Button
+                                    asChild
+                                    className={
+                                        elevatedIndexTableStyles.primaryButton
+                                    }
+                                >
+                                    <Link href={PastorController.create()}>
+                                        New pastor record
+                                    </Link>
+                                </Button>
+                            )}
+                        />
+                    </div>
 
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
-                        <thead className="bg-muted/40">
-                            <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                                <th className="py-2.5 pr-3 pl-4 font-medium">
+                    <div className="overflow-x-auto">
+                        <table className={elevatedIndexTableStyles.table}>
+                            <thead className={elevatedIndexTableStyles.thead}>
+                                <tr className={elevatedIndexTableStyles.headerRow}>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.firstHeaderCell
+                                        }
+                                    >
                                     Church
-                                </th>
-                                <th className="py-2.5 pr-3 font-medium">
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
                                     Section
-                                </th>
-                                <th className="py-2.5 pr-3 font-medium">
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
                                     Contact
-                                </th>
-                                <th className="py-2.5 pr-3 font-medium">
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
                                     Status
-                                </th>
-                                <th className="py-2.5 pr-4 text-right font-medium">
+                                    </th>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.lastHeaderCellRight
+                                        }
+                                    >
                                     Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-sidebar-border/50">
-                            {pastors.data.length === 0 ? (
-                                <tr>
-                                    <td
-                                        colSpan={5}
-                                        className="px-4 py-14 text-center"
-                                    >
-                                        <div className="space-y-2">
-                                            <div className="text-base font-medium">
-                                                {filters.search === ''
-                                                    ? 'No pastor records yet.'
-                                                    : `No pastors matched "${filters.search}".`}
-                                            </div>
-                                            <div className="text-sm text-muted-foreground">
-                                                {filters.search === ''
-                                                    ? 'Create the first pastor and church record to populate the directory.'
-                                                    : 'Try another church name, pastor name, contact number, or email address.'}
-                                            </div>
-                                        </div>
-                                    </td>
+                                    </th>
                                 </tr>
-                            ) : (
-                                pastors.data.map((pastor) => (
-                                    <tr
-                                        key={pastor.id}
-                                        className="bg-background transition-colors hover:bg-muted/20"
-                                    >
-                                        <td className="px-4 py-3.5 align-middle">
+                            </thead>
+                            <tbody className={elevatedIndexTableStyles.tbody}>
+                                {pastors.data.length === 0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan={5}
+                                            className={
+                                                elevatedIndexTableStyles.emptyCell
+                                            }
+                                        >
+                                            <div className="space-y-2">
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.emptyTitle
+                                                    }
+                                                >
+                                                    {filters.search === ''
+                                                        ? 'No pastor records yet.'
+                                                        : `No pastors matched "${filters.search}".`}
+                                                </div>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.emptyDescription
+                                                    }
+                                                >
+                                                    {filters.search === ''
+                                                        ? 'Create the first pastor and church record to populate the directory.'
+                                                        : 'Try another church name, pastor name, contact number, or email address.'}
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    pastors.data.map((pastor) => (
+                                        <tr
+                                            key={pastor.id}
+                                            className={elevatedIndexTableStyles.row}
+                                        >
+                                            <td className={elevatedIndexTableStyles.firstCell}>
                                             <div className="font-medium text-foreground">
                                                 {pastor.church_name}
                                             </div>
@@ -197,16 +230,18 @@ export default function PastorIndex({
                                                 {pastor.address ||
                                                     'No address provided.'}
                                             </div>
-                                        </td>
-                                        <td className="py-3.5 pr-3 align-middle">
+                                            </td>
+                                            <td className={elevatedIndexTableStyles.cell}>
                                             <div className="font-medium text-foreground">
                                                 {pastor.section.name}
                                             </div>
                                             <div className="mt-2 text-sm text-muted-foreground">
                                                 {pastor.district.name}
                                             </div>
-                                        </td>
-                                        <td className="py-3.5 pr-3 align-middle text-sm text-muted-foreground">
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} text-sm text-muted-foreground`}
+                                            >
                                             <div className="font-medium text-foreground/90">
                                                 {pastor.contact_number}
                                             </div>
@@ -214,8 +249,8 @@ export default function PastorIndex({
                                                 {pastor.email ||
                                                     'No email provided.'}
                                             </div>
-                                        </td>
-                                        <td className="py-3.5 pr-3 align-middle">
+                                            </td>
+                                            <td className={elevatedIndexTableStyles.cell}>
                                             <Badge
                                                 variant={
                                                     pastor.status === 'active'
@@ -226,8 +261,10 @@ export default function PastorIndex({
                                             >
                                                 {pastor.status}
                                             </Badge>
-                                        </td>
-                                        <td className="py-3.5 pr-4 align-middle">
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
+                                            >
                                             <div className="flex justify-end gap-2">
                                                 <Button
                                                     variant="outline"
@@ -252,21 +289,48 @@ export default function PastorIndex({
                                                     Delete
                                                 </Button>
                                             </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
 
-                <DataTablePagination
-                    meta={pastors.meta}
-                    onPageChange={changePage}
-                    rowsPerPage={filters.per_page}
-                    rowOptions={perPageOptions}
-                    onRowsPerPageChange={updatePerPage}
-                />
+                    <div className={elevatedIndexTableStyles.paginationWrapper}>
+                        <DataTablePagination
+                            meta={pastors.meta}
+                            onPageChange={changePage}
+                            rowsPerPage={filters.per_page}
+                            rowOptions={perPageOptions}
+                            onRowsPerPageChange={updatePerPage}
+                            className={elevatedIndexTableStyles.pagination}
+                            topRowClassName={
+                                elevatedIndexTableStyles.paginationTopRow
+                            }
+                            rowsTriggerClassName={
+                                elevatedIndexTableStyles.rowsTrigger
+                            }
+                            summaryClassName={elevatedIndexTableStyles.summary}
+                            navigationWrapperClassName={
+                                elevatedIndexTableStyles.navigationWrapper
+                            }
+                            previousButtonClassName={
+                                elevatedIndexTableStyles.previousButton
+                            }
+                            nextButtonClassName={
+                                elevatedIndexTableStyles.nextButton
+                            }
+                            activePageButtonClassName={
+                                elevatedIndexTableStyles.activePageButton
+                            }
+                            inactivePageButtonClassName={
+                                elevatedIndexTableStyles.inactivePageButton
+                            }
+                            ellipsisClassName={elevatedIndexTableStyles.ellipsis}
+                        />
+                    </div>
+                </div>
             </div>
         </AppLayout>
     );

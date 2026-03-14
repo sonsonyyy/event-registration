@@ -1,5 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import SectionController from '@/actions/App/Http/Controllers/Admin/SectionController';
+import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -53,18 +54,11 @@ export default function SectionIndex({ sections }: Props) {
             <Head title="Sections" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-                    <Heading
-                        title="Sections"
-                        description="Create and maintain the section records that sit beneath each district."
-                        className="mb-0"
-                    />
-                    <Button asChild className="h-11 rounded-xl">
-                        <Link href={SectionController.create()}>
-                            New section
-                        </Link>
-                    </Button>
-                </div>
+                <Heading
+                    title="Sections"
+                    description="Create and maintain the section records that sit beneath each district."
+                    className="mb-4"
+                />
 
                 {flash?.success && (
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100">
@@ -72,52 +66,84 @@ export default function SectionIndex({ sections }: Props) {
                     </div>
                 )}
 
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
-                        <thead className="bg-muted/40">
-                            <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                                <th className="py-2.5 pr-3 pl-4 font-medium">
+                <div className={elevatedIndexTableStyles.shell}>
+                    <div className={elevatedIndexTableStyles.band}>
+                        <div className={elevatedIndexTableStyles.headerActions}>
+                            <Button
+                                asChild
+                                className={elevatedIndexTableStyles.primaryButton}
+                            >
+                                <Link href={SectionController.create()}>
+                                    New section
+                                </Link>
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className={elevatedIndexTableStyles.table}>
+                            <thead className={elevatedIndexTableStyles.thead}>
+                                <tr className={elevatedIndexTableStyles.headerRow}>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.firstHeaderCell
+                                        }
+                                    >
                                     Section
-                                </th>
-                                <th className="py-2.5 pr-3 font-medium">
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
                                     District
-                                </th>
-                                <th className="py-2.5 pr-3 font-medium">
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
                                     Pastors
-                                </th>
-                                <th className="py-2.5 pr-3 font-medium">
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
                                     Status
-                                </th>
-                                <th className="py-2.5 pr-4 text-right font-medium">
+                                    </th>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.lastHeaderCellRight
+                                        }
+                                    >
                                     Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-sidebar-border/50">
-                            {sections.length === 0 ? (
-                                <tr>
-                                    <td
-                                        colSpan={5}
-                                        className="px-4 py-14 text-center"
-                                    >
-                                        <div className="space-y-2">
-                                            <div className="text-base font-medium">
-                                                No sections yet.
-                                            </div>
-                                            <div className="text-sm text-muted-foreground">
-                                                Create the first section to group
-                                                pastors under a district.
-                                            </div>
-                                        </div>
-                                    </td>
+                                    </th>
                                 </tr>
-                            ) : (
-                                sections.map((section) => (
-                                    <tr
-                                        key={section.id}
-                                        className="bg-background transition-colors hover:bg-muted/20"
-                                    >
-                                        <td className="px-4 py-3.5 align-middle">
+                            </thead>
+                            <tbody className={elevatedIndexTableStyles.tbody}>
+                                {sections.length === 0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan={5}
+                                            className={
+                                                elevatedIndexTableStyles.emptyCell
+                                            }
+                                        >
+                                            <div className="space-y-2">
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.emptyTitle
+                                                    }
+                                                >
+                                                    No sections yet.
+                                                </div>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.emptyDescription
+                                                    }
+                                                >
+                                                    Create the first section to group
+                                                    pastors under a district.
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    sections.map((section) => (
+                                        <tr
+                                            key={section.id}
+                                            className={elevatedIndexTableStyles.row}
+                                        >
+                                            <td className={elevatedIndexTableStyles.firstCell}>
                                             <div className="font-medium text-foreground">
                                                 {section.name}
                                             </div>
@@ -125,14 +151,18 @@ export default function SectionIndex({ sections }: Props) {
                                                 {section.description ||
                                                     'No description provided.'}
                                             </div>
-                                        </td>
-                                        <td className="py-3.5 pr-3 align-middle text-muted-foreground">
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} text-muted-foreground`}
+                                            >
                                             {section.district.name}
-                                        </td>
-                                        <td className="py-3.5 pr-3 align-middle text-muted-foreground">
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} text-muted-foreground`}
+                                            >
                                             {section.pastors_count}
-                                        </td>
-                                        <td className="py-3.5 pr-3 align-middle">
+                                            </td>
+                                            <td className={elevatedIndexTableStyles.cell}>
                                             <Badge
                                                 variant={
                                                     section.status === 'active'
@@ -143,8 +173,10 @@ export default function SectionIndex({ sections }: Props) {
                                             >
                                                 {section.status}
                                             </Badge>
-                                        </td>
-                                        <td className="py-3.5 pr-4 align-middle">
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
+                                            >
                                             <div className="flex justify-end gap-2">
                                                 <Button
                                                     variant="outline"
@@ -169,12 +201,13 @@ export default function SectionIndex({ sections }: Props) {
                                                     Delete
                                                 </Button>
                                             </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </AppLayout>
