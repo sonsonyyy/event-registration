@@ -146,9 +146,29 @@ class Registration extends Model
         ];
     }
 
+    /**
+     * Get the registration statuses used in the receipt verification workflow.
+     *
+     * @return array<int, string>
+     */
+    public static function verificationStatuses(): array
+    {
+        return [
+            self::STATUS_PENDING_VERIFICATION,
+            self::STATUS_VERIFIED,
+            self::STATUS_REJECTED,
+        ];
+    }
+
     public function reservesCapacity(): bool
     {
         return in_array($this->registration_status, self::capacityReservedStatuses(), true);
+    }
+
+    public function canBeReviewed(): bool
+    {
+        return $this->registration_mode === self::MODE_ONLINE
+            && in_array($this->registration_status, self::verificationStatuses(), true);
     }
 
     public function totalQuantity(): int

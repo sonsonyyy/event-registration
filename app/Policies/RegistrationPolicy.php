@@ -29,6 +29,11 @@ class RegistrationPolicy
         return $user->isOnlineRegistrant() && $user->pastor_id !== null;
     }
 
+    public function viewAnyVerification(User $user): bool
+    {
+        return $user->isManager() && $user->section_id !== null;
+    }
+
     public function view(User $user, Registration $registration): bool
     {
         return $user->canAccessRegistration($registration);

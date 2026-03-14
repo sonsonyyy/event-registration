@@ -21,6 +21,7 @@ test('admins can perform all protected actions', function () {
     expect($gate->allows('delete', $context['pastorOutsideSection']))->toBeTrue();
     expect($gate->allows('create', User::class))->toBeTrue();
     expect($gate->allows('verifyReceipt', $context['onlineRegistrationOutsideSection']))->toBeTrue();
+    expect($gate->allows('viewAnyVerification', Registration::class))->toBeTrue();
     expect($gate->allows('viewReports'))->toBeTrue();
     expect($gate->allows('viewSectionReport', $context['section']))->toBeTrue();
     expect($gate->allows('viewPastorReport', $context['pastorOutsideSection']))->toBeTrue();
@@ -45,6 +46,7 @@ test('managers are limited to their assigned section', function () {
     expect($gate->allows('update', $context['onlineRegistrationOutsideSection']))->toBeFalse();
     expect($gate->allows('verifyReceipt', $context['onlineRegistrationInSection']))->toBeTrue();
     expect($gate->allows('verifyReceipt', $context['onlineRegistrationOutsideSection']))->toBeFalse();
+    expect($gate->allows('viewAnyVerification', Registration::class))->toBeTrue();
     expect($gate->allows('create', Event::class))->toBeFalse();
     expect($gate->allows('update', $context['pastorInSection']))->toBeFalse();
     expect($gate->allows('delete', $context['section']))->toBeFalse();
@@ -83,6 +85,7 @@ test('registration staff can encode onsite registrations without master data acc
     expect($gate->allows('view', $context['pastorOutsideSection']))->toBeTrue();
     expect($gate->allows('createOnsite', [Registration::class, $context['pastorInSection']]))->toBeTrue();
     expect($gate->allows('viewAnyOnline', Registration::class))->toBeFalse();
+    expect($gate->allows('viewAnyVerification', Registration::class))->toBeFalse();
     expect($gate->allows('createOnline', [Registration::class, $context['pastorInSection']]))->toBeFalse();
     expect($gate->allows('view', $ownOnsiteRegistration))->toBeTrue();
     expect($gate->allows('view', $otherOnsiteRegistration))->toBeFalse();
@@ -129,6 +132,7 @@ test('online registrants are limited to their assigned pastor', function () {
     expect($gate->allows('view', $otherOnlineRegistration))->toBeFalse();
     expect($gate->allows('uploadReceipt', $ownOnlineRegistration))->toBeTrue();
     expect($gate->allows('uploadReceipt', $otherOnlineRegistration))->toBeFalse();
+    expect($gate->allows('viewAnyVerification', Registration::class))->toBeFalse();
     expect($gate->allows('viewReports'))->toBeFalse();
     expect($gate->allows('create', Event::class))->toBeFalse();
     expect($gate->allows('update', $context['pastorInSection']))->toBeFalse();
@@ -145,6 +149,7 @@ test('inactive users fail authorization checks even when their role would normal
     expect($gate->allows('view', $context['section']))->toBeFalse();
     expect($gate->allows('createOnsite', [Registration::class, $context['pastorInSection']]))->toBeFalse();
     expect($gate->allows('update', $context['onlineRegistrationInSection']))->toBeFalse();
+    expect($gate->allows('viewAnyVerification', Registration::class))->toBeFalse();
     expect($gate->allows('viewReports'))->toBeFalse();
 });
 

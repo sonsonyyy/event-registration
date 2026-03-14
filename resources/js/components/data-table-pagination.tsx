@@ -7,6 +7,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import type { PaginationMeta } from '@/types';
 
 type DataTablePaginationProps = {
@@ -15,6 +16,16 @@ type DataTablePaginationProps = {
     rowsPerPage?: number;
     rowOptions?: number[];
     onRowsPerPageChange?: (value: number) => void;
+    className?: string;
+    topRowClassName?: string;
+    rowsTriggerClassName?: string;
+    summaryClassName?: string;
+    navigationWrapperClassName?: string;
+    previousButtonClassName?: string;
+    nextButtonClassName?: string;
+    activePageButtonClassName?: string;
+    inactivePageButtonClassName?: string;
+    ellipsisClassName?: string;
 };
 
 export default function DataTablePagination({
@@ -23,13 +34,33 @@ export default function DataTablePagination({
     rowsPerPage,
     rowOptions,
     onRowsPerPageChange,
+    className,
+    topRowClassName,
+    rowsTriggerClassName,
+    summaryClassName,
+    navigationWrapperClassName,
+    previousButtonClassName,
+    nextButtonClassName,
+    activePageButtonClassName,
+    inactivePageButtonClassName,
+    ellipsisClassName,
 }: DataTablePaginationProps) {
     const pages = buildPageWindow(meta.current_page, meta.last_page);
     const summary = buildSummary(meta);
 
     return (
-        <div className="flex flex-col gap-4 border-t border-sidebar-border/70 pt-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div
+            className={cn(
+                'flex flex-col gap-4 border-t border-sidebar-border/70 pt-4',
+                className,
+            )}
+        >
+            <div
+                className={cn(
+                    'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between',
+                    topRowClassName,
+                )}
+            >
                 {rowsPerPage !== undefined &&
                     rowOptions !== undefined &&
                     onRowsPerPageChange !== undefined && (
@@ -43,7 +74,10 @@ export default function DataTablePagination({
                                 id="directory-per-page"
                                 aria-label="Rows per page"
                                 size="sm"
-                                className="h-8 w-[6.25rem] shrink-0 rounded-lg bg-background"
+                                className={cn(
+                                    'h-8 w-[6.25rem] shrink-0 rounded-lg bg-background',
+                                    rowsTriggerClassName,
+                                )}
                             >
                                 <SelectValue />
                             </SelectTrigger>
@@ -60,19 +94,29 @@ export default function DataTablePagination({
                         </Select>
                     )}
 
-                <p className="text-sm text-muted-foreground sm:text-right">
+                <p
+                    className={cn(
+                        'text-sm text-muted-foreground sm:text-right',
+                        summaryClassName,
+                    )}
+                >
                     {summary}
                 </p>
             </div>
 
             {meta.last_page > 1 && (
-                <div className="flex justify-end overflow-x-auto pb-1">
+                <div
+                    className={cn(
+                        'flex justify-end overflow-x-auto pb-1',
+                        navigationWrapperClassName,
+                    )}
+                >
                     <div className="flex items-center gap-1">
                         <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="rounded-lg"
+                            className={cn('rounded-lg', previousButtonClassName)}
                             onClick={() =>
                                 onPageChange(meta.current_page - 1)
                             }
@@ -89,7 +133,7 @@ export default function DataTablePagination({
                                     type="button"
                                     variant="ghost"
                                     size="sm"
-                                    className="rounded-lg"
+                                    className={cn('rounded-lg', ellipsisClassName)}
                                     disabled
                                 >
                                     <MoreHorizontal className="size-4" />
@@ -104,7 +148,12 @@ export default function DataTablePagination({
                                             : 'outline'
                                     }
                                     size="sm"
-                                    className="min-w-9 rounded-lg"
+                                    className={cn(
+                                        'min-w-9 rounded-lg',
+                                        page === meta.current_page
+                                            ? activePageButtonClassName
+                                            : inactivePageButtonClassName,
+                                    )}
                                     onClick={() => onPageChange(page)}
                                 >
                                     {page}
@@ -116,7 +165,7 @@ export default function DataTablePagination({
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="rounded-lg"
+                            className={cn('rounded-lg', nextButtonClassName)}
                             onClick={() =>
                                 onPageChange(meta.current_page + 1)
                             }
