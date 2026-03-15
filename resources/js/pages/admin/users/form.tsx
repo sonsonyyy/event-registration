@@ -89,6 +89,12 @@ const roleDescriptions: Record<string, string> = {
         'Must be assigned to one pastor or church account for online registration.',
 };
 
+const formatSectionOptionLabel = (section: SectionOption): string =>
+    `${section.name}${section.status === 'inactive' ? ' (Inactive)' : ''}`;
+
+const formatPastorOptionLabel = (pastor: PastorOption): string =>
+    `${pastor.section_name} · ${pastor.pastor_name}${pastor.status === 'inactive' ? ' (Inactive)' : ''}`;
+
 export default function UserForm({
     userRecord,
     roles,
@@ -393,11 +399,7 @@ export default function UserForm({
                                         key={section.id}
                                         value={section.id}
                                     >
-                                        {section.name} ·{' '}
-                                        {section.district_name}
-                                        {section.status === 'inactive'
-                                            ? ' (Inactive)'
-                                            : ''}
+                                        {formatSectionOptionLabel(section)}
                                     </option>
                                 ))}
                             </select>
@@ -423,11 +425,7 @@ export default function UserForm({
                                         key={pastor.id}
                                         value={pastor.id}
                                     >
-                                        {pastor.church_name} ·{' '}
-                                        {pastor.section_name}
-                                        {pastor.status === 'inactive'
-                                            ? ' (Inactive)'
-                                            : ''}
+                                        {formatPastorOptionLabel(pastor)}
                                     </option>
                                 ))}
                             </select>
