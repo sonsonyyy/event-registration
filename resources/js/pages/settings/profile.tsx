@@ -1,6 +1,6 @@
 import { Transition } from '@headlessui/react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import DeleteUser from '@/components/delete-user';
+import { ShieldAlert } from 'lucide-react';
 import Heading from '@/components/heading';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,10 +41,25 @@ export default function Profile({
                     />
 
                     <div className="space-y-6">
-                        <div className="rounded-lg border border-sidebar-border/70 bg-sidebar/30 px-4 py-3 text-sm text-muted-foreground">
-                            Contact an administrator if you need to update your
-                            account details. User profile changes are only
-                            allowed from the admin user management page.
+                        <div className="rounded-2xl border border-[#d6e2de] bg-[linear-gradient(145deg,_rgba(24,77,71,0.08),_rgba(255,255,255,0.96))] px-5 py-5 shadow-sm shadow-[#184d47]/8">
+                            <div className="flex items-start gap-4">
+                                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#184d47] text-white shadow-sm shadow-[#184d47]/20">
+                                    <ShieldAlert className="size-4" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <div className="text-xs font-semibold tracking-[0.18em] text-[#184d47] uppercase">
+                                        Administrator managed
+                                    </div>
+                                    <p className="text-sm font-semibold text-slate-900">
+                                        Profile changes are locked on this page.
+                                    </p>
+                                    <p className="text-sm leading-6 text-slate-600">
+                                        Contact an administrator if you need to
+                                        update your name, email address, or any
+                                        other account details.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="grid gap-2">
@@ -102,8 +117,6 @@ export default function Profile({
                         )}
                     </div>
                 </div>
-
-                <DeleteUser />
             </SettingsLayout>
         </AppLayout>
     );
