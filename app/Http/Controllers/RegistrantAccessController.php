@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreRegistrantAccessRequest;
-use App\Models\District;
 use App\Models\Pastor;
 use App\Models\Role;
 use App\Models\Section;
@@ -18,7 +17,6 @@ class RegistrantAccessController extends Controller
     public function create(): Response
     {
         return Inertia::render('auth/registrant-access', [
-            'districts' => $this->districtOptions(),
             'sections' => $this->sectionOptions(),
             'pastors' => $this->pastorOptions(),
         ]);
@@ -46,28 +44,6 @@ class RegistrantAccessController extends Controller
             'status',
             'Registrant account request submitted. You can sign in now, but online registration stays locked until an admin or manager approves your church account.',
         );
-    }
-
-    /**
-     * Build the district options that still have eligible church accounts.
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    private function districtOptions(): array
-    {
-        return District::query()
-            ->where('status', 'active')
-            ->whereHas('sections.pastors', function (Builder $query): void {
-                $this->eligiblePastorConstraint($query);
-            })
-            ->orderBy('name')
-            ->get()
-            ->map(fn (District $district): array => [
-                'id' => $district->getKey(),
-                'name' => $district->name,
-            ])
-            ->values()
-            ->all();
     }
 
     /**

@@ -4,7 +4,6 @@ namespace App\Http\Requests;
 
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
-use App\Models\District;
 use App\Models\Pastor;
 use App\Models\Role;
 use App\Models\Section;
@@ -35,7 +34,6 @@ class StoreRegistrantAccessRequest extends FormRequest
         return [
             ...$this->profileRules(),
             'password' => $this->passwordRules(),
-            'district_id' => ['required', 'integer', 'exists:districts,id'],
             'section_id' => ['required', 'integer', 'exists:sections,id'],
             'pastor_id' => ['required', 'integer', 'exists:pastors,id'],
         ];
@@ -50,16 +48,8 @@ class StoreRegistrantAccessRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
-                $district = $this->selectedDistrict();
                 $section = $this->selectedSection();
                 $pastor = $this->selectedPastor();
-
-                if ($district !== null && $district->status !== 'active') {
-                    $validator->errors()->add(
-                        'district_id',
-                        'The selected district is not available for registrant access requests.',
-                    );
-                }
 
                 if ($section !== null && $section->status !== 'active') {
                     $validator->errors()->add(
@@ -75,28 +65,10 @@ class StoreRegistrantAccessRequest extends FormRequest
                     );
                 }
 
-                if ($section !== null && $district !== null && $section->district_id !== $district->getKey()) {
-                    $validator->errors()->add(
-                        'section_id',
-                        'The selected section does not belong to the chosen district.',
-                    );
-                }
-
                 if ($pastor !== null && $section !== null && $pastor->section_id !== $section->getKey()) {
                     $validator->errors()->add(
                         'pastor_id',
                         'The selected pastor does not belong to the chosen section.',
-                    );
-                }
-
-                if (
-                    $pastor !== null
-                    && $district !== null
-                    && $pastor->section->district_id !== $district->getKey()
-                ) {
-                    $validator->errors()->add(
-                        'pastor_id',
-                        'The selected pastor does not belong to the chosen district.',
                     );
                 }
 
@@ -124,8 +96,6 @@ class StoreRegistrantAccessRequest extends FormRequest
             'email.unique' => 'That email address is already in use.',
             'password.required' => 'Enter a password for this registrant account.',
             'password.confirmed' => 'The password confirmation does not match.',
-            'district_id.required' => 'Choose a district.',
-            'district_id.exists' => 'Choose a valid district.',
             'section_id.required' => 'Choose a section.',
             'section_id.exists' => 'Choose a valid section.',
             'pastor_id.required' => 'Choose the church or pastor this account will represent.',
@@ -151,17 +121,6 @@ class StoreRegistrantAccessRequest extends FormRequest
             'section_id' => $pastor?->section_id,
             'pastor_id' => $pastor?->getKey(),
         ];
-    }
-
-    private function selectedDistrict(): ?District
-    {
-        $districtId = $this->input('district_id');
-
-        if (! filled($districtId)) {
-            return null;
-        }
-
-        return District::query()->find($districtId);
     }
 
     private function selectedSection(): ?Section

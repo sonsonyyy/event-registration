@@ -23,7 +23,6 @@ test('guests can submit self-service registrant account requests', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('auth/registrant-access')
-            ->has('districts', 1)
             ->has('sections', 1)
             ->has('pastors', 1)
             ->where('pastors.0.church_name', 'Grace Community Church'));
@@ -31,7 +30,6 @@ test('guests can submit self-service registrant account requests', function () {
     $this->post(route('registrant-access.store'), [
         'name' => 'Church Representative',
         'email' => 'representative@example.com',
-        'district_id' => $district->id,
         'section_id' => $section->id,
         'pastor_id' => $pastor->id,
         'password' => 'password',
@@ -82,7 +80,6 @@ test('self-service requests cannot be created when a church already has an activ
         ->post(route('registrant-access.store'), [
             'name' => 'Duplicate Representative',
             'email' => 'duplicate@example.com',
-            'district_id' => $district->id,
             'section_id' => $section->id,
             'pastor_id' => $pastor->id,
             'password' => 'password',

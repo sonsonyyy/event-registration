@@ -10,11 +10,6 @@ import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/auth-layout';
 import { login } from '@/routes';
 
-type DistrictOption = {
-    id: number;
-    name: string;
-};
-
 type SectionOption = {
     id: number;
     name: string;
@@ -33,7 +28,6 @@ type PastorOption = {
 };
 
 type Props = {
-    districts: DistrictOption[];
     sections: SectionOption[];
     pastors: PastorOption[];
 };
@@ -41,7 +35,6 @@ type Props = {
 type RegistrantAccessFormData = {
     name: string;
     email: string;
-    district_id: string;
     section_id: string;
     pastor_id: string;
     password: string;
@@ -49,26 +42,18 @@ type RegistrantAccessFormData = {
 };
 
 export default function RegistrantAccess({
-    districts,
     sections,
     pastors,
 }: Props) {
     const form = useForm<RegistrantAccessFormData>({
         name: '',
         email: '',
-        district_id: '',
         section_id: '',
         pastor_id: '',
         password: '',
         password_confirmation: '',
     });
 
-    const filteredSections = form.data.district_id
-        ? sections.filter(
-              (section) =>
-                  section.district_id.toString() === form.data.district_id,
-          )
-        : sections;
     const filteredPastors = form.data.section_id
         ? pastors.filter(
               (pastor) =>
@@ -79,30 +64,7 @@ export default function RegistrantAccess({
         pastors.find((pastor) => pastor.id.toString() === form.data.pastor_id) ??
         null;
 
-    const changeDistrict = (value: string): void => {
-        const matchingSection = sections.find(
-            (section) =>
-                section.id.toString() === form.data.section_id &&
-                section.district_id.toString() === value,
-        );
-        const matchingPastor = pastors.find(
-            (pastor) =>
-                pastor.id.toString() === form.data.pastor_id &&
-                pastor.district_id.toString() === value,
-        );
-
-        form.setData((currentData) => ({
-            ...currentData,
-            district_id: value,
-            section_id: matchingSection?.id.toString() ?? '',
-            pastor_id: matchingPastor?.id.toString() ?? '',
-        }));
-    };
-
     const changeSection = (value: string): void => {
-        const section = sections.find(
-            (option) => option.id.toString() === value,
-        );
         const matchingPastor = pastors.find(
             (pastor) =>
                 pastor.id.toString() === form.data.pastor_id &&
@@ -111,7 +73,6 @@ export default function RegistrantAccess({
 
         form.setData((currentData) => ({
             ...currentData,
-            district_id: section?.district_id.toString() ?? currentData.district_id,
             section_id: value,
             pastor_id: matchingPastor?.id.toString() ?? '',
         }));
@@ -122,7 +83,6 @@ export default function RegistrantAccess({
 
         form.setData((currentData) => ({
             ...currentData,
-            district_id: pastor?.district_id.toString() ?? currentData.district_id,
             section_id: pastor?.section_id.toString() ?? currentData.section_id,
             pastor_id: value,
         }));
@@ -184,27 +144,6 @@ export default function RegistrantAccess({
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="district_id">District</Label>
-                        <select
-                            id="district_id"
-                            name="district_id"
-                            value={form.data.district_id}
-                            onChange={(event) =>
-                                changeDistrict(event.target.value)
-                            }
-                            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-11 rounded-xl border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                        >
-                            <option value="">Select district</option>
-                            {districts.map((district) => (
-                                <option key={district.id} value={district.id}>
-                                    {district.name}
-                                </option>
-                            ))}
-                        </select>
-                        <InputError message={form.errors.district_id} />
-                    </div>
-
-                    <div className="grid gap-2">
                         <Label htmlFor="section_id">Section</Label>
                         <select
                             id="section_id"
@@ -216,9 +155,11 @@ export default function RegistrantAccess({
                             className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-11 rounded-xl border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
                         >
                             <option value="">Select section</option>
-                            {filteredSections.map((section) => (
+                            {sections.map((section) => (
                                 <option key={section.id} value={section.id}>
-                                    {section.name}
+                                    {section.district_name
+                                        ? `${section.name} (${section.district_name})`
+                                        : section.name}
                                 </option>
                             ))}
                         </select>
