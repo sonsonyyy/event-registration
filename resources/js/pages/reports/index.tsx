@@ -1,7 +1,13 @@
 import { Head, router } from '@inertiajs/react';
+import { Download } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import ReportsController from '@/actions/App/Http/Controllers/ReportsController';
+import DataTablePagination from '@/components/data-table-pagination';
+import { elevatedIndexTableStyles } from '@/components/data-table-presets';
+import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
     Select,
@@ -12,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
-import type { BreadcrumbItem } from '@/types';
+import type { BreadcrumbItem, PaginatedData } from '@/types';
 
 type EventOption = {
     id: number;
@@ -54,6 +60,14 @@ type FeeCategoryReport = {
     registered_amount: string;
 };
 
+type MissingChurchRecord = {
+    id: number;
+    church_name: string;
+    pastor_name: string;
+    section_name: string | null;
+    district_name: string | null;
+};
+
 type Props = {
     scopeSummary: string;
     canFilterBySection: boolean;
@@ -62,7 +76,10 @@ type Props = {
     filters: {
         event_id: number | null;
         section_id: number | null;
+        search: string;
+        per_page: number;
     };
+    perPageOptions: number[];
     selectedEvent: SelectedEvent;
     selectedSection: SelectedSection;
     eventTotalRegistration: {
@@ -72,20 +89,8 @@ type Props = {
         pending_online_quantity: number;
         fee_categories: FeeCategoryReport[];
     };
-    noRegistrationReport: {
-        sections: Array<{
-            id: number;
-            name: string;
-            district_name: string | null;
-        }>;
-        pastors: Array<{
-            id: number;
-            church_name: string;
-            pastor_name: string;
-            section_name: string | null;
-            district_name: string | null;
-        }>;
-    };
+    churchesWithoutRegistration: PaginatedData<MissingChurchRecord>;
+    churchesWithoutRegistrationExportUrl: string | null;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -143,21 +148,29 @@ export default function ReportsIndex({
     events,
     sections,
     filters,
+    perPageOptions,
     selectedEvent,
     selectedSection,
     eventTotalRegistration,
-    noRegistrationReport,
+    churchesWithoutRegistration,
+    churchesWithoutRegistrationExportUrl,
 }: Props) {
-    const visitReport = (next: {
+    const [search, setSearch] = useState(filters.search);
+
+    useEffect(() => {
+        setSearch(filters.search);
+    }, [filters.search]);
+
+    const visitReport = (query: {
         event_id?: number;
         section_id?: number;
+        search?: string;
+        per_page: number;
+        page?: number;
     }): void => {
         router.get(
             ReportsController.url({
-                query: {
-                    event_id: next.event_id,
-                    section_id: next.section_id,
-                },
+                query,
             }),
             {},
             {
@@ -166,6 +179,42 @@ export default function ReportsIndex({
                 replace: true,
             },
         );
+    };
+
+    const submitSearch = (): void => {
+        const normalizedSearch = search.trim();
+
+        visitReport({
+            ...(filters.event_id !== null ? { event_id: filters.event_id } : {}),
+            ...(filters.section_id !== null
+                ? { section_id: filters.section_id }
+                : {}),
+            ...(normalizedSearch !== '' ? { search: normalizedSearch } : {}),
+            per_page: filters.per_page,
+        });
+    };
+
+    const updatePerPage = (value: number): void => {
+        visitReport({
+            ...(filters.event_id !== null ? { event_id: filters.event_id } : {}),
+            ...(filters.section_id !== null
+                ? { section_id: filters.section_id }
+                : {}),
+            ...(filters.search !== '' ? { search: filters.search } : {}),
+            per_page: value,
+        });
+    };
+
+    const changePage = (pageNumber: number): void => {
+        visitReport({
+            ...(filters.event_id !== null ? { event_id: filters.event_id } : {}),
+            ...(filters.section_id !== null
+                ? { section_id: filters.section_id }
+                : {}),
+            ...(filters.search !== '' ? { search: filters.search } : {}),
+            per_page: filters.per_page,
+            ...(pageNumber > 1 ? { page: pageNumber } : {}),
+        });
     };
 
     const sectionFilterValue = filters.section_id !== null
@@ -194,7 +243,7 @@ export default function ReportsIndex({
                                     {selectedEvent?.name ?? 'Select an event'}
                                 </div>
                                 <p className="max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400">
-                                    Filter the event and section scope to review registration volume, fee-category totals, and missing section or church participation.
+                                    Filter the event and section scope to review registration volume, fee-category totals, and churches that have not submitted registrations yet.
                                 </p>
                             </div>
 
@@ -211,12 +260,19 @@ export default function ReportsIndex({
                                         }
                                         onValueChange={(value) =>
                                             visitReport({
-                                                event_id:
-                                                    value === ''
-                                                        ? undefined
-                                                        : Number(value),
-                                                section_id:
-                                                    filters.section_id ?? undefined,
+                                                ...(value !== ''
+                                                    ? { event_id: Number(value) }
+                                                    : {}),
+                                                ...(filters.section_id !== null
+                                                    ? {
+                                                          section_id:
+                                                              filters.section_id,
+                                                      }
+                                                    : {}),
+                                                ...(filters.search !== ''
+                                                    ? { search: filters.search }
+                                                    : {}),
+                                                per_page: filters.per_page,
                                             })
                                         }
                                         disabled={events.length === 0}
@@ -249,11 +305,19 @@ export default function ReportsIndex({
                                         value={sectionFilterValue}
                                         onValueChange={(value) =>
                                             visitReport({
-                                                event_id: filters.event_id ?? undefined,
-                                                section_id:
-                                                    value === 'all'
-                                                        ? undefined
-                                                        : Number(value),
+                                                ...(filters.event_id !== null
+                                                    ? { event_id: filters.event_id }
+                                                    : {}),
+                                                ...(value !== 'all'
+                                                    ? {
+                                                          section_id:
+                                                              Number(value),
+                                                      }
+                                                    : {}),
+                                                ...(filters.search !== ''
+                                                    ? { search: filters.search }
+                                                    : {}),
+                                                per_page: filters.per_page,
                                             })
                                         }
                                         disabled={! canFilterBySection}
@@ -387,7 +451,7 @@ export default function ReportsIndex({
                                                     Missing churches
                                                 </div>
                                                 <div className="text-right text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                    {noRegistrationReport.pastors.length}
+                                                    {churchesWithoutRegistration.meta.total}
                                                 </div>
                                             </div>
                                         </div>
@@ -531,104 +595,222 @@ export default function ReportsIndex({
                             </CardContent>
                         </Card>
 
-                        <div className="grid gap-6 xl:grid-cols-2">
-                            <Card className="overflow-hidden border border-[#d3ddd8] border-t-4 border-t-slate-900 bg-white py-0 shadow-xl shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-slate-200 dark:bg-slate-950 dark:shadow-black/20">
-                                <CardContent className="p-0">
-                                    <div className="border-b border-[#e2ebe6] px-6 py-6 dark:border-slate-800">
-                                        <div className="space-y-2">
-                                            <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
-                                                No Registration Report
-                                            </div>
-                                            <div className="text-2xl font-bold tracking-[-0.03em] text-slate-900 dark:text-slate-100">
-                                                Sections with no registration
-                                            </div>
+                        <div className={elevatedIndexTableStyles.shell}>
+                            <div className={elevatedIndexTableStyles.band}>
+                                <div className="space-y-5">
+                                    <div className="space-y-2">
+                                        <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                                            No Registration Report
                                         </div>
+                                        <div className="text-2xl font-bold tracking-[-0.03em] text-slate-900 dark:text-slate-100">
+                                            Churches with no registration
+                                        </div>
+                                        <p className="text-sm leading-6 text-slate-600 dark:text-slate-400">
+                                            Search and export the churches that still have no submitted registration for the selected event and section scope.
+                                        </p>
                                     </div>
 
-                                    <div className="px-6 py-3">
-                                        {noRegistrationReport.sections.length ===
-                                        0 ? (
-                                            <div className="py-8 text-sm text-slate-600 dark:text-slate-400">
-                                                All visible sections have submitted registrations for this event.
-                                            </div>
-                                        ) : (
-                                            noRegistrationReport.sections.map(
-                                                (section) => (
-                                                    <div
-                                                        key={section.id}
-                                                        className="flex items-start justify-between gap-4 border-b border-[#eef3f0] py-4 last:border-b-0 dark:border-slate-800"
+                                    <DataTableToolbar
+                                        searchValue={search}
+                                        onSearchValueChange={setSearch}
+                                        onSubmit={submitSearch}
+                                        placeholder="Search pastor, church, or section"
+                                        className={elevatedIndexTableStyles.toolbar}
+                                        searchWrapperClassName={
+                                            elevatedIndexTableStyles.searchWrapper
+                                        }
+                                        inputClassName={
+                                            elevatedIndexTableStyles.input
+                                        }
+                                        actionClassName={
+                                            elevatedIndexTableStyles.action
+                                        }
+                                        action={(
+                                            churchesWithoutRegistrationExportUrl !==
+                                                null &&
+                                            churchesWithoutRegistration.meta.total >
+                                                0 ? (
+                                                <Button
+                                                    asChild
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryButton
+                                                    }
+                                                >
+                                                    <a
+                                                        href={
+                                                            churchesWithoutRegistrationExportUrl
+                                                        }
                                                     >
-                                                        <div>
-                                                            <div className="font-medium text-slate-900 dark:text-slate-100">
-                                                                {section.name}
-                                                            </div>
-                                                            <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                                                {section.district_name}
-                                                            </div>
-                                                        </div>
-                                                        <Badge variant="outline">
-                                                            No registration
-                                                        </Badge>
-                                                    </div>
-                                                ),
+                                                        <Download className="size-4" />
+                                                        Download Excel
+                                                    </a>
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    type="button"
+                                                    disabled
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryButton
+                                                    }
+                                                >
+                                                    <Download className="size-4" />
+                                                    Download Excel
+                                                </Button>
                                             )
                                         )}
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                    />
+                                </div>
+                            </div>
 
-                            <Card className="overflow-hidden border border-[#d3ddd8] border-t-4 border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-emerald-500 dark:bg-slate-950 dark:shadow-black/20">
-                                <CardContent className="p-0">
-                                    <div className="border-b border-[#e2ebe6] px-6 py-6 dark:border-slate-800">
-                                        <div className="space-y-2">
-                                            <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
-                                                No Registration Report
-                                            </div>
-                                            <div className="text-2xl font-bold tracking-[-0.03em] text-slate-900 dark:text-slate-100">
-                                                Churches with no registration
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="px-6 py-3">
-                                        {noRegistrationReport.pastors.length ===
+                            <div className="overflow-x-auto">
+                                <table className={elevatedIndexTableStyles.table}>
+                                    <thead className={elevatedIndexTableStyles.thead}>
+                                        <tr className={elevatedIndexTableStyles.headerRow}>
+                                            <th
+                                                className={
+                                                    elevatedIndexTableStyles.firstHeaderCell
+                                                }
+                                            >
+                                                Pastor name
+                                            </th>
+                                            <th
+                                                className={
+                                                    elevatedIndexTableStyles.headerCell
+                                                }
+                                            >
+                                                Church name
+                                            </th>
+                                            <th
+                                                className={
+                                                    elevatedIndexTableStyles.headerCell
+                                                }
+                                            >
+                                                Section
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className={elevatedIndexTableStyles.tbody}>
+                                        {churchesWithoutRegistration.data.length ===
                                         0 ? (
-                                            <div className="py-8 text-sm text-slate-600 dark:text-slate-400">
-                                                All visible churches have submitted registrations for this event.
-                                            </div>
+                                            <tr>
+                                                <td
+                                                    colSpan={3}
+                                                    className={
+                                                        elevatedIndexTableStyles.emptyCell
+                                                    }
+                                                >
+                                                    <div className="space-y-2">
+                                                        <div
+                                                            className={
+                                                                elevatedIndexTableStyles.emptyTitle
+                                                            }
+                                                        >
+                                                            {filters.search === ''
+                                                                ? 'All visible churches have submitted registrations.'
+                                                                : `No churches matched "${filters.search}".`}
+                                                        </div>
+                                                        <div
+                                                            className={
+                                                                elevatedIndexTableStyles.emptyDescription
+                                                            }
+                                                        >
+                                                            {filters.search === ''
+                                                                ? 'There are no missing church registrations for the current event and section scope.'
+                                                                : 'Try another pastor name, church name, or section keyword.'}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
                                         ) : (
-                                            noRegistrationReport.pastors.map(
-                                                (pastor) => (
-                                                    <div
-                                                        key={pastor.id}
-                                                        className="flex items-start justify-between gap-4 border-b border-[#eef3f0] py-4 last:border-b-0 dark:border-slate-800"
+                                            churchesWithoutRegistration.data.map(
+                                                (church) => (
+                                                    <tr
+                                                        key={church.id}
+                                                        className={
+                                                            elevatedIndexTableStyles.row
+                                                        }
                                                     >
-                                                        <div>
-                                                            <div className="font-medium text-slate-900 dark:text-slate-100">
+                                                        <td
+                                                            className={
+                                                                elevatedIndexTableStyles.firstCell
+                                                            }
+                                                        >
+                                                            <div className="font-medium text-foreground">
                                                                 {
-                                                                    pastor.church_name
+                                                                    church.pastor_name
                                                                 }
                                                             </div>
-                                                            <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                                                {pastor.pastor_name}
+                                                        </td>
+                                                        <td
+                                                            className={
+                                                                elevatedIndexTableStyles.cell
+                                                            }
+                                                        >
+                                                            <div className="font-medium text-foreground">
+                                                                {
+                                                                    church.church_name
+                                                                }
                                                             </div>
-                                                            <div className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-                                                                {pastor.section_name}
-                                                                {pastor.district_name
-                                                                    ? ` • ${pastor.district_name}`
-                                                                    : ''}
+                                                        </td>
+                                                        <td
+                                                            className={`${elevatedIndexTableStyles.cell} text-sm text-muted-foreground`}
+                                                        >
+                                                            <div className="font-medium text-foreground/90">
+                                                                {church.section_name ??
+                                                                    'Unassigned'}
                                                             </div>
-                                                        </div>
-                                                        <Badge variant="outline">
-                                                            No registration
-                                                        </Badge>
-                                                    </div>
+                                                            <div className="mt-2">
+                                                                {church.district_name ??
+                                                                    'No district assigned'}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
                                                 ),
                                             )
                                         )}
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div className={elevatedIndexTableStyles.paginationWrapper}>
+                                <DataTablePagination
+                                    meta={churchesWithoutRegistration.meta}
+                                    onPageChange={changePage}
+                                    rowsPerPage={filters.per_page}
+                                    rowOptions={perPageOptions}
+                                    onRowsPerPageChange={updatePerPage}
+                                    className={
+                                        elevatedIndexTableStyles.pagination
+                                    }
+                                    topRowClassName={
+                                        elevatedIndexTableStyles.paginationTopRow
+                                    }
+                                    rowsTriggerClassName={
+                                        elevatedIndexTableStyles.rowsTrigger
+                                    }
+                                    summaryClassName={
+                                        elevatedIndexTableStyles.summary
+                                    }
+                                    navigationWrapperClassName={
+                                        elevatedIndexTableStyles.navigationWrapper
+                                    }
+                                    previousButtonClassName={
+                                        elevatedIndexTableStyles.previousButton
+                                    }
+                                    nextButtonClassName={
+                                        elevatedIndexTableStyles.nextButton
+                                    }
+                                    activePageButtonClassName={
+                                        elevatedIndexTableStyles.activePageButton
+                                    }
+                                    inactivePageButtonClassName={
+                                        elevatedIndexTableStyles.inactivePageButton
+                                    }
+                                    ellipsisClassName={
+                                        elevatedIndexTableStyles.ellipsis
+                                    }
+                                />
+                            </div>
                         </div>
                     </>
                 )}

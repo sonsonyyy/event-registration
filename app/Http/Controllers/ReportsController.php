@@ -10,10 +10,13 @@ use App\Models\RegistrationItem;
 use App\Models\Section;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportsController extends Controller
 {
@@ -33,6 +36,17 @@ class ReportsController extends Controller
         $sections = $this->sectionOptions($user);
         $selectedEvent = $this->selectedEvent($events, $filters['event_id']);
         $selectedSection = $this->selectedSection($user, $sections, $filters['section_id']);
+        $churchesWithoutRegistration = $selectedEvent !== null
+            ? $this->churchesWithoutRegistrationQuery(
+                $user,
+                $selectedEvent,
+                $selectedSection,
+                $filters['search'],
+            )
+                ->orderBy('church_name')
+                ->paginate($filters['per_page'])
+                ->withQueryString()
+            : null;
 
         return Inertia::render('reports/index', [
             'scopeSummary' => $this->scopeSummary($user),
@@ -59,7 +73,10 @@ class ReportsController extends Controller
             'filters' => [
                 'event_id' => $selectedEvent?->getKey(),
                 'section_id' => $selectedSection?->getKey(),
+                'search' => $filters['search'],
+                'per_page' => $filters['per_page'],
             ],
+            'perPageOptions' => [10, 25, 50],
             'selectedEvent' => $selectedEvent ? [
                 'id' => $selectedEvent->getKey(),
                 'name' => $selectedEvent->name,
@@ -77,10 +94,67 @@ class ReportsController extends Controller
             'eventTotalRegistration' => $selectedEvent
                 ? $this->eventTotalRegistrationReport($user, $selectedEvent, $selectedSection)
                 : $this->emptyEventTotalRegistrationReport(),
-            'noRegistrationReport' => $selectedEvent
-                ? $this->noRegistrationReport($user, $selectedEvent)
-                : $this->emptyNoRegistrationReport(),
+            'churchesWithoutRegistration' => $selectedEvent !== null && $churchesWithoutRegistration instanceof LengthAwarePaginator
+                ? [
+                    'data' => $churchesWithoutRegistration->getCollection()
+                        ->map(fn (Pastor $pastor): array => $this->churchWithoutRegistrationData($pastor))
+                        ->values()
+                        ->all(),
+                    'meta' => $this->paginationMeta($churchesWithoutRegistration),
+                ]
+                : $this->emptyChurchesWithoutRegistrationReport($filters['per_page']),
+            'churchesWithoutRegistrationExportUrl' => $selectedEvent !== null
+                ? route('reports.churches-without-registration.export', $this->reportQuery(
+                    $selectedEvent,
+                    $selectedSection,
+                    $filters['search'],
+                ))
+                : null,
         ]);
+    }
+
+    public function exportChurchesWithoutRegistration(IndexReportRequest $request): StreamedResponse
+    {
+        Gate::authorize('viewReports');
+
+        $user = $request->user();
+
+        abort_unless($user instanceof User, 403);
+
+        $filters = $request->filters();
+        $events = $this->eventOptions();
+        $sections = $this->sectionOptions($user);
+        $selectedEvent = $this->selectedEvent($events, $filters['event_id']);
+
+        abort_if($selectedEvent === null, 404);
+
+        $selectedSection = $this->selectedSection($user, $sections, $filters['section_id']);
+        $churches = $this->churchesWithoutRegistrationQuery(
+            $user,
+            $selectedEvent,
+            $selectedSection,
+            $filters['search'],
+        )
+            ->orderBy('church_name')
+            ->get();
+
+        $filename = $this->churchesWithoutRegistrationFilename($selectedEvent, $selectedSection);
+
+        return response()->streamDownload(
+            function () use ($selectedEvent, $selectedSection, $filters, $churches): void {
+                echo $this->churchesWithoutRegistrationSpreadsheet(
+                    $selectedEvent,
+                    $selectedSection,
+                    $filters['search'],
+                    $churches,
+                );
+            },
+            $filename,
+            [
+                'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
+                'Cache-Control' => 'max-age=0',
+            ],
+        );
     }
 
     /**
@@ -213,59 +287,43 @@ class ReportsController extends Controller
      *
      * @return array<string, mixed>
      */
-    private function noRegistrationReport(User $user, Event $event): array
-    {
-        $sectionsQuery = Section::query()
-            ->with('district')
-            ->where('status', 'active');
-
+    private function churchesWithoutRegistrationQuery(
+        User $user,
+        Event $event,
+        ?Section $section,
+        string $search,
+    ): Builder {
         $pastorsQuery = Pastor::query()
             ->with('section.district')
             ->where('status', 'active');
 
-        if ($user->isManager()) {
-            $sectionsQuery->whereKey($user->section_id);
-            $pastorsQuery->where('section_id', $user->section_id);
+        $sectionId = $user->isManager()
+            ? $user->section_id
+            : $section?->getKey();
+
+        if ($sectionId !== null) {
+            $pastorsQuery->where('section_id', $sectionId);
         }
 
-        $sections = $sectionsQuery
-            ->whereDoesntHave('pastors.registrations', function (Builder $query) use ($event): void {
-                $query
-                    ->where('event_id', $event->getKey())
-                    ->whereIn('registration_status', Registration::capacityReservedStatuses());
-            })
-            ->orderBy('name')
-            ->get();
-
-        $pastors = $pastorsQuery
+        $pastorsQuery
             ->whereDoesntHave('registrations', function (Builder $query) use ($event): void {
                 $query
                     ->where('event_id', $event->getKey())
                     ->whereIn('registration_status', Registration::capacityReservedStatuses());
-            })
-            ->orderBy('church_name')
-            ->get();
+            });
 
-        return [
-            'sections' => $sections
-                ->map(fn (Section $section): array => [
-                    'id' => $section->getKey(),
-                    'name' => $section->name,
-                    'district_name' => $section->district?->name,
-                ])
-                ->values()
-                ->all(),
-            'pastors' => $pastors
-                ->map(fn (Pastor $pastor): array => [
-                    'id' => $pastor->getKey(),
-                    'church_name' => $pastor->church_name,
-                    'pastor_name' => $pastor->pastor_name,
-                    'section_name' => $pastor->section?->name,
-                    'district_name' => $pastor->section?->district?->name,
-                ])
-                ->values()
-                ->all(),
-        ];
+        if ($search !== '') {
+            $pastorsQuery->where(function (Builder $query) use ($search): void {
+                $query
+                    ->where('pastor_name', 'like', "%{$search}%")
+                    ->orWhere('church_name', 'like', "%{$search}%")
+                    ->orWhereHas('section', function (Builder $sectionQuery) use ($search): void {
+                        $sectionQuery->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        return $pastorsQuery;
     }
 
     private function emptyEventTotalRegistrationReport(): array
@@ -279,12 +337,140 @@ class ReportsController extends Controller
         ];
     }
 
-    private function emptyNoRegistrationReport(): array
+    private function emptyChurchesWithoutRegistrationReport(int $perPage): array
     {
         return [
-            'sections' => [],
-            'pastors' => [],
+            'data' => [],
+            'meta' => [
+                'current_page' => 1,
+                'last_page' => 1,
+                'per_page' => $perPage,
+                'from' => null,
+                'to' => null,
+                'total' => 0,
+            ],
         ];
+    }
+
+    private function churchWithoutRegistrationData(Pastor $pastor): array
+    {
+        return [
+            'id' => $pastor->getKey(),
+            'church_name' => $pastor->church_name,
+            'pastor_name' => $pastor->pastor_name,
+            'section_name' => $pastor->section?->name,
+            'district_name' => $pastor->section?->district?->name,
+        ];
+    }
+
+    /**
+     * @return array{current_page: int, last_page: int, per_page: int, from: int|null, to: int|null, total: int}
+     */
+    private function paginationMeta(LengthAwarePaginator $paginator): array
+    {
+        return [
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'per_page' => $paginator->perPage(),
+            'from' => $paginator->firstItem(),
+            'to' => $paginator->lastItem(),
+            'total' => $paginator->total(),
+        ];
+    }
+
+    /**
+     * @return array{event_id: int, section_id?: int, search?: string}
+     */
+    private function reportQuery(Event $event, ?Section $section, string $search): array
+    {
+        $query = [
+            'event_id' => $event->getKey(),
+        ];
+
+        if ($section !== null) {
+            $query['section_id'] = $section->getKey();
+        }
+
+        if ($search !== '') {
+            $query['search'] = $search;
+        }
+
+        return $query;
+    }
+
+    private function churchesWithoutRegistrationFilename(Event $event, ?Section $section): string
+    {
+        $parts = [
+            Str::slug($event->name),
+            'churches-without-registration',
+        ];
+
+        if ($section !== null) {
+            $parts[] = Str::slug($section->name);
+        }
+
+        return implode('-', $parts).'.xls';
+    }
+
+    /**
+     * @param  Collection<int, Pastor>  $churches
+     */
+    private function churchesWithoutRegistrationSpreadsheet(
+        Event $event,
+        ?Section $section,
+        string $search,
+        Collection $churches,
+    ): string {
+        $rows = $churches
+            ->map(function (Pastor $pastor): string {
+                return sprintf(
+                    '<tr><td>%s</td><td>%s</td><td>%s</td></tr>',
+                    e($pastor->pastor_name),
+                    e($pastor->church_name),
+                    e($pastor->section?->name ?? 'Unassigned'),
+                );
+            })
+            ->implode('');
+
+        $eventName = e($event->name);
+        $scope = e($section?->name ?? 'All sections');
+        $searchSummary = $search !== '' ? e($search) : 'All visible churches';
+        $rows = $rows !== ''
+            ? $rows
+            : '<tr><td colspan="3">No churches found for the current filter.</td></tr>';
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Churches with No Registration</title>
+</head>
+<body>
+    <table border="1">
+        <tr><td colspan="3"><strong>Event</strong></td></tr>
+        <tr><td colspan="3">{$eventName}</td></tr>
+        <tr><td colspan="3"><strong>Section Scope</strong></td></tr>
+        <tr><td colspan="3">{$scope}</td></tr>
+        <tr><td colspan="3"><strong>Search</strong></td></tr>
+        <tr><td colspan="3">{$searchSummary}</td></tr>
+    </table>
+    <br>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Pastor Name</th>
+                <th>Church Name</th>
+                <th>Section</th>
+            </tr>
+        </thead>
+        <tbody>
+            {$rows}
+        </tbody>
+    </table>
+</body>
+</html>
+HTML;
     }
 
     private function scopeSummary(User $user): string
