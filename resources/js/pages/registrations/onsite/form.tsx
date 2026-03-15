@@ -49,11 +49,6 @@ type SectionOption = {
     district_name: string;
 };
 
-type SelectOption = {
-    value: string;
-    label: string;
-};
-
 type LineItemFormValue = {
     fee_category_id: string;
     quantity: string;
@@ -64,7 +59,6 @@ type OnsiteRegistrationFormData = {
     district_id: string;
     section_id: string;
     pastor_id: string;
-    payment_status: string;
     payment_reference: string;
     remarks: string;
     line_items: LineItemFormValue[];
@@ -73,7 +67,6 @@ type OnsiteRegistrationFormData = {
 type Props = {
     events: EventOption[];
     pastors: PastorOption[];
-    paymentStatusOptions: SelectOption[];
 };
 
 const textareaClassName =
@@ -101,18 +94,12 @@ function emptyLineItem(): LineItemFormValue {
 export default function OnsiteRegistrationForm({
     events,
     pastors,
-    paymentStatusOptions,
 }: Props) {
     const form = useForm<OnsiteRegistrationFormData>({
         event_id: events[0]?.id.toString() ?? '',
         district_id: '',
         section_id: '',
         pastor_id: '',
-        payment_status:
-            paymentStatusOptions.find((option) => option.value === 'unpaid')
-                ?.value ??
-            paymentStatusOptions[0]?.value ??
-            '',
         payment_reference: '',
         remarks: '',
         line_items: [emptyLineItem()],
@@ -380,51 +367,23 @@ export default function OnsiteRegistrationForm({
                         </div>
                     </div>
 
-                    <div className="grid gap-6 lg:grid-cols-2">
-                        <div className="grid gap-2">
-                            <Label htmlFor="payment_status">Payment status</Label>
-                            <select
-                                id="payment_status"
-                                name="payment_status"
-                                value={form.data.payment_status}
-                                onChange={(event) =>
-                                    form.setData(
-                                        'payment_status',
-                                        event.target.value,
-                                    )
-                                }
-                                className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                            >
-                                {paymentStatusOptions.map((option) => (
-                                    <option
-                                        key={option.value}
-                                        value={option.value}
-                                    >
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <InputError message={form.errors.payment_status} />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="payment_reference">
-                                Official receipt / reference
-                            </Label>
-                            <Input
-                                id="payment_reference"
-                                name="payment_reference"
-                                value={form.data.payment_reference}
-                                onChange={(event) =>
-                                    form.setData(
-                                        'payment_reference',
-                                        event.target.value,
-                                    )
-                                }
-                                placeholder="OR-2026-00123"
-                            />
-                            <InputError message={form.errors.payment_reference} />
-                        </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="payment_reference">
+                            Official receipt / reference
+                        </Label>
+                        <Input
+                            id="payment_reference"
+                            name="payment_reference"
+                            value={form.data.payment_reference}
+                            onChange={(event) =>
+                                form.setData(
+                                    'payment_reference',
+                                    event.target.value,
+                                )
+                            }
+                            placeholder="OR-2026-00123"
+                        />
+                        <InputError message={form.errors.payment_reference} />
                     </div>
 
                     <div className="grid gap-2">

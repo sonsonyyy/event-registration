@@ -35,14 +35,12 @@ test('registration staff can create onsite registrations with multiple fee-categ
             ->has('events.0.fee_categories', 2)
             ->where('pastors.0.church_name', $pastor->church_name)
             ->where('pastors.0.section_id', $pastor->section_id)
-            ->where('pastors.0.district_id', $pastor->section->district_id)
-            ->has('paymentStatusOptions', 3));
+            ->where('pastors.0.district_id', $pastor->section->district_id));
 
     $this->actingAs($staff)
         ->post(route('registrations.onsite.store'), [
             'event_id' => $event->id,
             'pastor_id' => $pastor->id,
-            'payment_status' => Registration::PAYMENT_STATUS_PAID,
             'payment_reference' => 'OR-2026-1001',
             'remarks' => 'Walk-in group registration',
             'line_items' => [
@@ -162,7 +160,6 @@ test('managers are limited to onsite registrations and pastors within their assi
         ->post(route('registrations.onsite.store'), [
             'event_id' => $event->id,
             'pastor_id' => $outsidePastor->id,
-            'payment_status' => Registration::PAYMENT_STATUS_UNPAID,
             'payment_reference' => '',
             'remarks' => '',
             'line_items' => [
@@ -193,7 +190,6 @@ test('online registrants cannot access onsite registration routes', function () 
         ->post(route('registrations.onsite.store'), [
             'event_id' => $event->id,
             'pastor_id' => $pastor->id,
-            'payment_status' => Registration::PAYMENT_STATUS_UNPAID,
             'payment_reference' => '',
             'remarks' => '',
             'line_items' => [
@@ -231,7 +227,6 @@ test('onsite registration rejects invalid fee-category selections and capacity o
         ->post(route('registrations.onsite.store'), [
             'event_id' => $event->id,
             'pastor_id' => $pastor->id,
-            'payment_status' => Registration::PAYMENT_STATUS_PARTIAL,
             'payment_reference' => 'OR-2026-2001',
             'remarks' => '',
             'line_items' => [

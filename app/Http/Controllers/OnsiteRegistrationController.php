@@ -65,7 +65,6 @@ class OnsiteRegistrationController extends Controller
         return Inertia::render('registrations/onsite/create', [
             'events' => $this->eventOptions(),
             'pastors' => $this->pastorOptions($request->user()),
-            'paymentStatusOptions' => $this->paymentStatusOptions(),
         ]);
     }
 
@@ -114,7 +113,7 @@ class OnsiteRegistrationController extends Controller
                 'pastor_id' => $pastor->getKey(),
                 'encoded_by_user_id' => $request->user()->getKey(),
                 'registration_mode' => Registration::MODE_ONSITE,
-                'payment_status' => $validated['payment_status'],
+                'payment_status' => Registration::PAYMENT_STATUS_PAID,
                 'registration_status' => Registration::STATUS_COMPLETED,
                 'payment_reference' => $validated['payment_reference'] ?: null,
                 'remarks' => $validated['remarks'] ?: null,
@@ -233,22 +232,6 @@ class OnsiteRegistrationController extends Controller
                 'section_name' => $pastor->section->name,
                 'district_id' => $pastor->section->district->getKey(),
                 'district_name' => $pastor->section->district->name,
-            ])
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Build the supported payment status options.
-     *
-     * @return array<int, array<string, string>>
-     */
-    private function paymentStatusOptions(): array
-    {
-        return collect(Registration::paymentStatuses())
-            ->map(fn (string $status): array => [
-                'value' => $status,
-                'label' => ucfirst($status),
             ])
             ->values()
             ->all();

@@ -36,15 +36,9 @@ type PastorOption = {
     district_name: string;
 };
 
-type SelectOption = {
-    value: string;
-    label: string;
-};
-
 type Props = {
     events: EventOption[];
     pastors: PastorOption[];
-    paymentStatusOptions: SelectOption[];
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -65,7 +59,6 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function CreateOnsiteRegistration({
     events,
     pastors,
-    paymentStatusOptions,
 }: Props) {
     const hasUnavailableDependencies = events.length === 0 || pastors.length === 0;
 
@@ -104,7 +97,6 @@ export default function CreateOnsiteRegistration({
                 <OnsiteRegistrationForm
                     events={events}
                     pastors={pastors}
-                    paymentStatusOptions={paymentStatusOptions}
                 />
             </div>
         </AppLayout>

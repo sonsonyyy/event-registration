@@ -8,7 +8,6 @@ use App\Models\Pastor;
 use App\Models\Registration;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class StoreOnsiteRegistrationRequest extends FormRequest
@@ -51,7 +50,6 @@ class StoreOnsiteRegistrationRequest extends FormRequest
         return [
             'event_id' => ['required', 'integer', 'exists:events,id'],
             'pastor_id' => ['required', 'integer', 'exists:pastors,id'],
-            'payment_status' => ['required', Rule::in(Registration::paymentStatuses())],
             'payment_reference' => ['nullable', 'string', 'max:255'],
             'remarks' => ['nullable', 'string', 'max:1000'],
             'line_items' => ['required', 'array', 'min:1'],
@@ -173,8 +171,6 @@ class StoreOnsiteRegistrationRequest extends FormRequest
             'event_id.exists' => 'Select a valid event.',
             'pastor_id.required' => 'Select a pastor or church.',
             'pastor_id.exists' => 'Select a valid pastor or church.',
-            'payment_status.required' => 'Select a payment status.',
-            'payment_status.in' => 'Select a valid payment status.',
             'payment_reference.max' => 'The receipt or manual reference must not exceed 255 characters.',
             'remarks.max' => 'Remarks must not exceed 1000 characters.',
             'line_items.required' => 'Add at least one fee category item.',
