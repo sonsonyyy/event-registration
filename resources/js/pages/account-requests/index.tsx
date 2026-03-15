@@ -8,6 +8,7 @@ import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { formatSystemDateTime as formatManilaDateTime } from '@/lib/date-time';
 import {
     Select,
     SelectContent,
@@ -78,10 +79,7 @@ const formatDateTime = (value: string | null): string => {
         return 'Not reviewed yet';
     }
 
-    return new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
+    return formatManilaDateTime(value);
 };
 
 const approvalStatusClassName = (status: string): string => {

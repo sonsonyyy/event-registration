@@ -2,6 +2,10 @@ import { Head } from '@inertiajs/react';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+    formatSystemDateRange,
+    formatSystemDateTime,
+} from '@/lib/date-time';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard as dashboardRoute } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -108,25 +112,12 @@ const metricCardClasses = [
     },
 ];
 
-const formatDateRange = (dateFrom: string, dateTo: string): string => {
-    const formatter = new Intl.DateTimeFormat(undefined, {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-    });
-
-    return `${formatter.format(new Date(dateFrom))} - ${formatter.format(new Date(dateTo))}`;
-};
-
 const formatDateTime = (value: string | null): string => {
     if (! value) {
         return 'Not submitted';
     }
 
-    return new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
+    return formatSystemDateTime(value);
 };
 
 const formatCurrency = (value: string): string =>
@@ -321,7 +312,7 @@ export default function Dashboard({ dashboard }: Props) {
                                                         {event.name}
                                                     </div>
                                                     <div className="text-sm text-slate-600">
-                                                        {formatDateRange(event.date_from, event.date_to)}
+                                                        {formatSystemDateRange(event.date_from, event.date_to)}
                                                     </div>
                                                     <div className="text-sm text-slate-500">
                                                         {event.venue}

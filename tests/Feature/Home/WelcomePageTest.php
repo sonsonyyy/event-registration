@@ -2,14 +2,17 @@
 
 use App\Models\Event;
 use App\Models\EventFeeCategory;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('welcome page lists open events that can still accept registrations', function () {
+    $registrationCloseAt = Carbon::create(2026, 4, 12, 23, 59, 59, config('app.timezone'));
+
     $availableEvent = Event::factory()->create([
         'name' => 'CLD Youth Conference 2026',
         'status' => Event::STATUS_OPEN,
         'registration_open_at' => now()->subDay(),
-        'registration_close_at' => now()->addWeek(),
+        'registration_close_at' => $registrationCloseAt,
         'total_capacity' => 800,
     ]);
     EventFeeCategory::factory()->for($availableEvent)->create([
@@ -46,5 +49,8 @@ test('welcome page lists open events that can still accept registrations', funct
             ->has('faqs', 5)
             ->where('faqs.0.question', 'How do I request a registrant account for our church?')
             ->where('events.0.name', 'CLD Youth Conference 2026')
+            ->where('events.0.registration_close_at', $registrationCloseAt->toIso8601String())
             ->where('events.0.fee_categories.0.category_name', 'Regular (Online)'));
+
+    expect(config('app.timezone'))->toBe('Asia/Manila');
 });

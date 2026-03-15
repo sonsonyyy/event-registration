@@ -8,6 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import {
+    formatSystemDateOnly,
+    formatSystemDateTime,
+} from '@/lib/date-time';
 
 type FeeCategoryOption = {
     id: number;
@@ -83,16 +87,9 @@ const formatCurrency = (value: number | string): string =>
         currency: 'PHP',
     }).format(typeof value === 'string' ? Number.parseFloat(value || '0') : value);
 
-const formatDate = (value: string): string =>
-    new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
+const formatDate = (value: string): string => formatSystemDateTime(value);
 
-const formatEventDate = (value: string): string =>
-    new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-    }).format(new Date(value));
+const formatEventDate = (value: string): string => formatSystemDateOnly(value);
 
 function emptyLineItem(): LineItemFormValue {
     return {

@@ -9,6 +9,7 @@ import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { formatSystemDateRange } from '@/lib/date-time';
 import {
     Select,
     SelectContent,
@@ -118,13 +119,7 @@ const formatDateRange = (
         return 'Dates not available';
     }
 
-    const formatter = new Intl.DateTimeFormat(undefined, {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-    });
-
-    return `${formatter.format(new Date(dateFrom))} - ${formatter.format(new Date(dateTo))}`;
+    return formatSystemDateRange(dateFrom, dateTo);
 };
 
 const eventStatusVariant = (

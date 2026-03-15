@@ -14,6 +14,10 @@ import AppLogo from '@/components/app-logo';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+    formatSystemDateRange,
+    formatSystemDateTime,
+} from '@/lib/date-time';
 import { dashboard, login } from '@/routes';
 
 type FeeCategoryRecord = {
@@ -55,22 +59,6 @@ const formatCurrency = (value: string): string =>
         style: 'currency',
         currency: 'PHP',
     }).format(Number.parseFloat(value || '0'));
-
-const formatDateRange = (dateFrom: string, dateTo: string): string => {
-    const formatter = new Intl.DateTimeFormat(undefined, {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-    });
-
-    return `${formatter.format(new Date(dateFrom))} - ${formatter.format(new Date(dateTo))}`;
-};
-
-const formatDateTime = (value: string): string =>
-    new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
 
 export default function Welcome() {
     const { auth, events, faqs } = usePage<PageProps>().props;
@@ -296,7 +284,7 @@ export default function Welcome() {
                                                                 Event dates
                                                             </div>
                                                             <div className="mt-2 text-sm font-semibold text-slate-900">
-                                                                {formatDateRange(event.date_from, event.date_to)}
+                                                                {formatSystemDateRange(event.date_from, event.date_to)}
                                                             </div>
                                                         </div>
 
@@ -317,7 +305,7 @@ export default function Welcome() {
                                                                 Fee categories
                                                             </div>
                                                             <div className="text-xs text-slate-500">
-                                                                Registration closes {formatDateTime(event.registration_close_at)}
+                                                                Registration closes {formatSystemDateTime(event.registration_close_at)}
                                                             </div>
                                                         </div>
                                                         <div className="mt-4 grid gap-3">

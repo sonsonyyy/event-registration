@@ -7,6 +7,10 @@ import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    formatSystemDateOnly,
+    formatSystemDateTime,
+} from '@/lib/date-time';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
@@ -48,17 +52,6 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: EventController.index(),
     },
 ];
-
-const formatDate = (value: string): string =>
-    new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-    }).format(new Date(value));
-
-const formatDateTime = (value: string): string =>
-    new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
 
 const eventStatusVariant = (
     status: string,
@@ -268,20 +261,20 @@ export default function EventIndex({
                                                 className={`${elevatedIndexTableStyles.cell} text-sm text-muted-foreground`}
                                             >
                                             <div>
-                                                {formatDate(event.date_from)} to{' '}
-                                                {formatDate(event.date_to)}
+                                                {formatSystemDateOnly(event.date_from)} to{' '}
+                                                {formatSystemDateOnly(event.date_to)}
                                             </div>
                                             <div className="mt-2 text-xs uppercase tracking-wide">
                                                 Opens{' '}
-                                                {formatDateTime(
+                                                {formatSystemDateTime(
                                                     event.registration_open_at,
                                                 )}
                                             </div>
                                             <div className="mt-1 text-xs uppercase tracking-wide">
                                                 Closes{' '}
-                                                {formatDateTime(
-                                                    event.registration_close_at,
-                                                )}
+                                                    {formatSystemDateTime(
+                                                        event.registration_close_at,
+                                                    )}
                                             </div>
                                             </td>
                                             <td className={elevatedIndexTableStyles.cell}>

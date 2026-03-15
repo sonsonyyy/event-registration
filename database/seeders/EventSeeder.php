@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Event;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
 
 class EventSeeder extends Seeder
 {
@@ -15,13 +16,13 @@ class EventSeeder extends Seeder
         $event = Event::query()->updateOrCreate(
             ['name' => 'CLD Youth Conference 2026'],
             [
-                'description' => 'Central Luzon District Youth Ministries Conference 2026',
-                'venue' => 'SMX Clark, Pampanga',
+                'description' => 'CLD Youth Ministries: ONE. For Souls. For Impact',
+                'venue' => 'SMX Convention Center, Clark',
                 'date_from' => '2026-05-05',
                 'date_to' => '2026-05-06',
-                'registration_open_at' => now()->startOfDay(),
-                'registration_close_at' => now()->addMonth()->endOfDay(),
-                'total_capacity' => 2000,
+                'registration_open_at' => Carbon::parse('2026-03-15')->startOfDay(),
+                'registration_close_at' => Carbon::parse('2026-04-12')->endOfDay(),
+                'total_capacity' => 1200,
                 'status' => Event::STATUS_OPEN,
             ],
         );

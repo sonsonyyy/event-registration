@@ -7,6 +7,7 @@ import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { formatSystemDateTime } from '@/lib/date-time';
 import {
     Select,
     SelectContent,
@@ -108,10 +109,7 @@ const formatDate = (value: string | null): string => {
         return 'Not submitted';
     }
 
-    return new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
+    return formatSystemDateTime(value);
 };
 
 const registrationStatusClassName = (status: string): string => {
