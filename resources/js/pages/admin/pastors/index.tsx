@@ -1,11 +1,14 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import PastorController from '@/actions/App/Http/Controllers/Admin/PastorController';
+import {
+    DataTableBadge,
+    resolveDataTableTone,
+} from '@/components/data-table-badge';
 import DataTablePagination from '@/components/data-table-pagination';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -220,56 +223,58 @@ export default function PastorIndex({
                                             className={elevatedIndexTableStyles.row}
                                         >
                                             <td className={elevatedIndexTableStyles.firstCell}>
-                                            <div className="font-medium text-foreground">
+                                            <div className={elevatedIndexTableStyles.primaryText}>
                                                 {pastor.church_name}
                                             </div>
-                                            <div className="mt-1 text-sm text-muted-foreground">
+                                            <div className={elevatedIndexTableStyles.secondaryText}>
                                                 {pastor.pastor_name}
                                             </div>
-                                            <div className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+                                            <div className={elevatedIndexTableStyles.detailText}>
                                                 {pastor.address ||
                                                     'No address provided.'}
                                             </div>
                                             </td>
                                             <td className={elevatedIndexTableStyles.cell}>
-                                            <div className="font-medium text-foreground">
+                                            <div className={elevatedIndexTableStyles.primaryText}>
                                                 {pastor.section.name}
                                             </div>
-                                            <div className="mt-2 text-sm text-muted-foreground">
+                                            <div className={elevatedIndexTableStyles.metaText}>
                                                 {pastor.district.name}
                                             </div>
                                             </td>
-                                            <td
-                                                className={`${elevatedIndexTableStyles.cell} text-sm text-muted-foreground`}
-                                            >
-                                            <div className="font-medium text-foreground/90">
+                                            <td className={elevatedIndexTableStyles.cell}>
+                                            <div className={elevatedIndexTableStyles.strongText}>
                                                 {pastor.contact_number ||
-                                                    'No contact number provided.'}
+                                                    'No contact number'}
                                             </div>
-                                            <div className="mt-2 break-all">
+                                            <div
+                                                className={`${elevatedIndexTableStyles.secondaryText} break-all`}
+                                            >
                                                 {pastor.email ||
-                                                    'No email provided.'}
+                                                    'No email address'}
                                             </div>
                                             </td>
                                             <td className={elevatedIndexTableStyles.cell}>
-                                            <Badge
-                                                variant={
-                                                    pastor.status === 'active'
-                                                        ? 'secondary'
-                                                        : 'destructive'
-                                                }
-                                                className="capitalize"
+                                            <DataTableBadge
+                                                tone={resolveDataTableTone(
+                                                    pastor.status,
+                                                    {
+                                                        active: 'emerald',
+                                                        inactive: 'rose',
+                                                    },
+                                                )}
                                             >
                                                 {pastor.status}
-                                            </Badge>
+                                            </DataTableBadge>
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
                                             >
-                                            <div className="flex justify-end gap-2">
+                                            <div className={elevatedIndexTableStyles.actionGroup}>
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
+                                                    className="rounded-md"
                                                     asChild
                                                 >
                                                     <Link
@@ -283,6 +288,7 @@ export default function PastorIndex({
                                                 <Button
                                                     variant="destructive"
                                                     size="sm"
+                                                    className="rounded-md"
                                                     onClick={() =>
                                                         destroy(pastor)
                                                     }

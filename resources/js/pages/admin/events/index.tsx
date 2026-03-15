@@ -1,11 +1,14 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import EventController from '@/actions/App/Http/Controllers/Admin/EventController';
+import {
+    DataTableBadge,
+    resolveDataTableTone,
+} from '@/components/data-table-badge';
 import DataTablePagination from '@/components/data-table-pagination';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     formatSystemDateOnly,
@@ -52,21 +55,6 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: EventController.index(),
     },
 ];
-
-const eventStatusVariant = (
-    status: string,
-): 'default' | 'secondary' | 'destructive' => {
-    switch (status) {
-        case 'open':
-        case 'completed':
-            return 'secondary';
-        case 'closed':
-        case 'cancelled':
-            return 'destructive';
-        default:
-            return 'default';
-    }
-};
 
 export default function EventIndex({
     events,
@@ -246,87 +234,94 @@ export default function EventIndex({
                                             className={elevatedIndexTableStyles.row}
                                         >
                                             <td className={elevatedIndexTableStyles.firstCell}>
-                                            <div className="font-medium text-foreground">
+                                            <div className={elevatedIndexTableStyles.primaryText}>
                                                 {event.name}
                                             </div>
-                                            <div className="mt-1 text-sm text-muted-foreground">
+                                            <div className={elevatedIndexTableStyles.secondaryText}>
                                                 {event.venue}
                                             </div>
-                                            <div className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+                                            <div className={elevatedIndexTableStyles.detailText}>
                                                 {event.description ||
                                                     'No description provided.'}
                                             </div>
                                             </td>
-                                            <td
-                                                className={`${elevatedIndexTableStyles.cell} text-sm text-muted-foreground`}
-                                            >
-                                            <div>
+                                            <td className={elevatedIndexTableStyles.cell}>
+                                            <div className={elevatedIndexTableStyles.strongText}>
                                                 {formatSystemDateOnly(event.date_from)} to{' '}
                                                 {formatSystemDateOnly(event.date_to)}
                                             </div>
-                                            <div className="mt-2 text-xs uppercase tracking-wide">
+                                            <div className={elevatedIndexTableStyles.secondaryText}>
                                                 Opens{' '}
                                                 {formatSystemDateTime(
                                                     event.registration_open_at,
                                                 )}
                                             </div>
-                                            <div className="mt-1 text-xs uppercase tracking-wide">
+                                            <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                                                 Closes{' '}
-                                                    {formatSystemDateTime(
-                                                        event.registration_close_at,
-                                                    )}
+                                                {formatSystemDateTime(
+                                                    event.registration_close_at,
+                                                )}
                                             </div>
                                             </td>
                                             <td className={elevatedIndexTableStyles.cell}>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <Badge
-                                                    variant={eventStatusVariant(
+                                                <DataTableBadge
+                                                    tone={resolveDataTableTone(
                                                         event.status,
+                                                        {
+                                                            open: 'emerald',
+                                                            draft: 'slate',
+                                                            closed: 'amber',
+                                                            completed: 'blue',
+                                                            cancelled: 'rose',
+                                                        },
                                                     )}
-                                                    className="capitalize"
                                                 >
                                                     {event.status}
-                                                </Badge>
-                                                <Badge
-                                                    variant={
+                                                </DataTableBadge>
+                                                <DataTableBadge
+                                                    tone={
                                                         event.accepting_registrations
-                                                            ? 'secondary'
-                                                            : 'destructive'
+                                                            ? 'emerald'
+                                                            : 'slate'
                                                     }
+                                                    capitalize={false}
                                                 >
                                                     {event.accepting_registrations
                                                         ? 'Accepting'
                                                         : 'Not accepting'}
-                                                </Badge>
+                                                </DataTableBadge>
                                             </div>
-                                            <div className="mt-2 text-sm text-muted-foreground">
+                                            <div className={elevatedIndexTableStyles.detailText}>
                                                 {event.status_reason ||
                                                     'Registration rules are satisfied.'}
                                             </div>
                                             </td>
-                                            <td
-                                                className={`${elevatedIndexTableStyles.cell} text-sm text-muted-foreground`}
-                                            >
-                                            <div>
+                                            <td className={elevatedIndexTableStyles.cell}>
+                                            <div className={elevatedIndexTableStyles.strongText}>
+                                                {event.remaining_slots} of{' '}
+                                                {event.total_capacity} remaining
+                                            </div>
+                                            <div className={elevatedIndexTableStyles.secondaryText}>
                                                 Reserved {event.reserved_quantity}
                                             </div>
-                                            <div className="mt-2">
-                                                Remaining {event.remaining_slots}{' '}
-                                                / {event.total_capacity}
-                                            </div>
                                             </td>
-                                            <td
-                                                className={`${elevatedIndexTableStyles.cell} text-muted-foreground`}
-                                            >
-                                            {event.fee_categories_count}
+                                            <td className={elevatedIndexTableStyles.cell}>
+                                            <div className={elevatedIndexTableStyles.primaryText}>
+                                                {event.fee_categories_count}
+                                            </div>
+                                            <div className={elevatedIndexTableStyles.secondaryText}>
+                                                fee categories
+                                            </div>
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
                                             >
-                                            <div className="flex justify-end gap-2">
+                                            <div className={elevatedIndexTableStyles.actionGroup}>
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
+                                                    className="rounded-md"
                                                     asChild
                                                 >
                                                     <Link
@@ -340,6 +335,7 @@ export default function EventIndex({
                                                 <Button
                                                     variant="destructive"
                                                     size="sm"
+                                                    className="rounded-md"
                                                     onClick={() =>
                                                         destroy(event)
                                                     }

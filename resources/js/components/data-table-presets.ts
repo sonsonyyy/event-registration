@@ -24,6 +24,21 @@ export const elevatedIndexTableStyles = {
     firstCell: 'px-6 py-4 align-middle',
     cell: 'py-4 pr-4 align-middle',
     lastCellRight: 'py-4 pr-6 align-middle',
+    primaryText: 'font-medium text-slate-900 dark:text-slate-100',
+    secondaryText: 'mt-1 text-sm text-slate-500 dark:text-slate-400',
+    detailText:
+        'mt-3 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400',
+    metaText:
+        'mt-3 text-xs font-semibold tracking-[0.18em] uppercase text-slate-500 dark:text-slate-400',
+    subMetaText:
+        'mt-1 text-xs font-semibold tracking-[0.18em] uppercase text-slate-500 dark:text-slate-400',
+    strongText: 'font-medium text-slate-900 dark:text-slate-100',
+    metricText: 'text-sm text-slate-500 dark:text-slate-400',
+    inlineTag:
+        'inline-flex rounded-md bg-slate-100 px-2.5 py-1 text-[11px] font-semibold tracking-[0.16em] uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-200',
+    subtleSurface:
+        'rounded-lg border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950',
+    actionGroup: 'flex justify-end gap-2',
     emptyCell: 'px-6 py-16 text-center',
     emptyTitle: 'text-base font-medium text-slate-900 dark:text-slate-100',
     emptyDescription: 'text-sm text-slate-500 dark:text-slate-400',

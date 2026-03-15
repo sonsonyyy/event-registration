@@ -1,8 +1,11 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import SectionController from '@/actions/App/Http/Controllers/Admin/SectionController';
+import {
+    DataTableBadge,
+    resolveDataTableTone,
+} from '@/components/data-table-badge';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import Heading from '@/components/heading';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -144,43 +147,48 @@ export default function SectionIndex({ sections }: Props) {
                                             className={elevatedIndexTableStyles.row}
                                         >
                                             <td className={elevatedIndexTableStyles.firstCell}>
-                                            <div className="font-medium text-foreground">
+                                            <div className={elevatedIndexTableStyles.primaryText}>
                                                 {section.name}
                                             </div>
-                                            <div className="mt-1 max-w-xl text-sm text-muted-foreground">
+                                            <div className={elevatedIndexTableStyles.secondaryText}>
                                                 {section.description ||
                                                     'No description provided.'}
                                             </div>
                                             </td>
-                                            <td
-                                                className={`${elevatedIndexTableStyles.cell} text-muted-foreground`}
-                                            >
-                                            {section.district.name}
-                                            </td>
-                                            <td
-                                                className={`${elevatedIndexTableStyles.cell} text-muted-foreground`}
-                                            >
-                                            {section.pastors_count}
+                                            <td className={elevatedIndexTableStyles.cell}>
+                                            <div className={elevatedIndexTableStyles.primaryText}>
+                                                {section.district.name}
+                                            </div>
                                             </td>
                                             <td className={elevatedIndexTableStyles.cell}>
-                                            <Badge
-                                                variant={
-                                                    section.status === 'active'
-                                                        ? 'secondary'
-                                                        : 'destructive'
-                                                }
-                                                className="capitalize"
+                                            <div className={elevatedIndexTableStyles.primaryText}>
+                                                {section.pastors_count}
+                                            </div>
+                                            <div className={elevatedIndexTableStyles.secondaryText}>
+                                                pastor records
+                                            </div>
+                                            </td>
+                                            <td className={elevatedIndexTableStyles.cell}>
+                                            <DataTableBadge
+                                                tone={resolveDataTableTone(
+                                                    section.status,
+                                                    {
+                                                        active: 'emerald',
+                                                        inactive: 'rose',
+                                                    },
+                                                )}
                                             >
                                                 {section.status}
-                                            </Badge>
+                                            </DataTableBadge>
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
                                             >
-                                            <div className="flex justify-end gap-2">
+                                            <div className={elevatedIndexTableStyles.actionGroup}>
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
+                                                    className="rounded-md"
                                                     asChild
                                                 >
                                                     <Link
@@ -194,6 +202,7 @@ export default function SectionIndex({ sections }: Props) {
                                                 <Button
                                                     variant="destructive"
                                                     size="sm"
+                                                    className="rounded-md"
                                                     onClick={() =>
                                                         destroy(section)
                                                     }

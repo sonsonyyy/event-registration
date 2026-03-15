@@ -1,11 +1,14 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
+import {
+    DataTableBadge,
+    resolveDataTableTone,
+} from '@/components/data-table-badge';
 import DataTablePagination from '@/components/data-table-pagination';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -60,16 +63,6 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: UserController.index(),
     },
 ];
-
-const roleVariant = (roleName: string | null): 'default' | 'secondary' => {
-    switch (roleName) {
-        case 'Manager':
-        case 'Online Registrant':
-            return 'secondary';
-        default:
-            return 'default';
-    }
-};
 
 export default function UserIndex({
     users,
@@ -257,63 +250,87 @@ export default function UserIndex({
                                             className={elevatedIndexTableStyles.row}
                                         >
                                             <td className={elevatedIndexTableStyles.firstCell}>
-                                            <div className="font-medium text-foreground">
+                                            <div className={elevatedIndexTableStyles.primaryText}>
                                                 {user.name}
                                             </div>
-                                            <div className="mt-1 text-sm text-muted-foreground">
+                                            <div className={elevatedIndexTableStyles.secondaryText}>
                                                 {user.email}
                                             </div>
                                             {user.is_current_user && (
                                                 <div className="mt-2">
-                                                    <Badge variant="secondary">
+                                                    <DataTableBadge
+                                                        tone="slate"
+                                                        capitalize={false}
+                                                    >
                                                         Current account
-                                                    </Badge>
+                                                    </DataTableBadge>
                                                 </div>
                                             )}
                                             </td>
                                             <td className={elevatedIndexTableStyles.cell}>
-                                            <Badge
-                                                variant={roleVariant(
+                                            <DataTableBadge
+                                                tone={resolveDataTableTone(
                                                     user.role.name,
+                                                    {
+                                                        Admin: 'slate',
+                                                        Manager: 'emerald',
+                                                        'Registration Staff':
+                                                            'blue',
+                                                        'Online Registrant':
+                                                            'violet',
+                                                    },
+                                                    'slate',
                                                 )}
+                                                capitalize={false}
                                             >
                                                 {user.role.name ?? 'No role'}
-                                            </Badge>
+                                            </DataTableBadge>
                                             </td>
-                                            <td
-                                                className={`${elevatedIndexTableStyles.cell} text-muted-foreground`}
-                                            >
-                                            <div>{user.scope_summary}</div>
+                                            <td className={elevatedIndexTableStyles.cell}>
+                                            <div className={elevatedIndexTableStyles.primaryText}>
+                                                {user.scope_summary}
+                                            </div>
                                             {user.pastor && (
-                                                <div className="mt-2 text-xs uppercase tracking-wide">
+                                                <div className={elevatedIndexTableStyles.metaText}>
                                                     {user.pastor.district_name}
                                                 </div>
                                             )}
                                             {! user.pastor && user.section && (
-                                                <div className="mt-2 text-xs uppercase tracking-wide">
+                                                <div className={elevatedIndexTableStyles.metaText}>
                                                     {user.section.district_name}
+                                                </div>
+                                            )}
+                                            {user.pastor && (
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.subMetaText
+                                                    }
+                                                >
+                                                    {user.pastor.section_name}
                                                 </div>
                                             )}
                                             </td>
                                             <td className={elevatedIndexTableStyles.cell}>
-                                            <Badge
-                                                variant={
-                                                    user.status === 'active'
-                                                        ? 'secondary'
-                                                        : 'destructive'
-                                                }
-                                                className="capitalize"
+                                            <DataTableBadge
+                                                tone={resolveDataTableTone(
+                                                    user.status,
+                                                    {
+                                                        active: 'emerald',
+                                                        inactive: 'rose',
+                                                    },
+                                                )}
                                             >
                                                 {user.status}
-                                            </Badge>
+                                            </DataTableBadge>
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
                                             >
-                                            <div className="flex justify-end gap-2">
+                                            <div className={elevatedIndexTableStyles.actionGroup}>
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
+                                                    className="rounded-md"
                                                     asChild
                                                 >
                                                     <Link
@@ -328,6 +345,7 @@ export default function UserIndex({
                                                     <Button
                                                         variant="destructive"
                                                         size="sm"
+                                                        className="rounded-md"
                                                         onClick={() =>
                                                             destroy(user)
                                                         }
@@ -338,6 +356,7 @@ export default function UserIndex({
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
+                                                        className="rounded-md"
                                                         disabled
                                                     >
                                                         Protected
