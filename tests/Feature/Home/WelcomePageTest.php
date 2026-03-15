@@ -43,6 +43,8 @@ test('welcome page lists open events that can still accept registrations', funct
         ->assertInertia(fn (Assert $page) => $page
             ->component('welcome')
             ->has('events', 1)
+            ->has('faqs', 5)
+            ->where('faqs.0.question', 'How do I request a registrant account for our church?')
             ->where('events.0.name', 'CLD Youth Conference 2026')
             ->where('events.0.fee_categories.0.category_name', 'Regular (Online)'));
 });

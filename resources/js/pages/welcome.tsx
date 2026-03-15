@@ -44,6 +44,10 @@ type PageProps = {
         };
     };
     events: EventRecord[];
+    faqs: Array<{
+        question: string;
+        answer: string;
+    }>;
 };
 
 const formatCurrency = (value: string): string =>
@@ -69,7 +73,7 @@ const formatDateTime = (value: string): string =>
     }).format(new Date(value));
 
 export default function Welcome() {
-    const { auth, events } = usePage<PageProps>().props;
+    const { auth, events, faqs } = usePage<PageProps>().props;
     const primaryActionHref = auth.user
         ? auth.can.manageOnlineRegistrations
             ? OnlineRegistrationController.create()
@@ -356,6 +360,41 @@ export default function Welcome() {
                                     ))}
                                 </div>
                             )}
+                        </section>
+
+                        <section className="space-y-6">
+                            <div className="space-y-2">
+                                <p className="text-sm font-semibold tracking-[0.2em] text-[#184d47] uppercase">
+                                    Registration guide
+                                </p>
+                                <h2 className="text-3xl font-bold tracking-[-0.04em]">
+                                    Frequently asked questions
+                                </h2>
+                                <p className="max-w-2xl text-sm leading-6 text-slate-600">
+                                    A quick guide for church representatives using the online registration flow.
+                                </p>
+                            </div>
+
+                            <div className="grid gap-4 lg:grid-cols-2">
+                                {faqs.map((faq, index) => (
+                                    <Card
+                                        key={faq.question}
+                                        className={`border-[#d8ddd2] bg-white/90 py-0 shadow-xl shadow-[#184d47]/5 ${index === 0 ? 'lg:col-span-2' : ''}`}
+                                    >
+                                        <CardContent className="space-y-3 px-6 py-6">
+                                            <div className="text-xs font-semibold tracking-[0.18em] text-[#184d47] uppercase">
+                                                FAQ {index + 1}
+                                            </div>
+                                            <h3 className="text-xl font-bold tracking-[-0.03em] text-slate-900">
+                                                {faq.question}
+                                            </h3>
+                                            <p className="text-sm leading-7 text-slate-600">
+                                                {faq.answer}
+                                            </p>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
                         </section>
                     </main>
                 </div>
