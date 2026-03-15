@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('section_id')->constrained()->cascadeOnDelete();
             $table->string('pastor_name');
             $table->string('church_name');
-            $table->string('contact_number');
+            $table->string('contact_number')->nullable();
             $table->string('email')->nullable();
             $table->text('address')->nullable();
             $table->string('status')->default('active')->index();

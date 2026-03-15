@@ -132,7 +132,6 @@ test('admins can create districts sections and pastors', function () {
             'section_id' => $section->id,
             'pastor_name' => 'Pastor Jane Doe',
             'church_name' => 'Grace Community Church',
-            'contact_number' => '+63 912 345 6789',
             'email' => 'grace@example.com',
             'address' => '123 Church Street',
             'status' => 'active',
@@ -142,6 +141,7 @@ test('admins can create districts sections and pastors', function () {
     $this->assertDatabaseHas('pastors', [
         'section_id' => $section->id,
         'church_name' => 'Grace Community Church',
+        'contact_number' => null,
     ]);
 });
 
@@ -236,14 +236,12 @@ test('admins must pass the form request validation rules', function () {
             'section_id' => $section->id,
             'pastor_name' => '',
             'church_name' => '',
-            'contact_number' => '',
             'status' => 'archived',
         ])
         ->assertRedirect(route('admin.pastors.create'))
         ->assertSessionHasErrors([
             'pastor_name',
             'church_name',
-            'contact_number',
             'status',
         ]);
 });
@@ -290,9 +288,9 @@ test('admins can update districts sections and pastors', function () {
             'section_id' => $replacementSection->id,
             'pastor_name' => 'Pastor Updated',
             'church_name' => 'Updated Church',
-            'contact_number' => '09123456789',
-            'email' => 'updated@example.com',
-            'address' => 'Updated address',
+            'contact_number' => '',
+            'email' => '',
+            'address' => '',
             'status' => 'inactive',
         ])
         ->assertRedirect(route('admin.pastors.index'));
@@ -301,6 +299,9 @@ test('admins can update districts sections and pastors', function () {
         'id' => $pastor->id,
         'section_id' => $replacementSection->id,
         'church_name' => 'Updated Church',
+        'contact_number' => null,
+        'email' => null,
+        'address' => null,
     ]);
 });
 

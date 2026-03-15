@@ -10,7 +10,7 @@ type Pastor = {
     id: number;
     pastor_name: string;
     church_name: string;
-    contact_number: string;
+    contact_number: string | null;
     email: string | null;
     address: string | null;
     status: string;

@@ -6,7 +6,6 @@ use App\Models\District;
 use App\Models\Pastor;
 use App\Models\Section;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 class DemoChurchHierarchySeeder extends Seeder
 {
@@ -153,9 +152,9 @@ class DemoChurchHierarchySeeder extends Seeder
      *     pastor_name: string,
      *     church_name: string,
      *     legacy_church_name: string|null,
-     *     contact_number: string,
-     *     email: string,
-     *     address: string
+     *     contact_number: string|null,
+     *     email: string|null,
+     *     address: string|null
      * }>
      */
     protected function pastorDefinitions(
@@ -164,38 +163,7 @@ class DemoChurchHierarchySeeder extends Seeder
         ?string $legacyDistrictName = null,
         ?string $legacySectionName = null,
     ): array {
-        $pastors = [];
-
-        for ($index = 1; $index <= 2; $index++) {
-            $slug = Str::slug(sprintf('%s %s %d', $districtName, $sectionName, $index));
-            $legacyChurchName = null;
-
-            if ($legacyDistrictName !== null && $legacySectionName !== null) {
-                $legacyChurchName = sprintf('%s %s Church %d', $legacyDistrictName, $legacySectionName, $index);
-            }
-
-            $pastors[] = [
-                'pastor_name' => sprintf('Pastor %s %d', $sectionName, $index),
-                'church_name' => sprintf('%s %s Church %d', $districtName, $sectionName, $index),
-                'legacy_church_name' => $legacyChurchName,
-                'contact_number' => sprintf('+63 912 34%02d %04d', strlen($districtName) + $index, strlen($sectionName) * 101 + $index),
-                'email' => sprintf('%s@example.com', $slug),
-                'address' => sprintf('%s Campus, %s', $sectionName, $districtName),
-            ];
-        }
-
-        if ($districtName === 'Central Luzon' && $sectionName === 'Section 1') {
-            $pastors[0] = [
-                'pastor_name' => 'Pastor Jane Doe',
-                'church_name' => 'Grace Community Church',
-                'legacy_church_name' => 'Grace Community Church',
-                'contact_number' => '+63 912 345 6789',
-                'email' => 'grace@example.com',
-                'address' => '123 Church Street',
-            ];
-        }
-
-        return $pastors;
+        return [];
     }
 
     private function deleteObsoleteManagedPastors(
@@ -229,6 +197,8 @@ class DemoChurchHierarchySeeder extends Seeder
             ->where('section_id', $section->id)
             ->whereIn('church_name', $managedChurchNames)
             ->whereNotIn('church_name', $desiredChurchNames)
+            ->whereDoesntHave('assignedUsers')
+            ->whereDoesntHave('registrations')
             ->delete();
     }
 

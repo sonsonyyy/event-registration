@@ -12,7 +12,7 @@ type Pastor = {
     id: number;
     pastor_name: string;
     church_name: string;
-    contact_number: string;
+    contact_number: string | null;
     email: string | null;
     address: string | null;
     status: string;
@@ -167,7 +167,9 @@ export default function PastorForm({
 
             <div className="grid gap-6 md:grid-cols-2">
                 <div className="grid gap-2">
-                    <Label htmlFor="contact_number">Contact number</Label>
+                    <Label htmlFor="contact_number">
+                        Contact number (optional)
+                    </Label>
                     <Input
                         id="contact_number"
                         name="contact_number"
@@ -178,7 +180,7 @@ export default function PastorForm({
                                 event.target.value,
                             )
                         }
-                        placeholder="+63 912 345 6789"
+                        placeholder="Optional church contact number"
                     />
                     <InputError message={form.errors.contact_number} />
                 </div>

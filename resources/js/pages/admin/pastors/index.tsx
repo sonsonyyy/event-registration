@@ -15,7 +15,7 @@ type Pastor = {
     id: number;
     pastor_name: string;
     church_name: string;
-    contact_number: string;
+    contact_number: string | null;
     email: string | null;
     address: string | null;
     status: string;
@@ -243,7 +243,8 @@ export default function PastorIndex({
                                                 className={`${elevatedIndexTableStyles.cell} text-sm text-muted-foreground`}
                                             >
                                             <div className="font-medium text-foreground/90">
-                                                {pastor.contact_number}
+                                                {pastor.contact_number ||
+                                                    'No contact number provided.'}
                                             </div>
                                             <div className="mt-2 break-all">
                                                 {pastor.email ||

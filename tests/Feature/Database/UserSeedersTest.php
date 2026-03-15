@@ -36,13 +36,14 @@ test('database seeder creates demo users for each role', function () {
     expect($onlineRegistrant)
         ->and($onlineRegistrant->roleName())->toBe(Role::ONLINE_REGISTRANT)
         ->and($onlineRegistrant->isActive())->toBeTrue()
-        ->and($onlineRegistrant->pastor?->church_name)->toBe('Grace Community Church')
+        ->and($onlineRegistrant->pastor?->church_name)->toBe('UPC')
+        ->and($onlineRegistrant->pastor?->pastor_name)->toBe('Rodolfo Dela Rosa')
         ->and($onlineRegistrant->district?->name)->toBe('Central Luzon')
-        ->and($onlineRegistrant->section?->name)->toBe('Section 1');
+        ->and($onlineRegistrant->section?->name)->toBe('Section 2');
 
     expect(District::query()->count())->toBe(1)
         ->and(Section::query()->count())->toBe(3)
-        ->and(Pastor::query()->count())->toBe(6);
+        ->and(Pastor::query()->count())->toBe(158);
 
     expect(District::query()->orderBy('name')->pluck('name')->all())
         ->toBe([
@@ -62,10 +63,41 @@ test('database seeder creates demo users for each role', function () {
             ]);
         });
 
-    Section::query()
+    $sectionOne = Section::query()
+        ->where('name', 'Section 1')
         ->withCount('pastors')
-        ->get()
-        ->each(function (Section $section): void {
-            expect($section->pastors_count)->toBe(2);
-        });
+        ->firstOrFail();
+    $sectionTwo = Section::query()
+        ->where('name', 'Section 2')
+        ->withCount('pastors')
+        ->firstOrFail();
+    $sectionThree = Section::query()
+        ->where('name', 'Section 3')
+        ->withCount('pastors')
+        ->firstOrFail();
+
+    expect($sectionOne->pastors_count)->toBe(0)
+        ->and($sectionTwo->pastors_count)->toBe(64)
+        ->and($sectionThree->pastors_count)->toBe(94);
+
+    expect(Pastor::query()
+        ->where('section_id', $sectionTwo->id)
+        ->where('church_name', 'UPC')
+        ->where('pastor_name', 'Rodolfo Dela Rosa')
+        ->exists())->toBeTrue()
+        ->and(Pastor::query()
+            ->where('section_id', $sectionTwo->id)
+            ->where('church_name', 'UPC')
+            ->where('pastor_name', 'Joseph Gonzales')
+            ->exists())->toBeTrue()
+        ->and(Pastor::query()
+            ->where('section_id', $sectionThree->id)
+            ->where('church_name', 'UPC')
+            ->where('pastor_name', 'Francis Alim')
+            ->exists())->toBeTrue()
+        ->and(Pastor::query()
+            ->where('section_id', $sectionThree->id)
+            ->where('church_name', 'UPC')
+            ->where('pastor_name', 'Charlie Zaspa')
+            ->exists())->toBeTrue();
 });

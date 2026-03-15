@@ -18,7 +18,7 @@ class OnlineRegistrantUserSeeder extends Seeder
     {
         $this->call([
             RoleSeeder::class,
-            DemoChurchHierarchySeeder::class,
+            PastorRosterSeeder::class,
         ]);
 
         $onlineRegistrantRole = Role::query()->firstOrCreate([
@@ -31,12 +31,12 @@ class OnlineRegistrantUserSeeder extends Seeder
 
         $section = Section::query()
             ->where('district_id', $district->id)
-            ->where('name', 'Section 1')
+            ->where('name', 'Section 2')
             ->firstOrFail();
 
         $pastor = Pastor::query()
             ->where('section_id', $section->id)
-            ->where('church_name', 'Grace Community Church')
+            ->where('pastor_name', 'Rodolfo Dela Rosa')
             ->firstOrFail();
 
         User::query()->updateOrCreate(

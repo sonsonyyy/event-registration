@@ -27,17 +27,24 @@ class StorePastorRequest extends FormRequest
         return [
             'section_id' => ['required', 'exists:sections,id'],
             'pastor_name' => ['required', 'string', 'max:255'],
-            'church_name' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('pastors', 'church_name')->where(fn ($query) => $query->where('section_id', $this->input('section_id'))),
-            ],
-            'contact_number' => ['required', 'string', 'max:50'],
+            'church_name' => ['required', 'string', 'max:255'],
+            'contact_number' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string', 'max:1000'],
             'status' => ['required', Rule::in(['active', 'inactive'])],
         ];
+    }
+
+    /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'contact_number' => $this->normalizeOptionalText('contact_number'),
+            'email' => $this->normalizeOptionalText('email'),
+            'address' => $this->normalizeOptionalText('address'),
+        ]);
     }
 
     /**
@@ -52,11 +59,22 @@ class StorePastorRequest extends FormRequest
             'section_id.exists' => 'Choose a valid section.',
             'pastor_name.required' => 'Enter the pastor name.',
             'church_name.required' => 'Enter the church name.',
-            'church_name.unique' => 'That church name already exists in the selected section.',
-            'contact_number.required' => 'Enter a contact number.',
             'email.email' => 'Enter a valid email address.',
             'status.required' => 'Choose a pastor status.',
             'status.in' => 'Choose a valid pastor status.',
         ];
+    }
+
+    private function normalizeOptionalText(string $field): ?string
+    {
+        $value = $this->input($field);
+
+        if ($value === null) {
+            return null;
+        }
+
+        $normalizedValue = trim((string) $value);
+
+        return $normalizedValue === '' ? null : $normalizedValue;
     }
 }
