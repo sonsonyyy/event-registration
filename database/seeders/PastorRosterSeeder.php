@@ -22,6 +22,7 @@ class PastorRosterSeeder extends Seeder
             ->where('name', 'Central Luzon')
             ->firstOrFail();
 
+        $this->seedSectionRoster($district, 'Section 1', $this->sectionOnePastorNames());
         $this->seedSectionRoster($district, 'Section 2', $this->sectionTwoPastorNames());
         $this->seedSectionRoster($district, 'Section 3', $this->sectionThreePastorNames());
     }
@@ -74,6 +75,78 @@ class PastorRosterSeeder extends Seeder
             ->whereDoesntHave('assignedUsers')
             ->whereDoesntHave('registrations')
             ->delete();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function sectionOnePastorNames(): array
+    {
+        return [
+            'Boy Ichi Campana',
+            'Belinda Campana',
+            'Nilo Gavino',
+            'Ferdinand Linao',
+            'Maria Lourdes Linao',
+            'Geotima Gamutan',
+            'Jerome Oliveros',
+            'Liezel Oliveros',
+            'Christian Macky Uyangurin',
+            'Alma Uyangurin',
+            'Jojo Soria',
+            'Ferdinand Apan',
+            'Zyrene Joy San Pedro',
+            'Paul Genesis Apan',
+            'Requil Montecino',
+            'Romeo Montecino',
+            'Leandro Abando',
+            'Leonides Abando',
+            'Leoncio Abando',
+            'Roah Quezon',
+            'Jc Manuel',
+            'Danilo Munsayac',
+            'Joseph Dan Munsayac',
+            'Elizabeth Watkins',
+            'Noel Lapinig',
+            'Bernard Angara',
+            'Daisy Atayde',
+            'Michael Garcia',
+            'Mary Jane Garcia',
+            'Ernesto Narvasa Jr.',
+            'Agripina Narvasa',
+            'Joseph Carino',
+            'Abraham Galang',
+            'Marilyn Galang',
+            'Noe Jopson',
+            'Conie Jopson',
+            'Madelyn San Roque',
+            'Damaso San Roque',
+            'Apolinario Acosta',
+            'Armando Figueroa',
+            'Manuel Alfonso',
+            'Artturo Balmediano',
+            'Bonifacio Volante',
+            'Dennis De Leon',
+            'Florence Viernes',
+            'Remuel Montecino',
+            'Elmer Bandi-anon',
+            'Riza Magaway',
+            'Erwin Narvasa',
+            'Phoebe Magana',
+            'Arnold Magana',
+            'Juanito Guevara',
+            'Anthony Mendizabal',
+            'Marcelino Lagmay',
+            'Jefhte Inso',
+            'Virginia Inso',
+            'Rodante Marquez Jr',
+            'Rovan Marquez',
+            'Ariel Cansad',
+            'Riyolyn Gamiao',
+            'Alex Calinawan',
+            'Edgardo Esperegante',
+            'Angelo Acosta',
+        ];
     }
 
     /**

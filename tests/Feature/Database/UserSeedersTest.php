@@ -67,7 +67,7 @@ test('database seeder creates demo users for each role', function () {
 
     expect(District::query()->count())->toBe(1)
         ->and(Section::query()->count())->toBe(3)
-        ->and(Pastor::query()->count())->toBe(158);
+        ->and(Pastor::query()->count())->toBe(221);
 
     expect(District::query()->orderBy('name')->pluck('name')->all())
         ->toBe([
@@ -100,15 +100,25 @@ test('database seeder creates demo users for each role', function () {
         ->withCount('pastors')
         ->firstOrFail();
 
-    expect($sectionOne->pastors_count)->toBe(0)
+    expect($sectionOne->pastors_count)->toBe(63)
         ->and($sectionTwo->pastors_count)->toBe(64)
         ->and($sectionThree->pastors_count)->toBe(94);
 
     expect(Pastor::query()
-        ->where('section_id', $sectionTwo->id)
+        ->where('section_id', $sectionOne->id)
         ->where('church_name', 'UPC')
-        ->where('pastor_name', 'Rodolfo Dela Rosa')
+        ->where('pastor_name', 'Boy Ichi Campana')
         ->exists())->toBeTrue()
+        ->and(Pastor::query()
+            ->where('section_id', $sectionOne->id)
+            ->where('church_name', 'UPC')
+            ->where('pastor_name', 'Angelo Acosta')
+            ->exists())->toBeTrue()
+        ->and(Pastor::query()
+            ->where('section_id', $sectionTwo->id)
+            ->where('church_name', 'UPC')
+            ->where('pastor_name', 'Rodolfo Dela Rosa')
+            ->exists())->toBeTrue()
         ->and(Pastor::query()
             ->where('section_id', $sectionTwo->id)
             ->where('church_name', 'UPC')
