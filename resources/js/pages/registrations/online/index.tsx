@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import OnlineRegistrationController from '@/actions/App/Http/Controllers/OnlineRegistrationController';
 import AssignedChurchCard from '@/components/assigned-church-card';
 import DataTablePagination from '@/components/data-table-pagination';
+import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
@@ -94,18 +95,16 @@ const formatDate = (value: string | null): string => {
     }).format(new Date(value));
 };
 
-const registrationStatusVariant = (
-    status: string,
-): 'default' | 'secondary' | 'destructive' => {
+const registrationStatusClassName = (status: string): string => {
     switch (status) {
         case 'verified':
         case 'completed':
-            return 'secondary';
+            return 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-300';
         case 'rejected':
         case 'cancelled':
-            return 'destructive';
+            return 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-500/10 dark:text-rose-300';
         default:
-            return 'default';
+            return 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-500/10 dark:text-amber-300';
     }
 };
 
@@ -182,165 +181,224 @@ export default function OnlineRegistrationIndex({
                     </div>
                 )}
 
-                <DataTableToolbar
-                    searchValue={search}
-                    onSearchValueChange={setSearch}
-                    onSubmit={submitSearch}
-                    placeholder="Search event, venue, reference, or uploaded receipt"
-                    action={(
-                        <Button asChild className="h-11 rounded-xl">
-                            <Link href={OnlineRegistrationController.create()}>
-                                New online registration
-                            </Link>
-                        </Button>
-                    )}
-                />
+                <div className={elevatedIndexTableStyles.shell}>
+                    <div className={elevatedIndexTableStyles.band}>
+                        <DataTableToolbar
+                            searchValue={search}
+                            onSearchValueChange={setSearch}
+                            onSubmit={submitSearch}
+                            placeholder="Search event, venue, reference, or uploaded receipt"
+                            className={elevatedIndexTableStyles.toolbar}
+                            searchWrapperClassName={
+                                elevatedIndexTableStyles.searchWrapper
+                            }
+                            inputClassName={elevatedIndexTableStyles.input}
+                            actionClassName={elevatedIndexTableStyles.action}
+                            action={(
+                                <Button
+                                    asChild
+                                    className={
+                                        elevatedIndexTableStyles.primaryButton
+                                    }
+                                >
+                                    <Link href={OnlineRegistrationController.create()}>
+                                        New online registration
+                                    </Link>
+                                </Button>
+                            )}
+                        />
+                    </div>
 
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
-                        <thead className="bg-muted/40">
-                            <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                                <th className="py-2.5 pr-3 pl-4 font-medium">
-                                    Transaction
-                                </th>
-                                <th className="py-2.5 pr-3 font-medium">
-                                    Event
-                                </th>
-                                <th className="py-2.5 pr-3 font-medium">
-                                    Items
-                                </th>
-                                <th className="py-2.5 pr-3 font-medium">
-                                    Total
-                                </th>
-                                <th className="py-2.5 pr-3 font-medium">
-                                    Receipt
-                                </th>
-                                <th className="py-2.5 pr-4 font-medium">
-                                    Status
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-sidebar-border/50">
-                            {registrations.data.length === 0 ? (
-                                <tr>
-                                    <td
-                                        colSpan={6}
-                                        className="px-4 py-14 text-center"
+                    <div className="overflow-x-auto">
+                        <table className={elevatedIndexTableStyles.table}>
+                            <thead className={elevatedIndexTableStyles.thead}>
+                                <tr className={elevatedIndexTableStyles.headerRow}>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.firstHeaderCell
+                                        }
                                     >
-                                        <div className="space-y-2">
-                                            <div className="text-base font-medium">
-                                                {filters.search === ''
-                                                    ? 'No online registrations yet.'
-                                                    : `No registrations matched "${filters.search}".`}
-                                            </div>
-                                            <div className="text-sm text-muted-foreground">
-                                                {filters.search === ''
-                                                    ? 'Create your first online registration to submit quantities for your church.'
-                                                    : 'Try another event, venue, reference, or receipt term.'}
-                                            </div>
-                                        </div>
-                                    </td>
+                                        Transaction
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
+                                        Event
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
+                                        Items
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
+                                        Total
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
+                                        Receipt
+                                    </th>
+                                    <th className={elevatedIndexTableStyles.headerCell}>
+                                        Status
+                                    </th>
                                 </tr>
-                            ) : (
-                                registrations.data.map((registration) => (
-                                    <tr
-                                        key={registration.id}
-                                        className="bg-background transition-colors hover:bg-muted/20"
-                                    >
-                                        <td className="px-4 py-3.5 align-middle">
-                                            <div className="font-medium text-foreground">
-                                                #{registration.id}
-                                            </div>
-                                            <div className="mt-1 text-sm text-muted-foreground">
-                                                {formatDate(
-                                                    registration.submitted_at,
-                                                )}
-                                            </div>
-                                            {registration.payment_reference && (
-                                                <div className="mt-2 text-sm text-muted-foreground">
-                                                    Ref: {registration.payment_reference}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="py-3.5 pr-3 align-middle">
-                                            <div className="font-medium text-foreground">
-                                                {registration.event.name}
-                                            </div>
-                                            <div className="mt-1 text-sm text-muted-foreground">
-                                                {registration.event.venue}
-                                            </div>
-                                        </td>
-                                        <td className="py-3.5 pr-3 align-middle">
+                            </thead>
+                            <tbody className={elevatedIndexTableStyles.tbody}>
+                                {registrations.data.length === 0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan={6}
+                                            className={
+                                                elevatedIndexTableStyles.emptyCell
+                                            }
+                                        >
                                             <div className="space-y-2">
-                                                {registration.items.map((item) => (
-                                                    <div
-                                                        key={item.id}
-                                                        className="text-sm text-muted-foreground"
-                                                    >
-                                                        <span className="font-medium text-foreground">
-                                                            {item.category_name}
-                                                        </span>{' '}
-                                                        × {item.quantity}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </td>
-                                        <td className="py-3.5 pr-3 align-middle">
-                                            <div className="font-medium text-foreground">
-                                                {formatCurrency(
-                                                    registration.total_amount,
-                                                )}
-                                            </div>
-                                            <div className="mt-1 text-sm text-muted-foreground">
-                                                {registration.total_quantity}{' '}
-                                                delegates
-                                            </div>
-                                        </td>
-                                        <td className="py-3.5 pr-3 align-middle">
-                                            <div className="font-medium text-foreground">
-                                                {registration.receipt.original_name ??
-                                                    'No receipt uploaded'}
-                                            </div>
-                                            <div className="mt-1 text-sm text-muted-foreground">
-                                                {formatDate(
-                                                    registration.receipt.uploaded_at,
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="py-3.5 pr-4 align-middle">
-                                            <div className="flex flex-col gap-2">
-                                                <Badge
-                                                    variant={registrationStatusVariant(
-                                                        registration.registration_status,
-                                                    )}
-                                                    className="w-fit capitalize"
-                                                >
-                                                    {
-                                                        registration.registration_status
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.emptyTitle
                                                     }
-                                                </Badge>
-                                                <Badge
-                                                    variant="default"
-                                                    className="w-fit capitalize"
                                                 >
-                                                    {registration.payment_status}
-                                                </Badge>
+                                                    {filters.search === ''
+                                                        ? 'No online registrations yet.'
+                                                        : `No registrations matched "${filters.search}".`}
+                                                </div>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.emptyDescription
+                                                    }
+                                                >
+                                                    {filters.search === ''
+                                                        ? 'Create your first online registration to submit quantities for your church.'
+                                                        : 'Try another event, venue, reference, or receipt term.'}
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                ) : (
+                                    registrations.data.map((registration) => (
+                                        <tr
+                                            key={registration.id}
+                                            className={elevatedIndexTableStyles.row}
+                                        >
+                                            <td className={elevatedIndexTableStyles.firstCell}>
+                                                <div className="font-medium text-slate-900 dark:text-slate-100">
+                                                    #{registration.id}
+                                                </div>
+                                                <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                                    {formatDate(
+                                                        registration.submitted_at,
+                                                    )}
+                                                </div>
+                                                {registration.payment_reference && (
+                                                    <div className="mt-2 inline-flex rounded-md bg-slate-100 px-2.5 py-1 text-[11px] font-semibold tracking-[0.16em] text-slate-600 uppercase dark:bg-slate-800 dark:text-slate-200">
+                                                        Ref. {registration.payment_reference}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className={elevatedIndexTableStyles.cell}>
+                                                <div className="font-medium text-slate-900 dark:text-slate-100">
+                                                    {registration.event.name}
+                                                </div>
+                                                <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                                    {registration.event.venue}
+                                                </div>
+                                            </td>
+                                            <td className={elevatedIndexTableStyles.cell}>
+                                                <div className="space-y-2">
+                                                    {registration.items.map((item) => (
+                                                        <div
+                                                            key={item.id}
+                                                            className="text-sm text-slate-500 dark:text-slate-400"
+                                                        >
+                                                            <span className="font-medium text-slate-900 dark:text-slate-100">
+                                                                {item.category_name}
+                                                            </span>{' '}
+                                                            × {item.quantity}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                            <td className={elevatedIndexTableStyles.cell}>
+                                                <div className="font-medium text-slate-900 dark:text-slate-100">
+                                                    {formatCurrency(
+                                                        registration.total_amount,
+                                                    )}
+                                                </div>
+                                                <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                                    {registration.total_quantity}{' '}
+                                                    delegates
+                                                </div>
+                                            </td>
+                                            <td className={elevatedIndexTableStyles.cell}>
+                                                <div className="font-medium text-slate-900 dark:text-slate-100">
+                                                    {registration.receipt.original_name ??
+                                                        'No receipt uploaded'}
+                                                </div>
+                                                <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                                    {formatDate(
+                                                        registration.receipt.uploaded_at,
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className={elevatedIndexTableStyles.cell}>
+                                                <div className="flex flex-col gap-2">
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={`w-fit rounded-md px-2.5 py-1 capitalize ${registrationStatusClassName(
+                                                            registration.registration_status,
+                                                        )}`}
+                                                    >
+                                                        {
+                                                            registration.registration_status
+                                                        }
+                                                    </Badge>
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="w-fit rounded-md border-slate-200 bg-slate-50 px-2.5 py-1 capitalize text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                                                    >
+                                                        {registration.payment_status}
+                                                    </Badge>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
 
-                <DataTablePagination
-                    meta={registrations.meta}
-                    rowsPerPage={filters.per_page}
-                    rowOptions={perPageOptions}
-                    onRowsPerPageChange={updatePerPage}
-                    onPageChange={changePage}
-                />
+                    <div className={elevatedIndexTableStyles.paginationWrapper}>
+                        <DataTablePagination
+                            meta={registrations.meta}
+                            rowsPerPage={filters.per_page}
+                            rowOptions={perPageOptions}
+                            onRowsPerPageChange={updatePerPage}
+                            onPageChange={changePage}
+                            className={elevatedIndexTableStyles.pagination}
+                            topRowClassName={
+                                elevatedIndexTableStyles.paginationTopRow
+                            }
+                            rowsTriggerClassName={
+                                elevatedIndexTableStyles.rowsTrigger
+                            }
+                            summaryClassName={
+                                elevatedIndexTableStyles.summary
+                            }
+                            navigationWrapperClassName={
+                                elevatedIndexTableStyles.navigationWrapper
+                            }
+                            previousButtonClassName={
+                                elevatedIndexTableStyles.previousButton
+                            }
+                            nextButtonClassName={
+                                elevatedIndexTableStyles.nextButton
+                            }
+                            activePageButtonClassName={
+                                elevatedIndexTableStyles.activePageButton
+                            }
+                            inactivePageButtonClassName={
+                                elevatedIndexTableStyles.inactivePageButton
+                            }
+                            ellipsisClassName={
+                                elevatedIndexTableStyles.ellipsis
+                            }
+                        />
+                    </div>
+                </div>
             </div>
         </AppLayout>
     );
