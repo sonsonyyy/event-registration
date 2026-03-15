@@ -28,23 +28,54 @@ class ManagerUserSeeder extends Seeder
             ->where('name', 'Central Luzon')
             ->firstOrFail();
 
-        $section = Section::query()
-            ->where('district_id', $district->id)
-            ->where('name', 'Section 1')
-            ->firstOrFail();
+        foreach ($this->managerUsers() as $managerUser) {
+            $section = Section::query()
+                ->where('district_id', $district->id)
+                ->where('name', $managerUser['section'])
+                ->firstOrFail();
 
-        User::query()->updateOrCreate(
-            ['email' => 'manager@example.com'],
+            User::query()->updateOrCreate(
+                ['email' => $managerUser['email']],
+                [
+                    'name' => $managerUser['name'],
+                    'password' => 'password',
+                    'role_id' => $managerRole->id,
+                    'district_id' => $district->id,
+                    'section_id' => $section->id,
+                    'pastor_id' => null,
+                    'status' => 'active',
+                    'email_verified_at' => now(),
+                ],
+            );
+        }
+    }
+
+    /**
+     * @return array<int, array{name: string, email: string, section: string}>
+     */
+    private function managerUsers(): array
+    {
+        return [
             [
-                'name' => 'Section Manager',
-                'password' => 'password',
-                'role_id' => $managerRole->id,
-                'district_id' => $district->id,
-                'section_id' => $section->id,
-                'pastor_id' => null,
-                'status' => 'active',
-                'email_verified_at' => now(),
+                'name' => 'Jefhte Inso',
+                'email' => 'insojeff31@gmail.com',
+                'section' => 'Section 1',
             ],
-        );
+            [
+                'name' => 'Elmor Tenorio',
+                'email' => 'elmor.tenorio@gmail.com',
+                'section' => 'Section 2',
+            ],
+            [
+                'name' => 'John Jeremiah Diamante',
+                'email' => 'johndiamante8@gmail.com',
+                'section' => 'Section 2',
+            ],
+            [
+                'name' => 'Junar Tongol',
+                'email' => 'ptrjunartongol@gmail.com',
+                'section' => 'Section 3',
+            ],
+        ];
     }
 }

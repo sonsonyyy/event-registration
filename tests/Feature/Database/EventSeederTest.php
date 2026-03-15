@@ -28,18 +28,18 @@ test('database seeder creates the default open event with fee categories', funct
         ->and($event->feeCategories)->toHaveCount(3)
         ->and($feeCategories->keys()->sort()->values()->all())->toBe([
             'One-day Pass',
-            'Onsite',
             'Regular (Online)',
+            'Regular (Onsite)',
         ])
         ->and($feeCategories['Regular (Online)']->amount)->toBe('800.00')
         ->and($feeCategories['Regular (Online)']->status)->toBe('active')
         ->and($feeCategories['Regular (Online)']->slot_limit)->toBeNull()
-        ->and($feeCategories['Onsite']->amount)->toBe('950.00')
-        ->and($feeCategories['Onsite']->status)->toBe('active')
-        ->and($feeCategories['Onsite']->slot_limit)->toBeNull()
         ->and($feeCategories['One-day Pass']->amount)->toBe('600.00')
-        ->and($feeCategories['One-day Pass']->status)->toBe('active')
-        ->and($feeCategories['One-day Pass']->slot_limit)->toBeNull();
+        ->and($feeCategories['One-day Pass']->status)->toBe('inactive')
+        ->and($feeCategories['One-day Pass']->slot_limit)->toBeNull()
+        ->and($feeCategories['Regular (Onsite)']->amount)->toBe('950.00')
+        ->and($feeCategories['Regular (Onsite)']->status)->toBe('inactive')
+        ->and($feeCategories['Regular (Onsite)']->slot_limit)->toBeNull();
 
     Carbon::setTestNow();
 });

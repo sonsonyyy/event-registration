@@ -10,36 +10,60 @@ use Database\Seeders\DatabaseSeeder;
 test('database seeder creates demo users for each role', function () {
     $this->seed(DatabaseSeeder::class);
 
-    $admin = User::query()->where('email', 'admin@example.com')->firstOrFail();
-    $manager = User::query()->where('email', 'manager@example.com')->firstOrFail();
-    $registrationStaff = User::query()->where('email', 'staff@example.com')->firstOrFail();
-    $onlineRegistrant = User::query()->where('email', 'registrant@example.com')->firstOrFail();
+    $adminUsers = User::query()
+        ->whereIn('email', [
+            'wcpeligrino6@gmail.com',
+            'jeromeoliveros65@gmail.com',
+            'salangsangerickson@gmail.com',
+        ])
+        ->orderBy('email')
+        ->get();
 
-    expect($admin)
-        ->and($admin->roleName())->toBe(Role::ADMIN)
-        ->and($admin->isActive())->toBeTrue()
-        ->and($admin->section_id)->toBeNull()
-        ->and($admin->pastor_id)->toBeNull();
+    $managerUsers = User::query()
+        ->whereIn('email', [
+            'insojeff31@gmail.com',
+            'elmor.tenorio@gmail.com',
+            'johndiamante8@gmail.com',
+            'ptrjunartongol@gmail.com',
+        ])
+        ->orderBy('email')
+        ->get();
 
-    expect($manager)
-        ->and($manager->roleName())->toBe(Role::MANAGER)
-        ->and($manager->isActive())->toBeTrue()
-        ->and($manager->district?->name)->toBe('Central Luzon')
-        ->and($manager->section?->name)->toBe('Section 1');
+    expect($adminUsers)->toHaveCount(3)
+        ->and($managerUsers)->toHaveCount(4)
+        ->and(User::query()->count())->toBe(7);
 
-    expect($registrationStaff)
-        ->and($registrationStaff->roleName())->toBe(Role::REGISTRATION_STAFF)
-        ->and($registrationStaff->isActive())->toBeTrue()
-        ->and($registrationStaff->section_id)->toBeNull()
-        ->and($registrationStaff->pastor_id)->toBeNull();
+    $adminUsers->each(function (User $admin): void {
+        expect($admin)
+            ->and($admin->roleName())->toBe(Role::ADMIN)
+            ->and($admin->isActive())->toBeTrue()
+            ->and($admin->district?->name)->toBe('Central Luzon')
+            ->and($admin->section?->name)->toBe('Section 3')
+            ->and($admin->pastor_id)->toBeNull();
+    });
 
-    expect($onlineRegistrant)
-        ->and($onlineRegistrant->roleName())->toBe(Role::ONLINE_REGISTRANT)
-        ->and($onlineRegistrant->isActive())->toBeTrue()
-        ->and($onlineRegistrant->pastor?->church_name)->toBe('UPC')
-        ->and($onlineRegistrant->pastor?->pastor_name)->toBe('Rodolfo Dela Rosa')
-        ->and($onlineRegistrant->district?->name)->toBe('Central Luzon')
-        ->and($onlineRegistrant->section?->name)->toBe('Section 2');
+    expect($managerUsers->pluck('section.name', 'email')->all())
+        ->toBe([
+            'elmor.tenorio@gmail.com' => 'Section 2',
+            'insojeff31@gmail.com' => 'Section 1',
+            'johndiamante8@gmail.com' => 'Section 2',
+            'ptrjunartongol@gmail.com' => 'Section 3',
+        ]);
+
+    $managerUsers->each(function (User $manager): void {
+        expect($manager)
+            ->and($manager->roleName())->toBe(Role::MANAGER)
+            ->and($manager->isActive())->toBeTrue()
+            ->and($manager->district?->name)->toBe('Central Luzon')
+            ->and($manager->pastor_id)->toBeNull();
+    });
+
+    expect(User::query()->whereIn('email', [
+        'admin@example.com',
+        'manager@example.com',
+        'staff@example.com',
+        'registrant@example.com',
+    ])->exists())->toBeFalse();
 
     expect(District::query()->count())->toBe(1)
         ->and(Section::query()->count())->toBe(3)

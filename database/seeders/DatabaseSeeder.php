@@ -18,8 +18,6 @@ class DatabaseSeeder extends Seeder
             EventSeeder::class,
             AdminUserSeeder::class,
             ManagerUserSeeder::class,
-            RegistrationStaffUserSeeder::class,
-            OnlineRegistrantUserSeeder::class,
         ]);
     }
 }
