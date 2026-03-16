@@ -1,12 +1,10 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
 import DistrictController from '@/actions/App/Http/Controllers/Admin/DistrictController';
 import {
     DataTableBadge,
     resolveDataTableTone,
 } from '@/components/data-table-badge';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
-import EntityRecordDialog from '@/components/entity-record-dialog';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { successNoticeClassName } from '@/lib/ui-styles';
@@ -40,9 +38,6 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function DistrictIndex({ districts }: Props) {
     const page = usePage();
     const flash = page.props.flash as { success?: string | null } | undefined;
-    const [selectedDistrict, setSelectedDistrict] = useState<District | null>(
-        null,
-    );
 
     const destroy = (district: District): void => {
         if (! window.confirm(`Delete "${district.name}"? This will also remove its sections and pastors.`)) {
@@ -183,18 +178,6 @@ export default function DistrictIndex({ districts }: Props) {
                                                     variant="outline"
                                                     size="sm"
                                                     className="rounded-md"
-                                                    onClick={() =>
-                                                        setSelectedDistrict(
-                                                            district,
-                                                        )
-                                                    }
-                                                >
-                                                    View
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="rounded-md"
                                                     asChild
                                                 >
                                                     <Link
@@ -224,84 +207,6 @@ export default function DistrictIndex({ districts }: Props) {
                         </table>
                     </div>
                 </div>
-
-                <EntityRecordDialog
-                    open={selectedDistrict !== null}
-                    onOpenChange={(open) => {
-                        if (!open) {
-                            setSelectedDistrict(null);
-                        }
-                    }}
-                    title={
-                        selectedDistrict
-                            ? `District: ${selectedDistrict.name}`
-                            : 'District'
-                    }
-                    description="Review the district details and current structure count."
-                    badges={
-                        selectedDistrict ? (
-                            <DataTableBadge
-                                tone={resolveDataTableTone(
-                                    selectedDistrict.status,
-                                    {
-                                        active: 'emerald',
-                                        inactive: 'rose',
-                                    },
-                                )}
-                            >
-                                {selectedDistrict.status}
-                            </DataTableBadge>
-                        ) : null
-                    }
-                    sections={
-                        selectedDistrict
-                            ? [
-                                  {
-                                      title: 'Details',
-                                      fields: [
-                                          {
-                                              label: 'District',
-                                              value: selectedDistrict.name,
-                                          },
-                                          {
-                                              label: 'Sections',
-                                              value: `${selectedDistrict.sections_count} sections`,
-                                          },
-                                          {
-                                              label: 'Description',
-                                              value:
-                                                  selectedDistrict.description ??
-                                                  'No description provided.',
-                                              fullWidth: true,
-                                          },
-                                      ],
-                                  },
-                              ]
-                            : []
-                    }
-                    footer={
-                        selectedDistrict ? (
-                            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => setSelectedDistrict(null)}
-                                >
-                                    Close
-                                </Button>
-                                <Button asChild variant="outline">
-                                    <Link
-                                        href={DistrictController.edit(
-                                            selectedDistrict.id,
-                                        )}
-                                    >
-                                        Edit district
-                                    </Link>
-                                </Button>
-                            </div>
-                        ) : null
-                    }
-                />
             </div>
         </AppLayout>
     );

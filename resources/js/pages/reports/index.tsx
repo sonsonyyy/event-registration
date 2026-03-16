@@ -5,7 +5,6 @@ import ReportsController from '@/actions/App/Http/Controllers/ReportsController'
 import DataTablePagination from '@/components/data-table-pagination';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
-import EntityRecordDialog from '@/components/entity-record-dialog';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -152,8 +151,6 @@ export default function ReportsIndex({
     churchesWithoutRegistrationExportUrl,
 }: Props) {
     const [search, setSearch] = useState(filters.search);
-    const [selectedChurch, setSelectedChurch] =
-        useState<MissingChurchRecord | null>(null);
 
     useEffect(() => {
         setSearch(filters.search);
@@ -685,13 +682,6 @@ export default function ReportsIndex({
                                             >
                                                 Section
                                             </th>
-                                            <th
-                                                className={
-                                                    elevatedIndexTableStyles.lastHeaderCellRight
-                                                }
-                                            >
-                                                Actions
-                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody className={elevatedIndexTableStyles.tbody}>
@@ -699,7 +689,7 @@ export default function ReportsIndex({
                                         0 ? (
                                             <tr>
                                                 <td
-                                                    colSpan={4}
+                                                    colSpan={3}
                                                     className={
                                                         elevatedIndexTableStyles.emptyCell
                                                     }
@@ -769,22 +759,6 @@ export default function ReportsIndex({
                                                                     'No district assigned'}
                                                             </div>
                                                         </td>
-                                                        <td
-                                                            className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
-                                                        >
-                                                            <Button
-                                                                type="button"
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() =>
-                                                                    setSelectedChurch(
-                                                                        church,
-                                                                    )
-                                                                }
-                                                            >
-                                                                View
-                                                            </Button>
-                                                        </td>
                                                     </tr>
                                                 ),
                                             )
@@ -835,80 +809,6 @@ export default function ReportsIndex({
                         </div>
                     </>
                 )}
-
-                <EntityRecordDialog
-                    open={selectedChurch !== null}
-                    onOpenChange={(open) => {
-                        if (!open) {
-                            setSelectedChurch(null);
-                        }
-                    }}
-                    title={
-                        selectedChurch
-                            ? `Missing registration: ${selectedChurch.church_name}`
-                            : 'Missing registration'
-                    }
-                    description="Review the church scope for this no-registration report result."
-                    sections={
-                        selectedChurch
-                            ? [
-                                  {
-                                      title: 'Church Details',
-                                      fields: [
-                                          {
-                                              label: 'Pastor',
-                                              value: selectedChurch.pastor_name,
-                                          },
-                                          {
-                                              label: 'Church',
-                                              value: selectedChurch.church_name,
-                                          },
-                                          {
-                                              label: 'Section',
-                                              value:
-                                                  selectedChurch.section_name ??
-                                                  'Unassigned',
-                                          },
-                                          {
-                                              label: 'District',
-                                              value:
-                                                  selectedChurch.district_name ??
-                                                  'No district assigned',
-                                          },
-                                      ],
-                                  },
-                                  {
-                                      title: 'Current report scope',
-                                      fields: [
-                                          {
-                                              label: 'Event',
-                                              value:
-                                                  selectedEvent?.name ??
-                                                  'No event selected',
-                                          },
-                                          {
-                                              label: 'Section filter',
-                                              value:
-                                                  selectedSection?.name ??
-                                                  'All visible sections',
-                                          },
-                                      ],
-                                  },
-                              ]
-                            : []
-                    }
-                    footer={
-                        <div className="flex justify-end">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setSelectedChurch(null)}
-                            >
-                                Close
-                            </Button>
-                        </div>
-                    }
-                />
             </div>
         </AppLayout>
     );
