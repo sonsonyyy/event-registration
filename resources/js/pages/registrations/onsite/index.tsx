@@ -1,13 +1,17 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
+import {
+    DataTableBadge,
+    resolveDataTableTone,
+} from '@/components/data-table-badge';
 import DataTablePagination from '@/components/data-table-pagination';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatSystemDateTime } from '@/lib/date-time';
+import { successNoticeClassName } from '@/lib/ui-styles';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
@@ -81,33 +85,6 @@ const formatDate = (value: string | null): string => {
     return formatSystemDateTime(value);
 };
 
-const registrationStatusVariant = (
-    status: string,
-): 'default' | 'secondary' | 'destructive' => {
-    switch (status) {
-        case 'completed':
-        case 'verified':
-            return 'secondary';
-        case 'cancelled':
-            return 'destructive';
-        default:
-            return 'default';
-    }
-};
-
-const paymentStatusVariant = (
-    status: string,
-): 'default' | 'secondary' | 'destructive' => {
-    switch (status) {
-        case 'paid':
-            return 'secondary';
-        case 'unpaid':
-            return 'destructive';
-        default:
-            return 'default';
-    }
-};
-
 export default function OnsiteRegistrationIndex({
     registrations,
     filters,
@@ -169,7 +146,7 @@ export default function OnsiteRegistrationIndex({
                 />
 
                 {flash?.success && (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100">
+                    <div className={successNoticeClassName}>
                         {flash.success}
                     </div>
                 )}
@@ -278,16 +255,24 @@ export default function OnsiteRegistrationIndex({
                                                 )}
                                             </div>
                                             <div className="mt-2">
-                                                <Badge
-                                                    variant={registrationStatusVariant(
+                                                <DataTableBadge
+                                                    tone={resolveDataTableTone(
                                                         registration.registration_status,
+                                                        {
+                                                            completed:
+                                                                'emerald',
+                                                            verified:
+                                                                'emerald',
+                                                            cancelled:
+                                                                'rose',
+                                                        },
+                                                        'amber',
                                                     )}
-                                                    className="capitalize"
                                                 >
                                                     {
                                                         registration.registration_status
                                                     }
-                                                </Badge>
+                                                </DataTableBadge>
                                             </div>
                                             </td>
                                             <td className={elevatedIndexTableStyles.cell}>
@@ -321,7 +306,7 @@ export default function OnsiteRegistrationIndex({
                                                     (item) => (
                                                         <div
                                                             key={item.id}
-                                                            className="rounded-lg border border-sidebar-border/60 bg-background px-3 py-2"
+                                                            className="rounded-md border border-sidebar-border/60 bg-background px-3 py-2"
                                                         >
                                                             <div className="font-medium text-foreground">
                                                                 {
@@ -365,14 +350,18 @@ export default function OnsiteRegistrationIndex({
                                             )}
                                             </td>
                                             <td className={elevatedIndexTableStyles.cell}>
-                                            <Badge
-                                                variant={paymentStatusVariant(
+                                            <DataTableBadge
+                                                tone={resolveDataTableTone(
                                                     registration.payment_status,
+                                                    {
+                                                        paid: 'emerald',
+                                                        unpaid: 'rose',
+                                                        partial: 'amber',
+                                                    },
                                                 )}
-                                                className="capitalize"
                                             >
                                                 {registration.payment_status}
-                                            </Badge>
+                                            </DataTableBadge>
                                             <div className="mt-2 text-sm text-muted-foreground">
                                                 {registration.payment_reference ??
                                                     'No receipt reference'}

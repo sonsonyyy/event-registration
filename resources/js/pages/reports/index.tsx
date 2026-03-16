@@ -272,18 +272,18 @@ export default function ReportsIndex({
                                         }
                                         disabled={events.length === 0}
                                     >
-                                        <SelectTrigger className="h-11 w-full rounded-xl border-slate-200 bg-white shadow-none dark:border-slate-800 dark:bg-slate-950">
+                                        <SelectTrigger className="h-11 w-full border-slate-200 bg-white shadow-none dark:border-slate-800 dark:bg-slate-950">
                                             <SelectValue placeholder="Select an event" />
                                         </SelectTrigger>
                                         <SelectContent
                                             align="end"
-                                            className="rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950"
+                                            className="border-slate-200 dark:border-slate-800 dark:bg-slate-950"
                                         >
                                             {events.map((event) => (
                                                 <SelectItem
                                                     key={event.id}
                                                     value={String(event.id)}
-                                                    className="rounded-lg"
+                                                    className="rounded-md"
                                                 >
                                                     {event.name}
                                                 </SelectItem>
@@ -317,17 +317,17 @@ export default function ReportsIndex({
                                         }
                                         disabled={! canFilterBySection}
                                     >
-                                        <SelectTrigger className="h-11 w-full rounded-xl border-slate-200 bg-white shadow-none dark:border-slate-800 dark:bg-slate-950">
+                                        <SelectTrigger className="h-11 w-full border-slate-200 bg-white shadow-none dark:border-slate-800 dark:bg-slate-950">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent
                                             align="end"
-                                            className="rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950"
+                                            className="border-slate-200 dark:border-slate-800 dark:bg-slate-950"
                                         >
                                             {canFilterBySection && (
                                                 <SelectItem
                                                     value="all"
-                                                    className="rounded-lg"
+                                                    className="rounded-md"
                                                 >
                                                     All sections
                                                 </SelectItem>
@@ -336,7 +336,7 @@ export default function ReportsIndex({
                                                 <SelectItem
                                                     key={section.id}
                                                     value={String(section.id)}
-                                                    className="rounded-lg"
+                                                    className="rounded-md"
                                                 >
                                                     {section.name}
                                                 </SelectItem>
@@ -391,7 +391,7 @@ export default function ReportsIndex({
                                         </div>
 
                                         <div className="grid gap-4 sm:grid-cols-2">
-                                            <div className="rounded-2xl border border-[#e2ebe6] bg-[#f8fbfa] px-4 py-4 dark:border-slate-800 dark:bg-slate-900/50">
+                                            <div className="rounded-md border border-[#e2ebe6] bg-[#f8fbfa] px-4 py-4 dark:border-slate-800 dark:bg-slate-900/50">
                                                 <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                                                     Venue
                                                 </div>
@@ -399,7 +399,7 @@ export default function ReportsIndex({
                                                     {selectedEvent.venue}
                                                 </div>
                                             </div>
-                                            <div className="rounded-2xl border border-[#e2ebe6] bg-[#f8fbfa] px-4 py-4 dark:border-slate-800 dark:bg-slate-900/50">
+                                            <div className="rounded-md border border-[#e2ebe6] bg-[#f8fbfa] px-4 py-4 dark:border-slate-800 dark:bg-slate-900/50">
                                                 <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                                                     Event dates
                                                 </div>
@@ -456,7 +456,7 @@ export default function ReportsIndex({
                         </div>
 
                         <div className="grid gap-4 md:grid-cols-3">
-                            <Card className="overflow-hidden rounded-[24px] border border-[#d6e2de] border-t-4 border-t-[#184d47] bg-[linear-gradient(145deg,_rgba(24,77,71,0.10),_rgba(255,255,255,0.98))] py-0 shadow-sm shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-emerald-500 dark:bg-slate-950">
+                            <Card className="overflow-hidden rounded-md border border-[#d6e2de] border-t-4 border-t-[#184d47] bg-[linear-gradient(145deg,_rgba(24,77,71,0.10),_rgba(255,255,255,0.98))] py-0 shadow-sm shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-emerald-500 dark:bg-slate-950">
                                 <CardContent className="p-5">
                                     <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
                                         Total registered quantity
@@ -470,7 +470,7 @@ export default function ReportsIndex({
                                 </CardContent>
                             </Card>
 
-                            <Card className="overflow-hidden rounded-[24px] border border-[#d9e2de] border-t-4 border-t-slate-900 bg-white py-0 shadow-sm shadow-[#184d47]/6 dark:border-slate-800 dark:border-t-slate-200 dark:bg-slate-950">
+                            <Card className="overflow-hidden rounded-md border border-[#d9e2de] border-t-4 border-t-slate-900 bg-white py-0 shadow-sm shadow-[#184d47]/6 dark:border-slate-800 dark:border-t-slate-200 dark:bg-slate-950">
                                 <CardContent className="p-5">
                                     <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
                                         Verified online quantity
@@ -484,7 +484,7 @@ export default function ReportsIndex({
                                 </CardContent>
                             </Card>
 
-                            <Card className="overflow-hidden rounded-[24px] border border-[#ecd7d8] border-t-4 border-t-[#be4b56] bg-white py-0 shadow-sm shadow-[#be4b56]/8 dark:border-slate-800 dark:border-t-rose-500 dark:bg-slate-950">
+                            <Card className="overflow-hidden rounded-md border border-[#ecd7d8] border-t-4 border-t-[#be4b56] bg-white py-0 shadow-sm shadow-[#be4b56]/8 dark:border-slate-800 dark:border-t-rose-500 dark:bg-slate-950">
                                 <CardContent className="p-5">
                                     <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
                                         Pending online quantity

@@ -1,12 +1,17 @@
 import { Link, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import EventController from '@/actions/App/Http/Controllers/Admin/EventController';
+import FormSelect from '@/components/form-select';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import {
+    formTextareaClassName,
+    mutedNoticeClassName,
+} from '@/lib/ui-styles';
 
 type PersistedFeeCategory = {
     id?: number;
@@ -69,9 +74,6 @@ type EventFormData = {
     total_capacity: string;
     fee_categories: FeeCategoryFormValue[];
 };
-
-const textareaClassName =
-    'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-28 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50';
 
 function emptyFeeCategory(): FeeCategoryFormValue {
     return {
@@ -204,7 +206,7 @@ export default function EventForm({
                             )
                         }
                         placeholder="Describe the event purpose, audience, and important logistics."
-                        className={textareaClassName}
+                        className={formTextareaClassName}
                     />
                     <InputError message={form.errors.description} />
                 </div>
@@ -290,27 +292,19 @@ export default function EventForm({
                 <div className="grid gap-6 lg:grid-cols-[220px_220px_minmax(0,1fr)]">
                     <div className="grid gap-2">
                         <Label htmlFor="status">Status</Label>
-                        <select
+                        <FormSelect
                             id="status"
                             name="status"
                             value={form.data.status}
-                            onChange={(changeEvent) =>
-                                form.setData(
-                                    'status',
-                                    changeEvent.target.value,
-                                )
+                            onValueChange={(value) =>
+                                form.setData('status', value)
                             }
-                            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                        >
-                            {statusOptions.map((option) => (
-                                <option
-                                    key={option.value}
-                                    value={option.value}
-                                >
-                                    {option.label}
-                                </option>
-                            ))}
-                        </select>
+                            placeholder="Select status"
+                            options={statusOptions.map((option) => ({
+                                value: option.value,
+                                label: option.label,
+                            }))}
+                        />
                         <InputError message={form.errors.status} />
                     </div>
 
@@ -333,7 +327,7 @@ export default function EventForm({
                         <InputError message={form.errors.total_capacity} />
                     </div>
 
-                    <div className="grid gap-3 rounded-xl border border-sidebar-border/70 bg-muted/30 p-4">
+                    <div className={`${mutedNoticeClassName} grid gap-3`}>
                         <div className="flex flex-wrap items-center gap-2">
                             <Badge variant="default">
                                 Reserved {reservedQuantity}
@@ -387,7 +381,7 @@ export default function EventForm({
                     <Button
                         type="button"
                         variant="outline"
-                        className="rounded-xl"
+                        className="rounded-md"
                         onClick={addFeeCategory}
                     >
                         Add fee category
@@ -416,7 +410,7 @@ export default function EventForm({
                         return (
                             <div
                                 key={`${feeCategory.id ?? 'new'}-${index}`}
-                                className="rounded-xl border border-sidebar-border/70 bg-background p-4"
+                                className="rounded-md border border-sidebar-border/70 bg-background p-4"
                             >
                                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                                     <div className="space-y-1">
@@ -559,29 +553,25 @@ export default function EventForm({
                                         >
                                             Status
                                         </Label>
-                                        <select
+                                        <FormSelect
                                             id={`fee_categories.${index}.status`}
+                                            name={`fee_categories.${index}.status`}
                                             value={feeCategory.status}
-                                            onChange={(changeEvent) =>
+                                            onValueChange={(value) =>
                                                 updateFeeCategory(
                                                     index,
                                                     'status',
-                                                    changeEvent.target.value,
+                                                    value,
                                                 )
                                             }
-                                            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                                        >
-                                            {feeCategoryStatusOptions.map(
-                                                (option) => (
-                                                    <option
-                                                        key={option.value}
-                                                        value={option.value}
-                                                    >
-                                                        {option.label}
-                                                    </option>
-                                                ),
+                                            placeholder="Select status"
+                                            options={feeCategoryStatusOptions.map(
+                                                (option) => ({
+                                                    value: option.value,
+                                                    label: option.label,
+                                                }),
                                             )}
-                                        </select>
+                                        />
                                         <InputError
                                             message={
                                                 form.errors[

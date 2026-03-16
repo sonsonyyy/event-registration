@@ -1,12 +1,16 @@
 import { Link, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import PastorController from '@/actions/App/Http/Controllers/Admin/PastorController';
+import FormSelect from '@/components/form-select';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import {
+    formTextareaClassName,
+} from '@/lib/ui-styles';
 
 type Pastor = {
     id: number;
@@ -40,9 +44,6 @@ type Props = {
     statusOptions: StatusOption[];
     minimalLayout?: boolean;
 };
-
-const textareaClassName =
-    'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-28 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50';
 
 export default function PastorForm({
     pastor,
@@ -79,51 +80,38 @@ export default function PastorForm({
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px]">
                 <div className="grid gap-2">
                     <Label htmlFor="section_id">Section</Label>
-                    <select
+                    <FormSelect
                         id="section_id"
                         name="section_id"
                         value={form.data.section_id}
-                        onChange={(event) =>
-                            form.setData(
-                                'section_id',
-                                event.target.value,
-                            )
+                        onValueChange={(value) =>
+                            form.setData('section_id', value)
                         }
-                        className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                    >
-                        <option value="">Select a section</option>
-                        {sections.map((section) => (
-                            <option
-                                key={section.id}
-                                value={section.id}
-                            >
-                                {section.name} · {section.district_name}
-                            </option>
-                        ))}
-                    </select>
+                        placeholder="Select a section"
+                        emptyLabel="Select a section"
+                        options={sections.map((section) => ({
+                            value: section.id.toString(),
+                            label: `${section.name} · ${section.district_name}`,
+                        }))}
+                    />
                     <InputError message={form.errors.section_id} />
                 </div>
 
                 <div className="grid gap-2">
                     <Label htmlFor="status">Status</Label>
-                    <select
+                    <FormSelect
                         id="status"
                         name="status"
                         value={form.data.status}
-                        onChange={(event) =>
-                            form.setData('status', event.target.value)
+                        onValueChange={(value) =>
+                            form.setData('status', value)
                         }
-                        className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                    >
-                        {statusOptions.map((option) => (
-                            <option
-                                key={option.value}
-                                value={option.value}
-                            >
-                                {option.label}
-                            </option>
-                        ))}
-                    </select>
+                        placeholder="Select status"
+                        options={statusOptions.map((option) => ({
+                            value: option.value,
+                            label: option.label,
+                        }))}
+                    />
                     <InputError message={form.errors.status} />
                 </div>
             </div>
@@ -211,7 +199,7 @@ export default function PastorForm({
                         form.setData('address', event.target.value)
                     }
                     placeholder="Optional church address."
-                    className={textareaClassName}
+                    className={formTextareaClassName}
                 />
                 <InputError message={form.errors.address} />
             </div>

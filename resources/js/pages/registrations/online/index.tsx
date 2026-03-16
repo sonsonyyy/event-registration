@@ -2,13 +2,17 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import OnlineRegistrationController from '@/actions/App/Http/Controllers/OnlineRegistrationController';
 import AssignedChurchCard from '@/components/assigned-church-card';
+import {
+    DataTableBadge,
+    resolveDataTableTone,
+} from '@/components/data-table-badge';
 import DataTablePagination from '@/components/data-table-pagination';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatSystemDateTime } from '@/lib/date-time';
+import { successNoticeClassName } from '@/lib/ui-styles';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
@@ -93,19 +97,6 @@ const formatDate = (value: string | null): string => {
     return formatSystemDateTime(value);
 };
 
-const registrationStatusClassName = (status: string): string => {
-    switch (status) {
-        case 'verified':
-        case 'completed':
-            return 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-300';
-        case 'rejected':
-        case 'cancelled':
-            return 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-500/10 dark:text-rose-300';
-        default:
-            return 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-500/10 dark:text-amber-300';
-    }
-};
-
 export default function OnlineRegistrationIndex({
     assignedPastor,
     registrations,
@@ -174,7 +165,7 @@ export default function OnlineRegistrationIndex({
                 )}
 
                 {flash?.success && (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100">
+                    <div className={successNoticeClassName}>
                         {flash.success}
                     </div>
                 )}
@@ -334,22 +325,40 @@ export default function OnlineRegistrationIndex({
                                             </td>
                                             <td className={elevatedIndexTableStyles.cell}>
                                                 <div className="flex flex-col gap-2">
-                                                    <Badge
-                                                        variant="outline"
-                                                        className={`w-fit rounded-md px-2.5 py-1 capitalize ${registrationStatusClassName(
+                                                    <DataTableBadge
+                                                        tone={resolveDataTableTone(
                                                             registration.registration_status,
-                                                        )}`}
+                                                            {
+                                                                verified:
+                                                                    'emerald',
+                                                                completed:
+                                                                    'emerald',
+                                                                rejected:
+                                                                    'rose',
+                                                                cancelled:
+                                                                    'rose',
+                                                            },
+                                                            'amber',
+                                                        )}
                                                     >
                                                         {
                                                             registration.registration_status
                                                         }
-                                                    </Badge>
-                                                    <Badge
-                                                        variant="outline"
-                                                        className="w-fit rounded-md border-slate-200 bg-slate-50 px-2.5 py-1 capitalize text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                                                    </DataTableBadge>
+                                                    <DataTableBadge
+                                                        tone={resolveDataTableTone(
+                                                            registration.payment_status,
+                                                            {
+                                                                paid: 'emerald',
+                                                                unpaid:
+                                                                    'rose',
+                                                                partial:
+                                                                    'amber',
+                                                            },
+                                                        )}
                                                     >
                                                         {registration.payment_status}
-                                                    </Badge>
+                                                    </DataTableBadge>
                                                 </div>
                                             </td>
                                         </tr>

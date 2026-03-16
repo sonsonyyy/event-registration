@@ -75,7 +75,7 @@ export default function DataTablePagination({
                                 aria-label="Rows per page"
                                 size="sm"
                                 className={cn(
-                                    'h-8 w-[6.25rem] shrink-0 rounded-lg bg-background',
+                                    'h-11 w-[7.25rem] shrink-0 rounded-md bg-background',
                                     rowsTriggerClassName,
                                 )}
                             >
@@ -116,7 +116,7 @@ export default function DataTablePagination({
                             type="button"
                             variant="outline"
                             size="sm"
-                            className={cn('rounded-lg', previousButtonClassName)}
+                            className={cn('rounded-md', previousButtonClassName)}
                             onClick={() =>
                                 onPageChange(meta.current_page - 1)
                             }
@@ -133,7 +133,7 @@ export default function DataTablePagination({
                                     type="button"
                                     variant="ghost"
                                     size="sm"
-                                    className={cn('rounded-lg', ellipsisClassName)}
+                                    className={cn('rounded-md', ellipsisClassName)}
                                     disabled
                                 >
                                     <MoreHorizontal className="size-4" />
@@ -149,7 +149,7 @@ export default function DataTablePagination({
                                     }
                                     size="sm"
                                     className={cn(
-                                        'min-w-9 rounded-lg',
+                                        'min-w-9 rounded-md',
                                         page === meta.current_page
                                             ? activePageButtonClassName
                                             : inactivePageButtonClassName,
@@ -165,7 +165,7 @@ export default function DataTablePagination({
                             type="button"
                             variant="outline"
                             size="sm"
-                            className={cn('rounded-lg', nextButtonClassName)}
+                            className={cn('rounded-md', nextButtonClassName)}
                             onClick={() =>
                                 onPageChange(meta.current_page + 1)
                             }

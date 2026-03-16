@@ -51,7 +51,7 @@ export default function DataTableToolbar({
                     onChange={(event) => onSearchValueChange(event.target.value)}
                     placeholder={placeholder}
                     className={cn(
-                        'h-11 rounded-xl bg-background pl-11 shadow-xs',
+                        'pl-11',
                         inputClassName,
                     )}
                 />

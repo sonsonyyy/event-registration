@@ -1,12 +1,17 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import RegistrantAccessController from '@/actions/App/Http/Controllers/RegistrantAccessController';
+import FormSelect from '@/components/form-select';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import {
+    formControlClassName,
+    warningNoticeClassName,
+} from '@/lib/ui-styles';
 import AuthLayout from '@/layouts/auth-layout';
 import { login } from '@/routes';
 
@@ -122,7 +127,7 @@ export default function RegistrantAccess({
                             }
                             autoFocus
                             placeholder="Firstname Lastname"
-                            className="h-11 rounded-xl"
+                            className={formControlClassName}
                         />
                         <InputError message={form.errors.name} />
                     </div>
@@ -138,52 +143,44 @@ export default function RegistrantAccess({
                                 form.setData('email', event.target.value)
                             }
                             placeholder="representative@example.com"
-                            className="h-11 rounded-xl"
+                            className={formControlClassName}
                         />
                         <InputError message={form.errors.email} />
                     </div>
 
                     <div className="grid gap-2">
                         <Label htmlFor="section_id">Section</Label>
-                        <select
+                        <FormSelect
                             id="section_id"
                             name="section_id"
                             value={form.data.section_id}
-                            onChange={(event) =>
-                                changeSection(event.target.value)
-                            }
-                            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-11 rounded-xl border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                        >
-                            <option value="">Select section</option>
-                            {sections.map((section) => (
-                                <option key={section.id} value={section.id}>
-                                    {section.district_name
-                                        ? `${section.name} (${section.district_name})`
-                                        : section.name}
-                                </option>
-                            ))}
-                        </select>
+                            onValueChange={changeSection}
+                            placeholder="Select section"
+                            emptyLabel="Select section"
+                            options={sections.map((section) => ({
+                                value: section.id.toString(),
+                                label: section.district_name
+                                    ? `${section.name} (${section.district_name})`
+                                    : section.name,
+                            }))}
+                        />
                         <InputError message={form.errors.section_id} />
                     </div>
 
                     <div className="grid gap-2">
                         <Label htmlFor="pastor_id">Pastor</Label>
-                        <select
+                        <FormSelect
                             id="pastor_id"
                             name="pastor_id"
                             value={form.data.pastor_id}
-                            onChange={(event) =>
-                                changePastor(event.target.value)
-                            }
-                            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-11 rounded-xl border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                        >
-                            <option value="">Select pastor</option>
-                            {filteredPastors.map((pastor) => (
-                                <option key={pastor.id} value={pastor.id}>
-                                    {pastor.pastor_name}
-                                </option>
-                            ))}
-                        </select>
+                            onValueChange={changePastor}
+                            placeholder="Select pastor"
+                            emptyLabel="Select pastor"
+                            options={filteredPastors.map((pastor) => ({
+                                value: pastor.id.toString(),
+                                label: pastor.pastor_name,
+                            }))}
+                        />
                         <InputError message={form.errors.pastor_id} />
                     </div>
 
@@ -194,7 +191,7 @@ export default function RegistrantAccess({
                             value={selectedPastor?.church_name ?? ''}
                             readOnly
                             placeholder="Select a pastor to load the church"
-                            className="h-11 rounded-xl bg-slate-50 text-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                            className="bg-slate-50 text-slate-700 dark:bg-slate-900 dark:text-slate-200"
                         />
                     </div>
 
@@ -208,7 +205,7 @@ export default function RegistrantAccess({
                                 form.setData('password', event.target.value)
                             }
                             placeholder="Password"
-                            className="h-11 rounded-xl"
+                            className={formControlClassName}
                         />
                         <InputError message={form.errors.password} />
                     </div>
@@ -228,7 +225,7 @@ export default function RegistrantAccess({
                                 )
                             }
                             placeholder="Confirm password"
-                            className="h-11 rounded-xl"
+                            className={formControlClassName}
                         />
                     </div>
                 </div>
@@ -245,7 +242,7 @@ export default function RegistrantAccess({
                     </p>
                     <Button
                         type="submit"
-                        className="h-11 rounded-xl bg-[#184d47] px-6 text-white hover:bg-[#143f3a]"
+                        className="px-6"
                         disabled={form.processing || pastors.length === 0}
                     >
                         {form.processing && <Spinner />}
@@ -254,7 +251,7 @@ export default function RegistrantAccess({
                 </div>
 
                 {pastors.length === 0 && (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100">
+                    <div className={warningNoticeClassName}>
                         No church accounts are currently available for self-service signup. Contact the district admin if your church still needs a registrant account.
                     </div>
                 )}

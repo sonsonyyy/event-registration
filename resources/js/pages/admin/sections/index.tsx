@@ -7,6 +7,7 @@ import {
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
+import { successNoticeClassName } from '@/lib/ui-styles';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -64,7 +65,7 @@ export default function SectionIndex({ sections }: Props) {
                 />
 
                 {flash?.success && (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100">
+                    <div className={successNoticeClassName}>
                         {flash.success}
                     </div>
                 )}

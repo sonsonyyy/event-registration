@@ -11,6 +11,7 @@ import {
 import { type FormEvent, useRef } from 'react';
 import OnlineRegistrationController from '@/actions/App/Http/Controllers/OnlineRegistrationController';
 import AssignedChurchCard from '@/components/assigned-church-card';
+import FormSelect from '@/components/form-select';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,10 @@ import {
     formatSystemDateOnly,
     formatSystemDateTime,
 } from '@/lib/date-time';
+import {
+    formTextareaClassName,
+    formControlClassName,
+} from '@/lib/ui-styles';
 
 type FeeCategoryOption = {
     id: number;
@@ -69,12 +74,13 @@ type Props = {
     events: EventOption[];
 };
 
-const textareaClassName =
-    'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-28 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50';
-const topFieldClassName =
-    'border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-11 rounded-xl border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]';
+const textareaClassName = formTextareaClassName;
 const summaryCardClassName =
-    'rounded-[24px] border px-5 py-5 shadow-sm transition-colors';
+    'rounded-md border px-5 py-5 shadow-sm transition-colors';
+const quantityInputClassName = formControlClassName;
+
+const normalizeQuantityValue = (value: string): string =>
+    value.replace(/\D+/g, '');
 
 const formatCurrency = (value: number | string): string =>
     new Intl.NumberFormat(undefined, {
@@ -182,33 +188,30 @@ export default function OnlineRegistrationForm({
 
                             <div className="grid gap-2">
                                 <Label htmlFor="event_id">Event</Label>
-                                <select
+                                <FormSelect
                                     id="event_id"
                                     name="event_id"
                                     value={form.data.event_id}
-                                    onChange={(event) =>
+                                    onValueChange={(value) =>
                                         form.setData((currentData) => ({
                                             ...currentData,
-                                            event_id: event.target.value,
+                                            event_id: value,
                                             line_items: [emptyLineItem()],
                                         }))
                                     }
-                                    className={topFieldClassName}
+                                    placeholder="Select an event"
+                                    emptyLabel="Select an event"
+                                    options={events.map((event) => ({
+                                        value: event.id.toString(),
+                                        label: `${event.name} · ${event.remaining_slots} slots left`,
+                                    }))}
                                     disabled={events.length === 0}
-                                >
-                                    <option value="">Select an event</option>
-                                    {events.map((event) => (
-                                        <option key={event.id} value={event.id}>
-                                            {event.name} · {event.remaining_slots} slots
-                                            {' '}left
-                                        </option>
-                                    ))}
-                                </select>
+                                />
                                 <InputError message={form.errors.event_id} />
                             </div>
                         </div>
 
-                        <div className="overflow-hidden rounded-[28px] border border-[#184d47]/20 bg-[#184d47] px-5 py-5 text-white shadow-sm shadow-[#184d47]/20">
+                        <div className="overflow-hidden rounded-md border border-[#184d47]/20 bg-[#184d47] px-5 py-5 text-white shadow-sm shadow-[#184d47]/20">
                             <div className="flex h-full flex-col justify-between gap-4">
                                 <div className="space-y-1.5">
                                     <div className="text-xs font-semibold tracking-[0.18em] text-white/70 uppercase">
@@ -283,7 +286,7 @@ export default function OnlineRegistrationForm({
                                     )
                                 }
                                 placeholder="Optional OR, deposit slip, or transfer reference"
-                                className="h-11 rounded-xl"
+                                className={formControlClassName}
                             />
                             <InputError message={form.errors.payment_reference} />
                         </div>
@@ -304,11 +307,11 @@ export default function OnlineRegistrationForm({
                                 }
                                 className="sr-only"
                             />
-                            <div className="flex h-11 items-center gap-3 rounded-xl border border-input bg-background px-3 shadow-xs">
+                            <div className="flex h-11 items-center gap-3 rounded-md border border-input bg-background px-3 shadow-xs">
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    className="h-8 shrink-0 rounded-xl px-3"
+                                    className="h-9 shrink-0 rounded-md px-3"
                                     onClick={() =>
                                         receiptInputRef.current?.click()
                                     }
@@ -366,7 +369,7 @@ export default function OnlineRegistrationForm({
                     <Button
                         type="button"
                         variant="outline"
-                        className="rounded-xl"
+                        className="rounded-md"
                         onClick={addLineItem}
                     >
                         <Plus className="mr-2 h-4 w-4" />
@@ -385,47 +388,42 @@ export default function OnlineRegistrationForm({
                     return (
                         <div
                             key={index}
-                            className="rounded-xl border border-sidebar-border/70 bg-background p-4"
+                            className="rounded-md border border-sidebar-border/70 bg-background p-4"
                         >
                             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_160px_auto]">
                                 <div className="grid gap-2">
                                     <Label htmlFor={`fee_category_${index}`}>
                                         Fee category
                                     </Label>
-                                    <select
+                                    <FormSelect
                                         id={`fee_category_${index}`}
                                         name={`line_items.${index}.fee_category_id`}
                                         value={lineItem.fee_category_id}
-                                        onChange={(event) =>
+                                        onValueChange={(value) =>
                                             updateLineItem(
                                                 index,
                                                 'fee_category_id',
-                                                event.target.value,
+                                                value,
                                             )
                                         }
-                                        className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                                        disabled={selectedEvent === null}
-                                    >
-                                        <option value="">
-                                            {selectedEvent
+                                        placeholder={
+                                            selectedEvent
                                                 ? 'Select a fee category'
-                                                : 'Select an event first'}
-                                        </option>
-                                        {availableFeeCategories.map(
-                                            (feeCategory) => (
-                                                <option
-                                                    key={feeCategory.id}
-                                                    value={feeCategory.id}
-                                                >
-                                                    {feeCategory.category_name}{' '}
-                                                    ·{' '}
-                                                    {formatCurrency(
-                                                        feeCategory.amount,
-                                                    )}
-                                                </option>
-                                            ),
+                                                : 'Select an event first'
+                                        }
+                                        emptyLabel={
+                                            selectedEvent
+                                                ? 'Select a fee category'
+                                                : 'Select an event first'
+                                        }
+                                        options={availableFeeCategories.map(
+                                            (feeCategory) => ({
+                                                value: feeCategory.id.toString(),
+                                                label: `${feeCategory.category_name} · ${formatCurrency(feeCategory.amount)}`,
+                                            }),
                                         )}
-                                    </select>
+                                        disabled={selectedEvent === null}
+                                    />
                                     <InputError
                                         message={
                                             form.errors[
@@ -439,21 +437,25 @@ export default function OnlineRegistrationForm({
                                     <Label htmlFor={`quantity_${index}`}>
                                         Quantity
                                     </Label>
-                                    <Input
-                                        id={`quantity_${index}`}
-                                        name={`line_items.${index}.quantity`}
-                                        type="number"
-                                        min="1"
-                                        value={lineItem.quantity}
-                                        onChange={(event) =>
-                                            updateLineItem(
-                                                index,
-                                                'quantity',
-                                                event.target.value,
-                                            )
-                                        }
-                                        placeholder="0"
-                                    />
+                                        <Input
+                                            id={`quantity_${index}`}
+                                            name={`line_items.${index}.quantity`}
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            value={lineItem.quantity}
+                                            onChange={(event) =>
+                                                updateLineItem(
+                                                    index,
+                                                    'quantity',
+                                                    normalizeQuantityValue(
+                                                        event.target.value,
+                                                    ),
+                                                )
+                                            }
+                                            placeholder="0"
+                                            className={quantityInputClassName}
+                                        />
                                     <InputError
                                         message={
                                             form.errors[

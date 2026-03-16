@@ -2,11 +2,17 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { BadgeCheck, CircleX, Clock3 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import RegistrantApprovalController from '@/actions/App/Http/Controllers/RegistrantApprovalController';
+import {
+    DataTableBadge,
+    resolveDataTableTone,
+} from '@/components/data-table-badge';
 import DataTablePagination from '@/components/data-table-pagination';
-import { elevatedIndexTableStyles } from '@/components/data-table-presets';
+import {
+    elevatedIndexTableStyles,
+    reviewWorkspaceStyles,
+} from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatSystemDateTime as formatManilaDateTime } from '@/lib/date-time';
 import {
@@ -75,22 +81,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const formatDateTime = (value: string | null): string => {
-    if (!value) {
+    if (! value) {
         return 'Not reviewed yet';
     }
 
     return formatManilaDateTime(value);
-};
-
-const approvalStatusClassName = (status: string): string => {
-    switch (status) {
-        case 'approved':
-            return 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-300';
-        case 'rejected':
-            return 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-500/10 dark:text-rose-300';
-        default:
-            return 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-500/10 dark:text-amber-300';
-    }
 };
 
 export default function AccountRequestsIndex({
@@ -146,7 +141,7 @@ export default function AccountRequestsIndex({
                 ? `Approve ${accountRequest.name}'s registrant access?`
                 : `Reject ${accountRequest.name}'s registrant access?`;
 
-        if (!window.confirm(confirmationMessage)) {
+        if (! window.confirm(confirmationMessage)) {
             return;
         }
 
@@ -168,30 +163,24 @@ export default function AccountRequestsIndex({
             value: summary.pending,
             subtitle: 'Awaiting account approval',
             icon: Clock3,
-            cardClassName:
-                'border border-[#eadfca] border-t-4 border-t-[#c58b1e] bg-white shadow-[#c58b1e]/8 dark:border-amber-950/60 dark:border-t-amber-500 dark:bg-slate-950',
-            iconWrapperClassName:
-                'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+            cardClassName: reviewWorkspaceStyles.summaryCardPending,
+            iconWrapperClassName: reviewWorkspaceStyles.summaryIconPending,
         },
         {
             title: 'Approved',
             value: summary.approved,
             subtitle: 'Online registration unlocked',
             icon: BadgeCheck,
-            cardClassName:
-                'border border-[#d6e2de] border-t-4 border-t-[#184d47] bg-white shadow-[#184d47]/8 dark:border-emerald-950/60 dark:border-t-emerald-500 dark:bg-slate-950',
-            iconWrapperClassName:
-                'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
+            cardClassName: reviewWorkspaceStyles.summaryCardApproved,
+            iconWrapperClassName: reviewWorkspaceStyles.summaryIconApproved,
         },
         {
             title: 'Rejected',
             value: summary.rejected,
             subtitle: 'Needs follow-up',
             icon: CircleX,
-            cardClassName:
-                'border border-[#ecd7d8] border-t-4 border-t-[#be4b56] bg-white shadow-[#be4b56]/8 dark:border-rose-950/60 dark:border-t-rose-500 dark:bg-slate-950',
-            iconWrapperClassName:
-                'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300',
+            cardClassName: reviewWorkspaceStyles.summaryCardRejected,
+            iconWrapperClassName: reviewWorkspaceStyles.summaryIconRejected,
         },
     ] as const;
 
@@ -209,23 +198,29 @@ export default function AccountRequestsIndex({
                     {summaryCards.map((card) => (
                         <div
                             key={card.title}
-                            className={`rounded-md px-5 py-5 shadow-sm ${card.cardClassName}`}
+                            className={`${reviewWorkspaceStyles.summaryCard} ${card.cardClassName}`}
                         >
                             <div className="flex items-start justify-between gap-4">
                                 <div className="space-y-3">
-                                    <div className="text-xs font-semibold tracking-[0.22em] uppercase text-slate-500 dark:text-slate-400">
+                                    <div
+                                        className={`text-xs font-semibold tracking-[0.22em] uppercase ${reviewWorkspaceStyles.summaryEyebrow}`}
+                                    >
                                         {card.title}
                                     </div>
-                                    <div className="text-3xl font-semibold tracking-[-0.04em] text-slate-900 dark:text-slate-100">
+                                    <div
+                                        className={`text-3xl font-semibold tracking-[-0.04em] ${reviewWorkspaceStyles.summaryValue}`}
+                                    >
                                         {card.value}
                                     </div>
-                                    <div className="text-sm text-slate-600 dark:text-slate-400">
+                                    <div
+                                        className={`text-sm ${reviewWorkspaceStyles.summarySubtitle}`}
+                                    >
                                         {card.subtitle}
                                     </div>
                                 </div>
 
                                 <div
-                                    className={`flex size-11 items-center justify-center rounded-md ${card.iconWrapperClassName}`}
+                                    className={`${reviewWorkspaceStyles.summaryIconWrapper} ${card.iconWrapperClassName}`}
                                 >
                                     <card.icon className="size-5" />
                                 </div>
@@ -235,19 +230,19 @@ export default function AccountRequestsIndex({
                 </div>
 
                 {flash?.success && (
-                    <div className="rounded-md border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-100">
+                    <div className={reviewWorkspaceStyles.flashSuccess}>
                         {flash.success}
                     </div>
                 )}
 
                 {errorMessage && (
-                    <div className="rounded-md border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/70 dark:text-rose-100">
+                    <div className={reviewWorkspaceStyles.flashError}>
                         {errorMessage}
                     </div>
                 )}
 
-                <div className={elevatedIndexTableStyles.shell}>
-                    <div className={elevatedIndexTableStyles.band}>
+                <div className={reviewWorkspaceStyles.shell}>
+                    <div className={reviewWorkspaceStyles.band}>
                         <DataTableToolbar
                             searchValue={search}
                             onSearchValueChange={setSearch}
@@ -260,12 +255,12 @@ export default function AccountRequestsIndex({
                                 })
                             }
                             placeholder="Search representative, email, church, pastor, or section"
-                            className={elevatedIndexTableStyles.toolbar}
+                            className={reviewWorkspaceStyles.toolbar}
                             searchWrapperClassName={
-                                elevatedIndexTableStyles.searchWrapper
+                                reviewWorkspaceStyles.searchWrapper
                             }
-                            inputClassName={elevatedIndexTableStyles.input}
-                            actionClassName={elevatedIndexTableStyles.action}
+                            inputClassName={reviewWorkspaceStyles.input}
+                            actionClassName={reviewWorkspaceStyles.action}
                             action={
                                 <div className="flex w-full sm:w-auto">
                                     <Select
@@ -281,18 +276,20 @@ export default function AccountRequestsIndex({
                                             });
                                         }}
                                     >
-                                        <SelectTrigger className="h-11 w-full min-w-52 rounded-md border-slate-200 bg-white px-4 text-slate-700 shadow-none data-[placeholder]:text-slate-400 focus-visible:border-[#184d47]/35 focus-visible:ring-[#184d47]/15 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:data-[placeholder]:text-slate-500">
+                                        <SelectTrigger
+                                            className={reviewWorkspaceStyles.selectTrigger}
+                                        >
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent
                                             align="end"
-                                            className="rounded-md border-slate-200 bg-white p-1 text-slate-900 shadow-xl dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                                            className={reviewWorkspaceStyles.selectContent}
                                         >
                                             {statusOptions.map((option) => (
                                                 <SelectItem
                                                     key={option.value}
                                                     value={option.value}
-                                                    className="rounded-sm px-3 py-2.5 text-slate-900 focus:bg-slate-100 focus:text-slate-900 dark:text-slate-100 dark:focus:bg-slate-800 dark:focus:text-white"
+                                                    className={reviewWorkspaceStyles.selectItem}
                                                 >
                                                     {option.label}
                                                 </SelectItem>
@@ -445,27 +442,35 @@ export default function AccountRequestsIndex({
                                                 }
                                             >
                                                 <div className="flex flex-col gap-3">
-                                                    <Badge
-                                                        variant="outline"
-                                                        className={`w-fit rounded-md px-2.5 py-1 capitalize ${approvalStatusClassName(
+                                                    <DataTableBadge
+                                                        tone={resolveDataTableTone(
                                                             accountRequest.approval_status,
-                                                        )}`}
+                                                            {
+                                                                approved:
+                                                                    'emerald',
+                                                                rejected:
+                                                                    'rose',
+                                                                pending:
+                                                                    'amber',
+                                                            },
+                                                        )}
+                                                        className="w-fit rounded-md capitalize"
                                                     >
                                                         {
                                                             accountRequest.approval_status
                                                         }
-                                                    </Badge>
-                                                    <Badge
-                                                        variant={
+                                                    </DataTableBadge>
+                                                    <DataTableBadge
+                                                        tone={
                                                             accountRequest.status ===
                                                             'active'
-                                                                ? 'secondary'
-                                                                : 'destructive'
+                                                                ? 'emerald'
+                                                                : 'rose'
                                                         }
-                                                        className="w-fit capitalize"
+                                                        className="w-fit rounded-md capitalize"
                                                     >
                                                         {accountRequest.status}
-                                                    </Badge>
+                                                    </DataTableBadge>
                                                 </div>
                                             </td>
                                             <td
@@ -475,7 +480,7 @@ export default function AccountRequestsIndex({
                                                     <Button
                                                         type="button"
                                                         size="sm"
-                                                        className="rounded-md bg-[#184d47] text-white hover:bg-[#143f3a]"
+                                                        className={reviewWorkspaceStyles.primaryButton}
                                                         onClick={() =>
                                                             reviewRequest(
                                                                 accountRequest,
@@ -493,7 +498,7 @@ export default function AccountRequestsIndex({
                                                         type="button"
                                                         variant="outline"
                                                         size="sm"
-                                                        className="rounded-md border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/40 dark:hover:text-rose-200"
+                                                        className={reviewWorkspaceStyles.dangerButton}
                                                         onClick={() =>
                                                             reviewRequest(
                                                                 accountRequest,
@@ -516,35 +521,35 @@ export default function AccountRequestsIndex({
                         </table>
                     </div>
 
-                    <div className={elevatedIndexTableStyles.paginationWrapper}>
+                    <div className={reviewWorkspaceStyles.paginationWrapper}>
                         <DataTablePagination
                             meta={requests.meta}
                             rowsPerPage={filters.per_page}
                             rowOptions={perPageOptions}
-                            className={elevatedIndexTableStyles.pagination}
+                            className={reviewWorkspaceStyles.pagination}
                             topRowClassName={
-                                elevatedIndexTableStyles.paginationTopRow
+                                reviewWorkspaceStyles.paginationTopRow
                             }
                             rowsTriggerClassName={
-                                elevatedIndexTableStyles.rowsTrigger
+                                reviewWorkspaceStyles.rowsTrigger
                             }
-                            summaryClassName={elevatedIndexTableStyles.summary}
+                            summaryClassName={reviewWorkspaceStyles.summary}
                             navigationWrapperClassName={
-                                elevatedIndexTableStyles.navigationWrapper
+                                reviewWorkspaceStyles.navigationWrapper
                             }
                             previousButtonClassName={
-                                elevatedIndexTableStyles.previousButton
+                                reviewWorkspaceStyles.previousButton
                             }
                             nextButtonClassName={
-                                elevatedIndexTableStyles.nextButton
+                                reviewWorkspaceStyles.nextButton
                             }
                             activePageButtonClassName={
-                                elevatedIndexTableStyles.activePageButton
+                                reviewWorkspaceStyles.activePageButton
                             }
                             inactivePageButtonClassName={
-                                elevatedIndexTableStyles.inactivePageButton
+                                reviewWorkspaceStyles.inactivePageButton
                             }
-                            ellipsisClassName={elevatedIndexTableStyles.ellipsis}
+                            ellipsisClassName={reviewWorkspaceStyles.ellipsis}
                             onRowsPerPageChange={(value) =>
                                 visitIndex({
                                     search: filters.search || undefined,

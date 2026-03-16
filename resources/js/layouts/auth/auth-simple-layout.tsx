@@ -17,7 +17,7 @@ export default function AuthSimpleLayout({
         >
             <div className="mx-auto flex min-h-[calc(100svh-3rem)] w-full max-w-6xl items-center">
                 <div className="grid w-full gap-6 lg:grid-cols-[minmax(0,1.05fr)_420px] lg:items-start">
-                    <div className="hidden self-start rounded-[32px] border border-white/70 bg-[linear-gradient(145deg,_rgba(255,255,255,0.88),_rgba(244,249,247,0.94))] p-8 shadow-2xl shadow-[#184d47]/10 backdrop-blur lg:flex lg:flex-col lg:gap-10">
+                    <div className="hidden self-start rounded-md border border-white/70 bg-[linear-gradient(145deg,_rgba(255,255,255,0.88),_rgba(244,249,247,0.94))] p-8 shadow-2xl shadow-[#184d47]/10 backdrop-blur lg:flex lg:flex-col lg:gap-10">
                         <div className="space-y-8">
                             <Link href={home()} className="inline-flex items-center gap-3 text-slate-900">
                                 <AppLogo />
@@ -39,7 +39,7 @@ export default function AuthSimpleLayout({
                         </div>
 
                         <div className="grid gap-4 sm:grid-cols-3">
-                            <div className="rounded-2xl border border-white/80 bg-white/80 p-4 shadow-sm shadow-[#184d47]/5">
+                            <div className="rounded-md border border-white/80 bg-white/80 p-4 shadow-sm shadow-[#184d47]/5">
                                 <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
                                     Scoped roles
                                 </div>
@@ -48,7 +48,7 @@ export default function AuthSimpleLayout({
                                 </div>
                             </div>
 
-                            <div className="rounded-2xl border border-white/80 bg-white/80 p-4 shadow-sm shadow-[#184d47]/5">
+                            <div className="rounded-md border border-white/80 bg-white/80 p-4 shadow-sm shadow-[#184d47]/5">
                                 <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
                                     Online flow
                                 </div>
@@ -57,7 +57,7 @@ export default function AuthSimpleLayout({
                                 </div>
                             </div>
 
-                            <div className="rounded-2xl border border-white/80 bg-white/80 p-4 shadow-sm shadow-[#184d47]/5">
+                            <div className="rounded-md border border-white/80 bg-white/80 p-4 shadow-sm shadow-[#184d47]/5">
                                 <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
                                     Onsite entry
                                 </div>
@@ -69,7 +69,7 @@ export default function AuthSimpleLayout({
                     </div>
 
                     <div className="flex items-center justify-center">
-                        <div className="w-full rounded-[32px] border border-[#d5ddd8] bg-white/92 p-6 shadow-2xl shadow-[#184d47]/10 backdrop-blur sm:p-8">
+                        <div className="w-full rounded-md border border-[#d5ddd8] bg-white/92 p-6 shadow-2xl shadow-[#184d47]/10 backdrop-blur sm:p-8">
                             <div className="mb-8 space-y-6">
                                 <Link href={home()} className="inline-flex items-center gap-3 text-slate-900 lg:hidden">
                                     <AppLogo />

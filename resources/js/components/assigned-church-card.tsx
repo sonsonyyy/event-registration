@@ -15,7 +15,7 @@ type Props = {
 
 export default function AssignedChurchCard({ assignedPastor }: Props) {
     return (
-        <div className="overflow-hidden rounded-[28px] border border-[#ccd8d4] bg-[linear-gradient(135deg,_rgba(24,77,71,0.12),_rgba(236,244,241,0.94)_46%,_rgba(255,255,255,0.98))] px-5 py-5 shadow-sm shadow-[#184d47]/10">
+        <div className="overflow-hidden rounded-md border border-[#ccd8d4] bg-[linear-gradient(135deg,_rgba(24,77,71,0.12),_rgba(236,244,241,0.94)_46%,_rgba(255,255,255,0.98))] px-5 py-5 shadow-sm shadow-[#184d47]/10">
             <div className="flex flex-col gap-5">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex items-start gap-4">
@@ -52,7 +52,7 @@ export default function AssignedChurchCard({ assignedPastor }: Props) {
                     {assignedPastor?.status && (
                         <Badge
                             variant="secondary"
-                            className="rounded-xl px-3 py-1 capitalize"
+                            className="rounded-md px-3 py-1 capitalize"
                         >
                             <BadgeCheck className="size-3.5" />
                             {assignedPastor.status}
@@ -62,7 +62,7 @@ export default function AssignedChurchCard({ assignedPastor }: Props) {
 
                 {assignedPastor && (
                     <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-2xl border border-white/70 bg-white/75 px-4 py-3 shadow-sm shadow-[#184d47]/5 backdrop-blur">
+                        <div className="rounded-md border border-white/70 bg-white/75 px-4 py-3 shadow-sm shadow-[#184d47]/5 backdrop-blur">
                             <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
                                 Pastor
                             </div>
@@ -71,7 +71,7 @@ export default function AssignedChurchCard({ assignedPastor }: Props) {
                             </div>
                         </div>
 
-                        <div className="rounded-2xl border border-white/70 bg-white/75 px-4 py-3 shadow-sm shadow-[#184d47]/5 backdrop-blur">
+                        <div className="rounded-md border border-white/70 bg-white/75 px-4 py-3 shadow-sm shadow-[#184d47]/5 backdrop-blur">
                             <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
                                 Coverage
                             </div>

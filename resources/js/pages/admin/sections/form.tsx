@@ -1,12 +1,16 @@
 import { Link, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import SectionController from '@/actions/App/Http/Controllers/Admin/SectionController';
+import FormSelect from '@/components/form-select';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import {
+    formTextareaClassName,
+} from '@/lib/ui-styles';
 
 type Section = {
     id: number;
@@ -35,9 +39,6 @@ type Props = {
     statusOptions: StatusOption[];
     minimalLayout?: boolean;
 };
-
-const textareaClassName =
-    'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-28 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50';
 
 export default function SectionForm({
     section,
@@ -71,51 +72,38 @@ export default function SectionForm({
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px]">
                 <div className="grid gap-2">
                     <Label htmlFor="district_id">District</Label>
-                    <select
+                    <FormSelect
                         id="district_id"
                         name="district_id"
                         value={form.data.district_id}
-                        onChange={(event) =>
-                            form.setData(
-                                'district_id',
-                                event.target.value,
-                            )
+                        onValueChange={(value) =>
+                            form.setData('district_id', value)
                         }
-                        className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                    >
-                        <option value="">Select a district</option>
-                        {districts.map((district) => (
-                            <option
-                                key={district.id}
-                                value={district.id}
-                            >
-                                {district.name}
-                            </option>
-                        ))}
-                    </select>
+                        placeholder="Select a district"
+                        emptyLabel="Select a district"
+                        options={districts.map((district) => ({
+                            value: district.id.toString(),
+                            label: district.name,
+                        }))}
+                    />
                     <InputError message={form.errors.district_id} />
                 </div>
 
                 <div className="grid gap-2">
                     <Label htmlFor="status">Status</Label>
-                    <select
+                    <FormSelect
                         id="status"
                         name="status"
                         value={form.data.status}
-                        onChange={(event) =>
-                            form.setData('status', event.target.value)
+                        onValueChange={(value) =>
+                            form.setData('status', value)
                         }
-                        className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                    >
-                        {statusOptions.map((option) => (
-                            <option
-                                key={option.value}
-                                value={option.value}
-                            >
-                                {option.label}
-                            </option>
-                        ))}
-                    </select>
+                        placeholder="Select status"
+                        options={statusOptions.map((option) => ({
+                            value: option.value,
+                            label: option.label,
+                        }))}
+                    />
                     <InputError message={form.errors.status} />
                 </div>
             </div>
@@ -148,7 +136,7 @@ export default function SectionForm({
                         )
                     }
                     placeholder="Optional notes for the section record."
-                    className={textareaClassName}
+                    className={formTextareaClassName}
                 />
                 <InputError message={form.errors.description} />
             </div>

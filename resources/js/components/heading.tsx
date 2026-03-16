@@ -14,21 +14,23 @@ export default function Heading({
     return (
         <header
             className={cn(
-                variant === 'small' ? '' : 'mb-8 space-y-0.5',
+                variant === 'small' ? 'space-y-1' : 'mb-6 space-y-1',
                 className,
             )}
         >
             <h2
                 className={
                     variant === 'small'
-                        ? 'mb-0.5 text-base font-medium'
-                        : 'text-xl font-semibold tracking-tight'
+                        ? 'text-lg font-semibold tracking-tight'
+                        : 'text-2xl font-semibold tracking-tight'
                 }
             >
                 {title}
             </h2>
             {description && (
-                <p className="text-sm text-muted-foreground">{description}</p>
+                <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+                    {description}
+                </p>
             )}
         </header>
     );

@@ -2,6 +2,7 @@ import { Link, useForm } from '@inertiajs/react';
 import { Building2, Plus, ReceiptText, Trash2, UsersRound } from 'lucide-react';
 import type { FormEvent } from 'react';
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
+import FormSelect from '@/components/form-select';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,10 @@ import {
     formatSystemDateOnly,
     formatSystemDateTime,
 } from '@/lib/date-time';
+import {
+    formControlClassName,
+    formTextareaClassName,
+} from '@/lib/ui-styles';
 
 type FeeCategoryOption = {
     id: number;
@@ -69,10 +74,15 @@ type Props = {
     pastors: PastorOption[];
 };
 
-const textareaClassName =
-    'border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-28 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50';
+const textareaClassName = formTextareaClassName;
+const detailCardClassName =
+    'rounded-md border border-[#d6e2de] bg-[linear-gradient(145deg,_rgba(247,250,249,0.98),_rgba(255,255,255,1))] px-5 py-5 shadow-sm shadow-[#184d47]/8';
 const summaryCardClassName =
-    'rounded-[24px] border px-5 py-5 shadow-sm transition-colors';
+    'rounded-md border px-5 py-5 shadow-sm transition-colors';
+const quantityInputClassName = formControlClassName;
+
+const normalizeQuantityValue = (value: string): string =>
+    value.replace(/\D+/g, '');
 
 const formatCurrency = (value: number | string): string =>
     new Intl.NumberFormat(undefined, {
@@ -239,76 +249,138 @@ export default function OnsiteRegistrationForm({
             <div className="space-y-6">
                 <div className="grid gap-6">
                     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch">
-                        <div className="flex h-full flex-col gap-6">
-                            <div className="grid gap-2">
-                                <Label htmlFor="event_id">Event</Label>
-                                <select
-                                    id="event_id"
-                                    name="event_id"
-                                    value={form.data.event_id}
-                                    onChange={(event) =>
-                                        setEvent(event.target.value)
-                                    }
-                                    className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                                    disabled={events.length === 0}
-                                >
-                                    <option value="">Select an event</option>
-                                    {events.map((event) => (
-                                        <option key={event.id} value={event.id}>
-                                            {event.name} · {event.remaining_slots} slots
-                                            {' '}left
-                                        </option>
-                                    ))}
-                                </select>
-                                <InputError message={form.errors.event_id} />
+                        <div className={`${detailCardClassName} flex h-full flex-col`}>
+                            <div className="space-y-1.5">
+                                <div className="text-xs font-semibold tracking-[0.18em] text-[#184d47]/70 uppercase">
+                                    Transaction details
+                                </div>
+                                <div className="text-lg font-semibold text-slate-900">
+                                    Onsite registration details
+                                </div>
+                                <p className="text-sm leading-6 text-slate-600">
+                                    Select the event and church covered by this
+                                    onsite transaction, then record the official
+                                    receipt or cash reference for auditing.
+                                </p>
                             </div>
 
-                            <div className="grid gap-6 xl:grid-cols-2">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="section_id">Section</Label>
-                                    <select
-                                        id="section_id"
-                                        name="section_id"
-                                        value={form.data.section_id}
-                                        onChange={(event) =>
-                                            changeSection(event.target.value)
-                                        }
-                                        className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                                    >
-                                        <option value="">Select a section</option>
-                                        {sectionOptions.map((section) => (
-                                            <option key={section.id} value={section.id}>
-                                                {section.name} · {section.district_name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                <div className="mt-6 grid flex-1 gap-5">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="event_id">Event</Label>
+                                        <FormSelect
+                                            id="event_id"
+                                            name="event_id"
+                                            value={form.data.event_id}
+                                            onValueChange={setEvent}
+                                            placeholder="Select an event"
+                                            emptyLabel="Select an event"
+                                            options={events.map((event) => ({
+                                                value: event.id.toString(),
+                                                label: `${event.name} · ${event.remaining_slots} slots left`,
+                                            }))}
+                                            disabled={events.length === 0}
+                                        />
+                                    <InputError message={form.errors.event_id} />
+                                </div>
+
+                                <div className="grid gap-5 xl:grid-cols-2">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="section_id">Section</Label>
+                                        <FormSelect
+                                            id="section_id"
+                                            name="section_id"
+                                            value={form.data.section_id}
+                                            onValueChange={changeSection}
+                                            placeholder="Select a section"
+                                            emptyLabel="Select a section"
+                                            options={sectionOptions.map((section) => ({
+                                                value: section.id.toString(),
+                                                label: `${section.name} · ${section.district_name}`,
+                                            }))}
+                                        />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="pastor_id">
+                                            Pastor or church
+                                        </Label>
+                                        <FormSelect
+                                            id="pastor_id"
+                                            name="pastor_id"
+                                            value={form.data.pastor_id}
+                                            onValueChange={changePastor}
+                                            placeholder="Select a pastor or church"
+                                            emptyLabel="Select a pastor or church"
+                                            options={filteredPastors.map((pastor) => ({
+                                                value: pastor.id.toString(),
+                                                label: `${pastor.church_name} · ${pastor.pastor_name}`,
+                                            }))}
+                                            disabled={pastors.length === 0}
+                                        />
+                                        <InputError message={form.errors.pastor_id} />
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="payment_reference">
+                                            Official receipt / reference
+                                        </Label>
+                                        <Input
+                                            id="payment_reference"
+                                            name="payment_reference"
+                                            value={form.data.payment_reference}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'payment_reference',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            placeholder="OR-2026-00123"
+                                            className={formControlClassName}
+                                        />
+                                        <InputError
+                                            message={form.errors.payment_reference}
+                                        />
+                                    </div>
+
+                                    <div className="rounded-md border border-[#d6e2de] bg-white/88 px-4 py-4 shadow-sm shadow-[#184d47]/6">
+                                        <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
+                                            Payment handling
+                                        </div>
+                                        <div className="mt-2 text-sm font-medium text-slate-900">
+                                            Onsite transactions are recorded as
+                                            paid.
+                                        </div>
+                                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                                            Keep the receipt or manual reference
+                                            here so staff can reconcile the
+                                            transaction later.
+                                        </p>
+                                    </div>
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor="pastor_id">Pastor or church</Label>
-                                    <select
-                                        id="pastor_id"
-                                        name="pastor_id"
-                                        value={form.data.pastor_id}
+                                    <Label htmlFor="remarks">Remarks</Label>
+                                    <textarea
+                                        id="remarks"
+                                        name="remarks"
+                                        value={form.data.remarks}
                                         onChange={(event) =>
-                                            changePastor(event.target.value)
+                                            form.setData(
+                                                'remarks',
+                                                event.target.value,
+                                            )
                                         }
-                                        className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                                        disabled={pastors.length === 0}
-                                    >
-                                        <option value="">Select a pastor or church</option>
-                                        {filteredPastors.map((pastor) => (
-                                            <option key={pastor.id} value={pastor.id}>
-                                                {pastor.church_name} · {pastor.pastor_name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <InputError message={form.errors.pastor_id} />
+                                        placeholder="Optional notes for this transaction."
+                                        className={textareaClassName}
+                                    />
+                                    <InputError message={form.errors.remarks} />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="overflow-hidden rounded-[28px] border border-[#184d47]/20 bg-[#184d47] px-5 py-5 text-white shadow-sm shadow-[#184d47]/20">
+                        <div className="overflow-hidden rounded-md border border-[#184d47]/20 bg-[#184d47] px-5 py-5 text-white shadow-sm shadow-[#184d47]/20">
                             <div className="flex h-full flex-col justify-between gap-4">
                                 <div className="space-y-1.5">
                                     <div className="text-xs font-semibold tracking-[0.18em] text-white/70 uppercase">
@@ -367,39 +439,6 @@ export default function OnsiteRegistrationForm({
                         </div>
                     </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="payment_reference">
-                            Official receipt / reference
-                        </Label>
-                        <Input
-                            id="payment_reference"
-                            name="payment_reference"
-                            value={form.data.payment_reference}
-                            onChange={(event) =>
-                                form.setData(
-                                    'payment_reference',
-                                    event.target.value,
-                                )
-                            }
-                            placeholder="OR-2026-00123"
-                        />
-                        <InputError message={form.errors.payment_reference} />
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label htmlFor="remarks">Remarks</Label>
-                        <textarea
-                            id="remarks"
-                            name="remarks"
-                            value={form.data.remarks}
-                            onChange={(event) =>
-                                form.setData('remarks', event.target.value)
-                            }
-                            placeholder="Optional notes for this transaction."
-                            className={textareaClassName}
-                        />
-                        <InputError message={form.errors.remarks} />
-                    </div>
                 </div>
             </div>
 
@@ -417,7 +456,7 @@ export default function OnsiteRegistrationForm({
                     <Button
                         type="button"
                         variant="outline"
-                        className="rounded-xl"
+                        className="rounded-md"
                         onClick={addLineItem}
                     >
                         <Plus className="mr-2 h-4 w-4" />
@@ -436,47 +475,66 @@ export default function OnsiteRegistrationForm({
                         return (
                             <div
                                 key={index}
-                                className="rounded-xl border border-sidebar-border/70 bg-background p-4"
+                                className="rounded-md border border-[#d9e1de] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(247,250,249,0.98))] p-5 shadow-sm shadow-[#184d47]/6"
                             >
+                                <div className="mb-4 flex flex-col gap-3 border-b border-[#e5ece8] pb-4 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
+                                            Line item {String(index + 1).padStart(2, '0')}
+                                        </div>
+                                        <div className="mt-1 text-sm text-slate-600">
+                                            Choose one fee category and the
+                                            quantity to add to this transaction.
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="h-10 rounded-md border-dashed"
+                                        onClick={() => removeLineItem(index)}
+                                        disabled={
+                                            form.data.line_items.length === 1
+                                        }
+                                    >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Remove
+                                    </Button>
+                                </div>
+
                                 <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_160px_auto]">
                                     <div className="grid gap-2">
                                         <Label htmlFor={`fee_category_${index}`}>
                                             Fee category
                                         </Label>
-                                        <select
+                                        <FormSelect
                                             id={`fee_category_${index}`}
                                             name={`line_items.${index}.fee_category_id`}
                                             value={lineItem.fee_category_id}
-                                            onChange={(event) =>
+                                            onValueChange={(value) =>
                                                 updateLineItem(
                                                     index,
                                                     'fee_category_id',
-                                                    event.target.value,
+                                                    value,
                                                 )
                                             }
-                                            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                                            disabled={selectedEvent === null}
-                                        >
-                                            <option value="">
-                                                {selectedEvent
+                                            placeholder={
+                                                selectedEvent
                                                     ? 'Select a fee category'
-                                                    : 'Select an event first'}
-                                            </option>
-                                            {availableFeeCategories.map(
-                                                (feeCategory) => (
-                                                    <option
-                                                        key={feeCategory.id}
-                                                        value={feeCategory.id}
-                                                    >
-                                                        {feeCategory.category_name}{' '}
-                                                        ·{' '}
-                                                        {formatCurrency(
-                                                            feeCategory.amount,
-                                                        )}
-                                                    </option>
-                                                ),
+                                                    : 'Select an event first'
+                                            }
+                                            emptyLabel={
+                                                selectedEvent
+                                                    ? 'Select a fee category'
+                                                    : 'Select an event first'
+                                            }
+                                            options={availableFeeCategories.map(
+                                                (feeCategory) => ({
+                                                    value: feeCategory.id.toString(),
+                                                    label: `${feeCategory.category_name} · ${formatCurrency(feeCategory.amount)}`,
+                                                }),
                                             )}
-                                        </select>
+                                            disabled={selectedEvent === null}
+                                        />
                                         <InputError
                                             message={
                                                 form.errors[
@@ -493,17 +551,21 @@ export default function OnsiteRegistrationForm({
                                         <Input
                                             id={`quantity_${index}`}
                                             name={`line_items.${index}.quantity`}
-                                            type="number"
-                                            min="1"
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
                                             value={lineItem.quantity}
                                             onChange={(event) =>
                                                 updateLineItem(
                                                     index,
                                                     'quantity',
-                                                    event.target.value,
+                                                    normalizeQuantityValue(
+                                                        event.target.value,
+                                                    ),
                                                 )
                                             }
                                             placeholder="0"
+                                            className={quantityInputClassName}
                                         />
                                         <InputError
                                             message={
@@ -514,39 +576,31 @@ export default function OnsiteRegistrationForm({
                                         />
                                     </div>
 
-                                    <div className="flex items-end">
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            onClick={() => removeLineItem(index)}
-                                            disabled={
-                                                form.data.line_items.length === 1
-                                            }
-                                        >
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            Remove
-                                        </Button>
-                                    </div>
+                                    <div className="hidden lg:block" />
                                 </div>
 
                                 {selectedFeeCategory && (
-                                    <div className="mt-3 flex flex-wrap gap-2 text-sm text-muted-foreground">
-                                        <Badge variant="default">
+                                    <div className="mt-4 flex flex-wrap gap-2 text-sm text-muted-foreground">
+                                        <Badge
+                                            variant="outline"
+                                            className="rounded-md border-slate-200 bg-white px-3 py-1 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                                        >
                                             {formatCurrency(
                                                 selectedFeeCategory.amount,
                                             )}{' '}
                                             each
                                         </Badge>
                                         <Badge
-                                            variant={
+                                            variant="outline"
+                                            className={`rounded-md px-3 py-1 ${
                                                 selectedFeeCategory.remaining_slots ===
                                                 null
-                                                    ? 'default'
+                                                    ? 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
                                                     : selectedFeeCategory.remaining_slots >
                                                           0
-                                                      ? 'secondary'
-                                                      : 'destructive'
-                                            }
+                                                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-300'
+                                                      : 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-500/10 dark:text-rose-300'
+                                            }`}
                                         >
                                             {selectedFeeCategory.remaining_slots ===
                                             null

@@ -41,7 +41,7 @@ export default function Profile({
                     />
 
                     <div className="space-y-6">
-                        <div className="rounded-2xl border border-[#d6e2de] bg-[linear-gradient(145deg,_rgba(24,77,71,0.08),_rgba(255,255,255,0.96))] px-5 py-5 shadow-sm shadow-[#184d47]/8">
+                        <div className="rounded-md border border-[#d6e2de] bg-[linear-gradient(145deg,_rgba(24,77,71,0.08),_rgba(255,255,255,0.96))] px-5 py-5 shadow-sm shadow-[#184d47]/8">
                             <div className="flex items-start gap-4">
                                 <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#184d47] text-white shadow-sm shadow-[#184d47]/20">
                                     <ShieldAlert className="size-4" />

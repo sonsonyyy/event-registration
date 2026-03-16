@@ -1,6 +1,7 @@
 import { Link, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
+import FormSelect from '@/components/form-select';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import {
+    mutedNoticeClassName,
+} from '@/lib/ui-styles';
 
 type UserRecord = {
     id: number;
@@ -255,51 +259,42 @@ export default function UserForm({
                     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px]">
                         <div className="grid gap-2">
                             <Label htmlFor="role_id">Role</Label>
-                            <select
+                            <FormSelect
                                 id="role_id"
                                 name="role_id"
                                 value={form.data.role_id}
-                                onChange={(event) =>
-                                    changeRole(event.target.value)
-                                }
-                                className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                            >
-                                <option value="">Select a role</option>
-                                {roles.map((role) => (
-                                    <option key={role.id} value={role.id}>
-                                        {role.name}
-                                    </option>
-                                ))}
-                            </select>
+                                onValueChange={changeRole}
+                                placeholder="Select a role"
+                                emptyLabel="Select a role"
+                                options={roles.map((role) => ({
+                                    value: role.id.toString(),
+                                    label: role.name,
+                                }))}
+                            />
                             <InputError message={form.errors.role_id} />
                         </div>
 
                         <div className="grid gap-2">
                             <Label htmlFor="status">Status</Label>
-                            <select
+                            <FormSelect
                                 id="status"
                                 name="status"
                                 value={form.data.status}
-                                onChange={(event) =>
-                                    form.setData('status', event.target.value)
+                                onValueChange={(value) =>
+                                    form.setData('status', value)
                                 }
-                                className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                            >
-                                {statusOptions.map((statusOption) => (
-                                    <option
-                                        key={statusOption.value}
-                                        value={statusOption.value}
-                                    >
-                                        {statusOption.label}
-                                    </option>
-                                ))}
-                            </select>
+                                placeholder="Select status"
+                                options={statusOptions.map((statusOption) => ({
+                                    value: statusOption.value,
+                                    label: statusOption.label,
+                                }))}
+                            />
                             <InputError message={form.errors.status} />
                         </div>
                     </div>
 
                     {selectedRole && (
-                        <div className="rounded-lg border border-sidebar-border/70 bg-sidebar/30 px-4 py-3 text-sm text-muted-foreground">
+                        <div className={mutedNoticeClassName}>
                             {roleDescriptions[selectedRole.name] ??
                                 'Assign the scope that matches this role.'}
                         </div>
@@ -355,28 +350,18 @@ export default function UserForm({
                             <Label htmlFor="district_id">
                                 Assigned district
                             </Label>
-                            <select
+                            <FormSelect
                                 id="district_id"
                                 name="district_id"
                                 value={form.data.district_id}
-                                onChange={(event) =>
-                                    changeDistrict(event.target.value)
-                                }
-                                className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                            >
-                                <option value="">No district scope</option>
-                                {districts.map((district) => (
-                                    <option
-                                        key={district.id}
-                                        value={district.id}
-                                    >
-                                        {district.name}
-                                        {district.status === 'inactive'
-                                            ? ' (Inactive)'
-                                            : ''}
-                                    </option>
-                                ))}
-                            </select>
+                                onValueChange={changeDistrict}
+                                placeholder="Select a district"
+                                emptyLabel="No district scope"
+                                options={districts.map((district) => ({
+                                    value: district.id.toString(),
+                                    label: `${district.name}${district.status === 'inactive' ? ' (Inactive)' : ''}`,
+                                }))}
+                            />
                             <InputError message={form.errors.district_id} />
                         </div>
 
@@ -384,25 +369,18 @@ export default function UserForm({
                             <Label htmlFor="section_id">
                                 Assigned section
                             </Label>
-                            <select
+                            <FormSelect
                                 id="section_id"
                                 name="section_id"
                                 value={form.data.section_id}
-                                onChange={(event) =>
-                                    changeSection(event.target.value)
-                                }
-                                className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                            >
-                                <option value="">No section scope</option>
-                                {filteredSections.map((section) => (
-                                    <option
-                                        key={section.id}
-                                        value={section.id}
-                                    >
-                                        {formatSectionOptionLabel(section)}
-                                    </option>
-                                ))}
-                            </select>
+                                onValueChange={changeSection}
+                                placeholder="Select a section"
+                                emptyLabel="No section scope"
+                                options={filteredSections.map((section) => ({
+                                    value: section.id.toString(),
+                                    label: formatSectionOptionLabel(section),
+                                }))}
+                            />
                             <InputError message={form.errors.section_id} />
                         </div>
 
@@ -410,31 +388,24 @@ export default function UserForm({
                             <Label htmlFor="pastor_id">
                                 Assigned pastor
                             </Label>
-                            <select
+                            <FormSelect
                                 id="pastor_id"
                                 name="pastor_id"
                                 value={form.data.pastor_id}
-                                onChange={(event) =>
-                                    changePastor(event.target.value)
-                                }
-                                className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-                            >
-                                <option value="">No pastor scope</option>
-                                {filteredPastors.map((pastor) => (
-                                    <option
-                                        key={pastor.id}
-                                        value={pastor.id}
-                                    >
-                                        {formatPastorOptionLabel(pastor)}
-                                    </option>
-                                ))}
-                            </select>
+                                onValueChange={changePastor}
+                                placeholder="Select a pastor"
+                                emptyLabel="No pastor scope"
+                                options={filteredPastors.map((pastor) => ({
+                                    value: pastor.id.toString(),
+                                    label: formatPastorOptionLabel(pastor),
+                                }))}
+                            />
                             <InputError message={form.errors.pastor_id} />
                         </div>
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-3">
-                        <div className="rounded-xl border border-sidebar-border/70 p-4">
+                        <div className="rounded-md border border-sidebar-border/70 p-4">
                             <div className="text-sm text-muted-foreground">
                                 Current district
                             </div>
@@ -444,7 +415,7 @@ export default function UserForm({
                             </div>
                         </div>
 
-                        <div className="rounded-xl border border-sidebar-border/70 p-4">
+                        <div className="rounded-md border border-sidebar-border/70 p-4">
                             <div className="text-sm text-muted-foreground">
                                 Current section
                             </div>
@@ -455,7 +426,7 @@ export default function UserForm({
                             </div>
                         </div>
 
-                        <div className="rounded-xl border border-sidebar-border/70 p-4">
+                        <div className="rounded-md border border-sidebar-border/70 p-4">
                             <div className="flex items-center justify-between gap-2">
                                 <div className="text-sm text-muted-foreground">
                                     Current pastor
@@ -473,7 +444,7 @@ export default function UserForm({
                     </div>
 
                     {isEditing && userRecord && (
-                        <div className="rounded-lg border border-sidebar-border/70 bg-sidebar/30 px-4 py-3 text-sm text-muted-foreground">
+                        <div className={mutedNoticeClassName}>
                             Current saved scope: {userRecord.scope_summary}
                         </div>
                     )}

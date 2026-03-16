@@ -260,7 +260,7 @@ export default function Dashboard({ dashboard }: Props) {
                         return (
                             <Card
                                 key={metric.label}
-                                className={`overflow-hidden rounded-[24px] py-0 shadow-sm ${style.card}`}
+                                className={`overflow-hidden rounded-md py-0 shadow-sm ${style.card}`}
                             >
                                 <CardContent className="p-5">
                                     <div className={`text-sm font-medium ${style.label}`}>

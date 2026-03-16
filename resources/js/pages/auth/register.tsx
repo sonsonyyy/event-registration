@@ -11,7 +11,7 @@ export default function Register() {
         >
             <Head title="Register" />
 
-            <div className="space-y-4 rounded-lg border border-sidebar-border/70 bg-sidebar/30 px-4 py-5 text-sm text-muted-foreground">
+            <div className="space-y-4 rounded-md border border-sidebar-border/70 bg-sidebar/30 px-4 py-5 text-sm text-muted-foreground">
                 <p>
                     User accounts are created by administrators only. Contact
                     the admin if you need a new account or access changes.

@@ -95,13 +95,13 @@ export default function Welcome() {
 
                         <div className="flex items-center gap-3">
                             {auth.user ? (
-                                <Button asChild className="h-10 rounded-xl px-5">
+                                <Button asChild className="h-10 rounded-md px-5">
                                     <Link href={dashboard()}>Dashboard</Link>
                                 </Button>
                             ) : (
                                 <Link
                                     href={login()}
-                                    className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-white/60 hover:text-slate-900"
+                                    className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-white/60 hover:text-slate-900"
                                 >
                                     <LogIn className="size-4" />
                                     Log in
@@ -129,12 +129,12 @@ export default function Welcome() {
                                 </div>
 
                                 <div className="flex flex-col gap-3 sm:flex-row">
-                                    <Button asChild size="lg" className="h-12 rounded-xl bg-[#184d47] px-6 text-white hover:bg-[#143f3a]">
+                                    <Button asChild size="lg" className="h-12 rounded-md px-6">
                                         <Link href={primaryActionHref}>
                                             {primaryActionLabel}
                                         </Link>
                                     </Button>
-                                    <Button variant="outline" asChild size="lg" className="h-12 rounded-xl px-6">
+                                    <Button variant="outline" asChild size="lg" className="h-12 rounded-md px-6">
                                         <a href="#available-events">Browse available events</a>
                                     </Button>
                                 </div>
@@ -195,24 +195,24 @@ export default function Welcome() {
                                             Online registration is available only to authorized registrant accounts assigned to a church or pastor record.
                                         </p>
                                         <ul className="space-y-3">
-                                            <li className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                                                <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[#b6d6cd]">
+                                            <li className="flex items-start gap-3 rounded-md border border-white/10 bg-white/5 px-4 py-3">
+                                                <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md bg-white/10 text-[#b6d6cd]">
                                                     <ClipboardList className="size-4" />
                                                 </div>
                                                 <div>
                                                     Select an open event and add multiple fee-category quantities in one transaction.
                                                 </div>
                                             </li>
-                                            <li className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                                                <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[#b6d6cd]">
+                                            <li className="flex items-start gap-3 rounded-md border border-white/10 bg-white/5 px-4 py-3">
+                                                <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md bg-white/10 text-[#b6d6cd]">
                                                     <Upload className="size-4" />
                                                 </div>
                                                 <div>
                                                     Upload proof of payment in JPG, PNG, or PDF format during submission.
                                                 </div>
                                             </li>
-                                            <li className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                                                <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[#b6d6cd]">
+                                            <li className="flex items-start gap-3 rounded-md border border-white/10 bg-white/5 px-4 py-3">
+                                                <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md bg-white/10 text-[#b6d6cd]">
                                                     <ShieldCheck className="size-4" />
                                                 </div>
                                                 <div>
@@ -220,7 +220,7 @@ export default function Welcome() {
                                                 </div>
                                             </li>
                                         </ul>
-                                        <div className="rounded-2xl border border-[#3c655e] bg-[#184d47] px-4 py-4 text-[#eff8f5]">
+                                        <div className="rounded-md border border-[#3c655e] bg-[#184d47] px-4 py-4 text-[#eff8f5]">
                                             Use your assigned registrant account to continue. Guests are redirected to the login page before they can register.
                                         </div>
                                     </div>
@@ -270,7 +270,7 @@ export default function Welcome() {
                                                                 {event.description}
                                                             </p>
                                                         </div>
-                                                        <Badge className="rounded-xl bg-[#184d47] px-3 py-1 text-white hover:bg-[#184d47]">
+                                                        <Badge className="rounded-md bg-[#184d47] px-3 py-1 text-white hover:bg-[#184d47]">
                                                             {event.remaining_slots} slots left
                                                         </Badge>
                                                     </div>
@@ -278,7 +278,7 @@ export default function Welcome() {
 
                                                 <div className="space-y-5 px-6 py-6">
                                                     <div className="grid gap-4 sm:grid-cols-2">
-                                                        <div className="rounded-2xl border border-[#e8ece5] bg-[#fafbf8] px-4 py-4">
+                                                        <div className="rounded-md border border-[#e8ece5] bg-[#fafbf8] px-4 py-4">
                                                             <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
                                                                 <CalendarDays className="size-4 text-[#184d47]" />
                                                                 Event dates
@@ -288,7 +288,7 @@ export default function Welcome() {
                                                             </div>
                                                         </div>
 
-                                                        <div className="rounded-2xl border border-[#e8ece5] bg-[#fafbf8] px-4 py-4">
+                                                        <div className="rounded-md border border-[#e8ece5] bg-[#fafbf8] px-4 py-4">
                                                             <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
                                                                 <MapPin className="size-4 text-[#184d47]" />
                                                                 Venue
@@ -299,7 +299,7 @@ export default function Welcome() {
                                                         </div>
                                                     </div>
 
-                                                    <div className="rounded-2xl border border-[#e8ece5] bg-[#fafbf8] px-4 py-4">
+                                                    <div className="rounded-md border border-[#e8ece5] bg-[#fafbf8] px-4 py-4">
                                                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                                             <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
                                                                 Fee categories
@@ -312,7 +312,7 @@ export default function Welcome() {
                                                             {event.fee_categories.map((feeCategory) => (
                                                                 <div
                                                                     key={feeCategory.id}
-                                                                    className="flex flex-col gap-2 rounded-2xl border border-white bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                                                                    className="flex flex-col gap-2 rounded-md border border-white bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
                                                                 >
                                                                     <div>
                                                                         <div className="font-semibold text-slate-900">
@@ -336,7 +336,7 @@ export default function Welcome() {
                                                         <div className="text-sm text-slate-500">
                                                             Total event capacity: <span className="font-semibold text-slate-900">{event.total_capacity}</span>
                                                         </div>
-                                                        <Button asChild className="h-11 rounded-xl bg-[#184d47] px-5 text-white hover:bg-[#143f3a]">
+                                                        <Button asChild className="h-11 rounded-md px-5">
                                                             <Link href={primaryActionHref}>
                                                                 {primaryActionLabel}
                                                             </Link>
