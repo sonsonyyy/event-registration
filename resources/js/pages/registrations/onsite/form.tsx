@@ -302,7 +302,7 @@ export default function OnsiteRegistrationForm({
                                             emptyLabel="Select an event"
                                             options={events.map((event) => ({
                                                 value: event.id.toString(),
-                                                label: `${event.name} · ${event.remaining_slots} slots left`,
+                                                label: event.name,
                                             }))}
                                             disabled={events.length === 0}
                                         />
