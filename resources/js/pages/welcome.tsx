@@ -63,11 +63,125 @@ type PageProps = {
     }>;
 };
 
+type PrimaryActionHref =
+    | ReturnType<typeof login>
+    | ReturnType<typeof dashboard>
+    | ReturnType<typeof OnlineRegistrationController.create>;
+
 const formatCurrency = (value: string): string =>
     new Intl.NumberFormat(undefined, {
         style: 'currency',
         currency: 'PHP',
     }).format(Number.parseFloat(value || '0'));
+
+function PublicEventCard({
+    event,
+    primaryActionHref,
+    primaryActionLabel,
+    className = '',
+    hoverable = false,
+}: {
+    event: EventRecord;
+    primaryActionHref: PrimaryActionHref;
+    primaryActionLabel: string;
+    className?: string;
+    hoverable?: boolean;
+}) {
+    return (
+        <Card
+            className={`flex h-full w-full flex-col overflow-hidden border-[#d8ddd2] bg-white/90 py-0 shadow-xl shadow-[#184d47]/5 ${hoverable ? 'transition-transform duration-300 group-hover:scale-[1.015]' : ''} ${className}`}
+        >
+            <CardContent className="flex h-full flex-1 flex-col p-0">
+                <div className="border-b border-[#edf1ea] bg-[linear-gradient(135deg,_rgba(24,77,71,0.08),_rgba(255,255,255,0.9))] px-6 py-5">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-2">
+                            <h3 className="text-2xl font-bold tracking-[-0.03em] text-slate-900">
+                                {event.name}
+                            </h3>
+                            <p className="max-w-2xl text-sm leading-6 text-slate-600">
+                                {event.description}
+                            </p>
+                        </div>
+                        <Badge className="rounded-md bg-[#184d47] px-3 py-1 text-white hover:bg-[#184d47]">
+                            {event.remaining_slots} slots left
+                        </Badge>
+                    </div>
+                </div>
+
+                <div className="flex flex-1 flex-col gap-5 px-6 py-6">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="rounded-md border border-[#e8ece5] bg-[#fafbf8] px-4 py-4">
+                            <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                                <CalendarDays className="size-4 text-[#184d47]" />
+                                Event dates
+                            </div>
+                            <div className="mt-2 text-sm font-semibold text-slate-900">
+                                {formatSystemDateRange(event.date_from, event.date_to)}
+                            </div>
+                        </div>
+
+                        <div className="rounded-md border border-[#e8ece5] bg-[#fafbf8] px-4 py-4">
+                            <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                                <MapPin className="size-4 text-[#184d47]" />
+                                Venue
+                            </div>
+                            <div className="mt-2 text-sm font-semibold text-slate-900">
+                                {event.venue}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-1 flex-col rounded-md border border-[#e8ece5] bg-[#fafbf8] px-4 py-4">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
+                                Fee categories
+                            </div>
+                            <div className="text-xs text-slate-500">
+                                Registration closes {formatSystemDateTime(event.registration_close_at)}
+                            </div>
+                        </div>
+                        <div className="mt-4 grid gap-3">
+                            {event.fee_categories.map((feeCategory) => (
+                                <div
+                                    key={feeCategory.id}
+                                    className="flex flex-col gap-2 rounded-md border border-white bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                                >
+                                    <div>
+                                        <div className="font-semibold text-slate-900">
+                                            {feeCategory.category_name}
+                                        </div>
+                                        <div className="text-sm text-slate-500">
+                                            {feeCategory.remaining_slots === null
+                                                ? 'No category slot limit'
+                                                : `${feeCategory.remaining_slots} category slots left`}
+                                        </div>
+                                    </div>
+                                    <div className="text-lg font-bold tracking-[-0.03em] text-[#184d47]">
+                                        {formatCurrency(feeCategory.amount)}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="mt-auto flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="text-sm text-slate-500">
+                            Total event capacity:{' '}
+                            <span className="font-semibold text-slate-900">
+                                {event.total_capacity}
+                            </span>
+                        </div>
+                        <Button asChild className="h-11 rounded-md px-5">
+                            <Link href={primaryActionHref}>
+                                {primaryActionLabel}
+                            </Link>
+                        </Button>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
 
 function PublicEventsCarousel({
     events,
@@ -75,7 +189,7 @@ function PublicEventsCarousel({
     primaryActionLabel,
 }: {
     events: EventRecord[];
-    primaryActionHref: ReturnType<typeof login> | ReturnType<typeof dashboard> | ReturnType<typeof OnlineRegistrationController.create>;
+    primaryActionHref: PrimaryActionHref;
     primaryActionLabel: string;
 }) {
     const containerRef = useRef<HTMLDivElement | null>(null);
@@ -201,96 +315,12 @@ function PublicEventsCarousel({
                             onMouseEnter={() => setIsAutoAdvancePaused(true)}
                             onMouseLeave={() => setIsAutoAdvancePaused(false)}
                         >
-                            <Card className="flex h-full w-full flex-col overflow-hidden border-[#d8ddd2] bg-white/90 py-0 shadow-xl shadow-[#184d47]/5 transition-transform duration-300 group-hover:scale-[1.015]">
-                                <CardContent className="flex h-full flex-1 flex-col p-0">
-                                    <div className="border-b border-[#edf1ea] bg-[linear-gradient(135deg,_rgba(24,77,71,0.08),_rgba(255,255,255,0.9))] px-6 py-5">
-                                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                                            <div className="space-y-2">
-                                                <h3 className="text-2xl font-bold tracking-[-0.03em] text-slate-900">
-                                                    {event.name}
-                                                </h3>
-                                                <p className="max-w-2xl text-sm leading-6 text-slate-600">
-                                                    {event.description}
-                                                </p>
-                                            </div>
-                                            <Badge className="rounded-md bg-[#184d47] px-3 py-1 text-white hover:bg-[#184d47]">
-                                                {event.remaining_slots} slots left
-                                            </Badge>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex flex-1 flex-col gap-5 px-6 py-6">
-                                        <div className="grid gap-4 sm:grid-cols-2">
-                                            <div className="rounded-md border border-[#e8ece5] bg-[#fafbf8] px-4 py-4">
-                                                <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                                                    <CalendarDays className="size-4 text-[#184d47]" />
-                                                    Event dates
-                                                </div>
-                                                <div className="mt-2 text-sm font-semibold text-slate-900">
-                                                    {formatSystemDateRange(event.date_from, event.date_to)}
-                                                </div>
-                                            </div>
-
-                                            <div className="rounded-md border border-[#e8ece5] bg-[#fafbf8] px-4 py-4">
-                                                <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                                                    <MapPin className="size-4 text-[#184d47]" />
-                                                    Venue
-                                                </div>
-                                                <div className="mt-2 text-sm font-semibold text-slate-900">
-                                                    {event.venue}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex flex-1 flex-col rounded-md border border-[#e8ece5] bg-[#fafbf8] px-4 py-4">
-                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                                <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                                                    Fee categories
-                                                </div>
-                                                <div className="text-xs text-slate-500">
-                                                    Registration closes {formatSystemDateTime(event.registration_close_at)}
-                                                </div>
-                                            </div>
-                                            <div className="mt-4 grid gap-3">
-                                                {event.fee_categories.map((feeCategory) => (
-                                                    <div
-                                                        key={feeCategory.id}
-                                                        className="flex flex-col gap-2 rounded-md border border-white bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-                                                    >
-                                                        <div>
-                                                            <div className="font-semibold text-slate-900">
-                                                                {feeCategory.category_name}
-                                                            </div>
-                                                            <div className="text-sm text-slate-500">
-                                                                {feeCategory.remaining_slots === null
-                                                                    ? 'No category slot limit'
-                                                                    : `${feeCategory.remaining_slots} category slots left`}
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-lg font-bold tracking-[-0.03em] text-[#184d47]">
-                                                            {formatCurrency(feeCategory.amount)}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-auto flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
-                                            <div className="text-sm text-slate-500">
-                                                Total event capacity:{' '}
-                                                <span className="font-semibold text-slate-900">
-                                                    {event.total_capacity}
-                                                </span>
-                                            </div>
-                                            <Button asChild className="h-11 rounded-md px-5">
-                                                <Link href={primaryActionHref}>
-                                                    {primaryActionLabel}
-                                                </Link>
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <PublicEventCard
+                                event={event}
+                                primaryActionHref={primaryActionHref}
+                                primaryActionLabel={primaryActionLabel}
+                                hoverable
+                            />
                         </div>
                     ))}
                 </div>
@@ -539,6 +569,14 @@ export default function Welcome() {
                                         </p>
                                     </CardContent>
                                 </Card>
+                            ) : events.length === 1 ? (
+                                <div className="mx-auto w-full max-w-3xl">
+                                    <PublicEventCard
+                                        event={events[0]}
+                                        primaryActionHref={primaryActionHref}
+                                        primaryActionLabel={primaryActionLabel}
+                                    />
+                                </div>
                             ) : (
                                 <PublicEventsCarousel
                                     events={events}
