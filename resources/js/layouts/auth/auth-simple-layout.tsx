@@ -32,23 +32,23 @@ export default function AuthSimpleLayout({
                                         {name}
                                     </h1>
                                     <p className="max-w-xl text-base leading-7 text-slate-600">
-                                        Centralized event registration for district administrators, managers, staff, and authorized church registrants.
+                                        Centralized event registration for administrators, reviewers, staff, and authorized registrants across participating districts and departments.
                                     </p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="grid gap-4 sm:grid-cols-3">
-                            <div className="rounded-md border border-white/80 bg-white/80 p-4 shadow-sm shadow-[#184d47]/5">
+                        <div className="grid auto-rows-fr gap-4 sm:grid-cols-3">
+                            <div className="flex h-full flex-col justify-center rounded-md border border-white/80 bg-white/80 p-4 shadow-sm shadow-[#184d47]/5">
                                 <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
                                     Scoped roles
                                 </div>
                                 <div className="mt-2 text-sm font-semibold text-slate-900">
-                                    District, section, and church-aware access
+                                    Multi-level access across district, section, and church scopes
                                 </div>
                             </div>
 
-                            <div className="rounded-md border border-white/80 bg-white/80 p-4 shadow-sm shadow-[#184d47]/5">
+                            <div className="flex h-full flex-col justify-center rounded-md border border-white/80 bg-white/80 p-4 shadow-sm shadow-[#184d47]/5">
                                 <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
                                     Online flow
                                 </div>
@@ -57,7 +57,7 @@ export default function AuthSimpleLayout({
                                 </div>
                             </div>
 
-                            <div className="rounded-md border border-white/80 bg-white/80 p-4 shadow-sm shadow-[#184d47]/5">
+                            <div className="flex h-full flex-col justify-center rounded-md border border-white/80 bg-white/80 p-4 shadow-sm shadow-[#184d47]/5">
                                 <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
                                     Onsite entry
                                 </div>

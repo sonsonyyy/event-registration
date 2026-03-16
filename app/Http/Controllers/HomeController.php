@@ -13,6 +13,7 @@ class HomeController extends Controller
     {
         return Inertia::render('welcome', [
             'events' => $this->publicEvents(),
+            'registrationFlow' => $this->registrationFlow(),
             'faqs' => $this->registrationFaqs(),
         ]);
     }
@@ -92,11 +93,11 @@ class HomeController extends Controller
         return [
             [
                 'question' => 'How do I request a registrant account for our church?',
-                'answer' => 'Open the church representative access link and submit the representative name, district, section, pastor or church assignment, and password for the account request.',
+                'answer' => 'Open the church representative access link and submit the representative name, section, pastor or church assignment, and password for the account request.',
             ],
             [
                 'question' => 'Who approves registrant account requests?',
-                'answer' => 'Youth officials using a manager account review and approve registrant account requests based on their assigned section scope.',
+                'answer' => 'Authorized reviewers using manager or admin access review and approve registrant account requests based on their assigned scope.',
             ],
             [
                 'question' => 'When can I submit an online registration?',
@@ -108,7 +109,43 @@ class HomeController extends Controller
             ],
             [
                 'question' => 'How do I know when the registration process is complete?',
-                'answer' => 'Monitor the submitted registrations in your account dashboard. Once a youth official verifies the submission, the registration is complete.',
+                'answer' => 'Monitor the submitted registrations in your account dashboard. Once an authorized reviewer verifies the submission, the registration is complete.',
+            ],
+        ];
+    }
+
+    /**
+     * Build the easy-to-follow homepage steps for public registration.
+     *
+     * @return array<int, array{eyebrow: string, title: string, description: string}>
+     */
+    private function registrationFlow(): array
+    {
+        return [
+            [
+                'eyebrow' => 'Step 1',
+                'title' => 'Request a registrant account',
+                'description' => 'Use the church representative access link and submit the assigned section, pastor, church, and account password.',
+            ],
+            [
+                'eyebrow' => 'Step 2',
+                'title' => 'Wait for account approval',
+                'description' => 'An authorized reviewer with the proper scope reviews the account request before online registration is unlocked.',
+            ],
+            [
+                'eyebrow' => 'Step 3',
+                'title' => 'Submit the event registration',
+                'description' => 'Choose an open event, add fee-category quantities, and provide the payment reference number with proof of payment.',
+            ],
+            [
+                'eyebrow' => 'Step 4',
+                'title' => 'Monitor verification',
+                'description' => 'Track the submission in the account dashboard while authorized reviewers check the receipt and transaction details.',
+            ],
+            [
+                'eyebrow' => 'Step 5',
+                'title' => 'Complete once verified',
+                'description' => 'When the registration status becomes verified, the church registration is complete for that event.',
             ],
         ];
     }

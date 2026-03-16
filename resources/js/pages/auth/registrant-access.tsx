@@ -104,7 +104,7 @@ export default function RegistrantAccess({
     return (
         <AuthLayout
             title="Request a registrant account"
-            description="Church representatives can request their own online registration access here. Approval is still required before online registration is unlocked."
+            description="Church representatives can request online registration access here. Approval is still required before registration tools are unlocked."
         >
             <Head title="Request Registrant Access">
                 <link rel="preconnect" href="https://fonts.bunny.net" />
@@ -252,7 +252,7 @@ export default function RegistrantAccess({
 
                 {pastors.length === 0 && (
                     <div className={warningNoticeClassName}>
-                        No church accounts are currently available for self-service signup. Contact the district admin if your church still needs a registrant account.
+                        No church accounts are currently available for self-service signup. Contact your administrator if your church still needs a registrant account.
                     </div>
                 )}
             </form>
