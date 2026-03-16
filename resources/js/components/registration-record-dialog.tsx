@@ -280,11 +280,11 @@ export default function RegistrationRecordDialog({
                 {
                     title: 'Line Items',
                     content: (
-                        <div className="divide-y divide-slate-200/80 rounded-md border border-slate-200/80 dark:divide-slate-800 dark:border-slate-800">
+                        <div className="divide-y divide-slate-200/80 dark:divide-slate-800">
                             {items.map((item) => (
                                 <div
                                     key={item.id}
-                                    className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(0,1fr)_220px] md:items-center"
+                                    className="grid gap-2 py-3 first:pt-0 last:pb-0 md:grid-cols-[minmax(0,1fr)_220px] md:items-center"
                                 >
                                     <div>
                                         <div className="font-medium text-slate-900 dark:text-slate-100">
@@ -312,7 +312,11 @@ export default function RegistrationRecordDialog({
                               fields: [
                                   {
                                       label: 'Notes',
-                                      value: remarks,
+                                      value: (
+                                          <div className="whitespace-pre-wrap">
+                                              {remarks}
+                                          </div>
+                                      ),
                                       fullWidth: true,
                                   },
                               ],
@@ -324,11 +328,11 @@ export default function RegistrationRecordDialog({
                           {
                               title: 'Review History',
                               content: (
-                                  <div className="divide-y divide-slate-200/80 rounded-md border border-slate-200/80 dark:divide-slate-800 dark:border-slate-800">
+                                  <div className="divide-y divide-slate-200/80 dark:divide-slate-800">
                                       {reviews.map((review) => (
                                           <div
                                               key={review.id}
-                                              className="space-y-2 px-4 py-4"
+                                              className="space-y-2 py-4 first:pt-0 last:pb-0"
                                           >
                                               <DataTableBadge
                                                   tone={resolveDataTableTone(

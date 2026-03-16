@@ -845,7 +845,7 @@ export default function RegistrationVerificationIndex({
                     reviews={selectedRegistration?.review_history ?? []}
                     children={
                         selectedRegistration?.can_review ? (
-                            <div className="space-y-5 rounded-md border border-slate-200/80 bg-slate-50/80 px-4 py-5 dark:border-slate-800 dark:bg-slate-950">
+                            <div className="space-y-5">
                                 <div className="space-y-1">
                                     <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                                         Review action
