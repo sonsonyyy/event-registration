@@ -358,6 +358,7 @@ export default function OnlineRegistrationForm({
                             <Input
                                 id="payment_reference"
                                 name="payment_reference"
+                                required
                                 value={form.data.payment_reference}
                                 onChange={(event) =>
                                     form.setData(
@@ -365,7 +366,7 @@ export default function OnlineRegistrationForm({
                                         event.target.value,
                                     )
                                 }
-                                placeholder="Optional OR, deposit slip, or transfer reference"
+                                placeholder="Enter the OR, deposit slip, or transfer reference"
                                 className={formControlClassName}
                             />
                             <InputError message={form.errors.payment_reference} />

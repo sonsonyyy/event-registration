@@ -287,8 +287,8 @@ Used by registration staff, manager, or admin for onsite registrations.
 - User can choose fee category per line item
 - User can enter quantity per line item
 - User can add multiple fee categories within one transaction
-- User can mark payment status
-- User can record official receipt or manual reference if needed
+- User saves the transaction as paid
+- User must record official receipt or manual reference
 - User can save and print/view registration confirmation
 
 ### Registration Structure
@@ -302,6 +302,8 @@ Onsite registration is quantity-based, not delegate-based.
 - Paid
 - Unpaid
 - Partial
+
+The current MVP records both onsite and online submissions as `Paid`. `Unpaid` and `Partial` remain reserved for future workflow enhancements.
 
 ---
 
@@ -322,7 +324,8 @@ Used by online registrants assigned to a specific pastor/church.
 ### Business Rules
 - Online registrant can only register under assigned pastor/church
 - System must validate capacity before submission
-- Proof of payment may be required before final submission
+- Receipt or reference number is required before final submission
+- Proof of payment is required before final submission
 - One receipt can cover multiple fee-category quantities in one registration
 
 ### Registration Status Values

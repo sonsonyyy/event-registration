@@ -285,7 +285,8 @@ export default function OnsiteRegistrationForm({
                                 <p className="text-sm leading-6 text-slate-600">
                                     Select the event and church covered by this
                                     onsite transaction, then record the official
-                                    receipt or cash reference for auditing.
+                                    receipt or cash reference required for
+                                    later confirmation.
                                 </p>
                             </div>
 
@@ -354,6 +355,7 @@ export default function OnsiteRegistrationForm({
                                         <Input
                                             id="payment_reference"
                                             name="payment_reference"
+                                            required
                                             value={form.data.payment_reference}
                                             onChange={(event) =>
                                                 form.setData(
@@ -379,8 +381,8 @@ export default function OnsiteRegistrationForm({
                                         </div>
                                         <p className="mt-2 text-sm leading-6 text-slate-600">
                                             Keep the receipt or manual reference
-                                            here so staff can reconcile the
-                                            transaction later.
+                                            here so managers can reconcile the
+                                            transaction faster.
                                         </p>
                                     </div>
                                 </div>

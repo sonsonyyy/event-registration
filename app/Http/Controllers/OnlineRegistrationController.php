@@ -142,7 +142,7 @@ class OnlineRegistrationController extends Controller
                     'registration_mode' => Registration::MODE_ONLINE,
                     'payment_status' => Registration::PAYMENT_STATUS_PAID,
                     'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
-                    'payment_reference' => $validated['payment_reference'] ?: null,
+                    'payment_reference' => $validated['payment_reference'],
                     'receipt_file_path' => $receiptPath,
                     'receipt_original_name' => $receipt->getClientOriginalName(),
                     'receipt_uploaded_at' => $receiptUploadedAt,
@@ -239,7 +239,7 @@ class OnlineRegistrationController extends Controller
 
                 $registration->forceFill([
                     'event_id' => $event->getKey(),
-                    'payment_reference' => $validated['payment_reference'] ?: null,
+                    'payment_reference' => $validated['payment_reference'],
                     'remarks' => $validated['remarks'] ?: null,
                     'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
                     'submitted_at' => $submittedAt,

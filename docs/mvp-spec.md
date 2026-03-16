@@ -165,8 +165,8 @@ Used by registration staff, manager, or admin.
 - Choose fee category
 - Enter quantity per fee category
 - Add another fee category with another quantity within the same transaction
-- Mark payment status
-- Record OR number / manual receipt reference if needed
+- Save the transaction as paid
+- Record OR number / manual receipt reference
 - Print or show confirmation
 
 #### Onsite Registration Structure
@@ -178,10 +178,9 @@ Each onsite transaction may contain multiple registration line items, for exampl
 
 This means a single registration record can contain multiple fee categories with corresponding quantities.
 
-#### Onsite Payment Status Options
-- `Paid`
-- `Unpaid`
-- `Partial` (optional)
+#### Onsite Payment Status
+- Onsite transactions are recorded as `Paid` in the current MVP.
+- `Unpaid` and `Partial` remain reserved in the data model for future workflow expansion.
 
 ---
 
@@ -200,7 +199,8 @@ Used by the Online Registrant user assigned to a church / pastor.
 #### Online Registration Rules
 - Online registrant can only register delegates for their assigned church / pastor
 - System validates capacity before submission
-- Proof of payment is required before final submission if configured
+- Receipt / reference number is required before final submission
+- Proof of payment is required before final submission
 - Registration may remain under status:
   - `Pending Verification`
   - `Verified`
@@ -281,7 +281,7 @@ Used by the Online Registrant user assigned to a church / pastor.
 - `Partial`
 - `For Verification`
 
-These may be combined carefully to avoid confusion.
+The data model keeps these values for future payment workflows. In the current MVP, both onsite and online submissions are recorded as `Paid`.
 
 ---
 

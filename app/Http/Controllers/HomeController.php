@@ -104,7 +104,7 @@ class HomeController extends Controller
             ],
             [
                 'question' => 'What is required when submitting an online registration?',
-                'answer' => 'Select an open event, enter the required fee-category quantities, then upload proof of payment as an image file or PDF before submitting.',
+                'answer' => 'Select an open event, enter the required fee-category quantities, then provide the receipt or reference number and upload proof of payment as an image file or PDF before submitting.',
             ],
             [
                 'question' => 'How do I know when the registration process is complete?',

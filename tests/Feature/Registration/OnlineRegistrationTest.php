@@ -126,7 +126,7 @@ test('online registrations can store receipts on s3 when the configured disk use
     $this->actingAs($registrant)
         ->post(route('registrations.online.store'), [
             'event_id' => $event->id,
-            'payment_reference' => '',
+            'payment_reference' => 'DEP-2026-0002',
             'receipt' => UploadedFile::fake()->image('receipt.png'),
             'remarks' => '',
             'line_items' => [
@@ -143,6 +143,86 @@ test('online registrations can store receipts on s3 when the configured disk use
     expect($registration->receipt_file_path)->not->toBeNull();
 
     Storage::disk('s3')->assertExists((string) $registration->receipt_file_path);
+});
+
+test('online registrations require a receipt reference number on create and update', function () {
+    Storage::fake('local');
+    config()->set('registration.receipts_disk', 'local');
+
+    $pastor = Pastor::factory()->create();
+    $registrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $pastor->section->district_id,
+        'section_id' => $pastor->section_id,
+        'pastor_id' => $pastor->id,
+    ]);
+    $event = onlineRegistrationEvent();
+    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+    ]);
+
+    $this->actingAs($registrant)
+        ->from(route('registrations.online.create'))
+        ->post(route('registrations.online.store'), [
+            'event_id' => $event->id,
+            'payment_reference' => '',
+            'receipt' => UploadedFile::fake()->create('receipt.pdf', 256, 'application/pdf'),
+            'remarks' => '',
+            'line_items' => [
+                [
+                    'fee_category_id' => $feeCategory->id,
+                    'quantity' => 1,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('registrations.online.create'))
+        ->assertSessionHasErrors(['payment_reference']);
+
+    Storage::disk('local')->put(
+        'registration-receipts/2026/03/reference-required.pdf',
+        'existing-receipt',
+    );
+
+    $registration = Registration::factory()
+        ->for($event)
+        ->for($pastor)
+        ->for($registrant, 'encodedByUser')
+        ->for($registrant, 'receiptUploadedByUser')
+        ->create([
+            'registration_mode' => Registration::MODE_ONLINE,
+            'payment_status' => Registration::PAYMENT_STATUS_PAID,
+            'registration_status' => Registration::STATUS_NEEDS_CORRECTION,
+            'payment_reference' => 'DEP-2026-4001',
+            'receipt_file_path' => 'registration-receipts/2026/03/reference-required.pdf',
+            'receipt_original_name' => 'reference-required.pdf',
+            'receipt_uploaded_at' => now()->subHour(),
+            'submitted_at' => now()->subHour(),
+        ]);
+
+    RegistrationItem::factory()
+        ->for($registration)
+        ->for($feeCategory, 'feeCategory')
+        ->create([
+            'quantity' => 2,
+            'unit_amount' => $feeCategory->amount,
+            'subtotal_amount' => '1600.00',
+        ]);
+
+    $this->actingAs($registrant)
+        ->from(route('registrations.online.edit', $registration))
+        ->patch(route('registrations.online.update', $registration), [
+            'event_id' => $event->id,
+            'payment_reference' => '',
+            'remarks' => '',
+            'line_items' => [
+                [
+                    'fee_category_id' => $feeCategory->id,
+                    'quantity' => 2,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('registrations.online.edit', $registration))
+        ->assertSessionHasErrors(['payment_reference']);
 });
 
 test('non-registrant roles cannot access online registration routes', function () {

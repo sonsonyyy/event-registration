@@ -29,7 +29,7 @@ class UpdateOnsiteRegistrationRequest extends FormRequest
         return [
             'event_id' => ['required', 'integer', 'exists:events,id'],
             'pastor_id' => ['required', 'integer', 'exists:pastors,id'],
-            'payment_reference' => ['nullable', 'string', 'max:255'],
+            'payment_reference' => ['required', 'string', 'max:255'],
             'remarks' => ['nullable', 'string', 'max:1000'],
             'line_items' => ['required', 'array', 'min:1'],
             'line_items.*.fee_category_id' => ['required', 'integer', 'distinct', 'exists:event_fee_categories,id'],
@@ -49,6 +49,7 @@ class UpdateOnsiteRegistrationRequest extends FormRequest
             'event_id.exists' => 'Select a valid event.',
             'pastor_id.required' => 'Select a pastor or church.',
             'pastor_id.exists' => 'Select a valid pastor or church.',
+            'payment_reference.required' => 'Enter the official receipt or reference number.',
             'payment_reference.max' => 'The receipt or manual reference must not exceed 255 characters.',
             'remarks.max' => 'Remarks must not exceed 1000 characters.',
             'line_items.required' => 'Add at least one fee category item.',

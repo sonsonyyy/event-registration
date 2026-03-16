@@ -134,7 +134,7 @@ class OnsiteRegistrationController extends Controller
                 'registration_mode' => Registration::MODE_ONSITE,
                 'payment_status' => Registration::PAYMENT_STATUS_PAID,
                 'registration_status' => Registration::STATUS_COMPLETED,
-                'payment_reference' => $validated['payment_reference'] ?: null,
+                'payment_reference' => $validated['payment_reference'],
                 'remarks' => $validated['remarks'] ?: null,
                 'submitted_at' => now(),
                 'verified_at' => null,
@@ -203,7 +203,7 @@ class OnsiteRegistrationController extends Controller
             $registration->forceFill([
                 'event_id' => $event->getKey(),
                 'pastor_id' => $pastor->getKey(),
-                'payment_reference' => $validated['payment_reference'] ?: null,
+                'payment_reference' => $validated['payment_reference'],
                 'remarks' => $validated['remarks'] ?: null,
             ])->save();
 

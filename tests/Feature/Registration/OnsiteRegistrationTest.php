@@ -251,6 +251,70 @@ test('onsite registration rejects invalid fee-category selections and capacity o
         ->and(RegistrationItem::query()->count())->toBe(1);
 });
 
+test('onsite registrations require an official receipt or reference number on create and update', function () {
+    $staff = User::factory()->registrationStaff()->create();
+    $pastor = Pastor::factory()->create();
+    $event = onsiteRegistrationEvent();
+    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Onsite)',
+        'amount' => '950.00',
+    ]);
+
+    $this->actingAs($staff)
+        ->from(route('registrations.onsite.create'))
+        ->post(route('registrations.onsite.store'), [
+            'event_id' => $event->id,
+            'pastor_id' => $pastor->id,
+            'payment_reference' => '',
+            'remarks' => '',
+            'line_items' => [
+                [
+                    'fee_category_id' => $feeCategory->id,
+                    'quantity' => 1,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('registrations.onsite.create'))
+        ->assertSessionHasErrors(['payment_reference']);
+
+    $registration = Registration::factory()
+        ->for($event)
+        ->for($pastor)
+        ->for($staff, 'encodedByUser')
+        ->create([
+            'registration_mode' => Registration::MODE_ONSITE,
+            'payment_status' => Registration::PAYMENT_STATUS_PAID,
+            'registration_status' => Registration::STATUS_COMPLETED,
+            'payment_reference' => 'OR-2026-4001',
+        ]);
+
+    RegistrationItem::factory()
+        ->for($registration)
+        ->for($feeCategory, 'feeCategory')
+        ->create([
+            'quantity' => 2,
+            'unit_amount' => $feeCategory->amount,
+            'subtotal_amount' => '1900.00',
+        ]);
+
+    $this->actingAs($staff)
+        ->from(route('registrations.onsite.edit', $registration))
+        ->patch(route('registrations.onsite.update', $registration), [
+            'event_id' => $event->id,
+            'pastor_id' => $pastor->id,
+            'payment_reference' => '',
+            'remarks' => '',
+            'line_items' => [
+                [
+                    'fee_category_id' => $feeCategory->id,
+                    'quantity' => 2,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('registrations.onsite.edit', $registration))
+        ->assertSessionHasErrors(['payment_reference']);
+});
+
 test('staff can edit onsite registrations and replace grouped quantities', function () {
     $staff = User::factory()->registrationStaff()->create();
     $pastor = Pastor::factory()->create([

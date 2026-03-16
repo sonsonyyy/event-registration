@@ -29,7 +29,7 @@ class UpdateOnlineRegistrationRequest extends FormRequest
     {
         return [
             'event_id' => ['required', 'integer', 'exists:events,id'],
-            'payment_reference' => ['nullable', 'string', 'max:255'],
+            'payment_reference' => ['required', 'string', 'max:255'],
             'receipt' => [
                 'nullable',
                 'file',
@@ -81,6 +81,7 @@ class UpdateOnlineRegistrationRequest extends FormRequest
         return [
             'event_id.required' => 'Select an event.',
             'event_id.exists' => 'Select a valid event.',
+            'payment_reference.required' => 'Enter the receipt or reference number.',
             'payment_reference.max' => 'The receipt reference must not exceed 255 characters.',
             'receipt.file' => 'Upload a valid proof of payment file.',
             'receipt.mimes' => 'Proof of payment must be a JPG, PNG, or PDF file.',
