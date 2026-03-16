@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CancelOnlineRegistrationRequest;
 use App\Http\Requests\IndexOnlineRegistrationRequest;
 use App\Http\Requests\StoreOnlineRegistrationRequest;
+use App\Http\Requests\UpdateOnlineRegistrationRequest;
 use App\Models\Event;
 use App\Models\EventFeeCategory;
 use App\Models\Registration;
+use App\Models\RegistrationItem;
+use App\Models\RegistrationReview;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -37,7 +41,7 @@ class OnlineRegistrationController extends Controller
             'assignedPastor' => $this->assignedPastorData($user),
             'registrations' => [
                 'data' => $registrations->getCollection()
-                    ->map(fn (Registration $registration): array => $this->registrationData($registration))
+                    ->map(fn (Registration $registration): array => $this->registrationData($registration, $user))
                     ->values()
                     ->all(),
                 'meta' => [
@@ -61,6 +65,24 @@ class OnlineRegistrationController extends Controller
         return Inertia::render('registrations/online/create', [
             'assignedPastor' => $this->assignedPastorData($request->user()),
             'events' => $this->eventOptions(),
+        ]);
+    }
+
+    public function edit(Request $request, Registration $registration): Response
+    {
+        Gate::authorize('updateOnline', $registration);
+
+        $registration = Registration::query()
+            ->with([
+                'items.feeCategory',
+                'reviews.reviewer',
+            ])
+            ->findOrFail($registration->getKey());
+
+        return Inertia::render('registrations/online/edit', [
+            'assignedPastor' => $this->assignedPastorData($request->user()),
+            'events' => $this->eventOptions($registration),
+            'registration' => $this->editableRegistrationData($registration),
         ]);
     }
 
@@ -131,20 +153,7 @@ class OnlineRegistrationController extends Controller
                     'verified_by_user_id' => null,
                 ]);
 
-                $lineItems->each(function (array $lineItem) use ($feeCategories, $registration): void {
-                    /** @var EventFeeCategory $feeCategory */
-                    $feeCategory = $feeCategories->get((int) $lineItem['fee_category_id']);
-                    $quantity = (int) $lineItem['quantity'];
-                    $unitAmount = (string) $feeCategory->amount;
-
-                    $registration->items()->create([
-                        'fee_category_id' => $feeCategory->getKey(),
-                        'quantity' => $quantity,
-                        'unit_amount' => $unitAmount,
-                        'subtotal_amount' => bcmul($unitAmount, (string) $quantity, 2),
-                        'remarks' => null,
-                    ]);
-                });
+                $this->persistLineItems($registration, $lineItems, $feeCategories);
 
                 return $registration->getKey();
             });
@@ -158,29 +167,195 @@ class OnlineRegistrationController extends Controller
             ->with('success', "Online registration #{$registrationId} submitted successfully.");
     }
 
+    public function update(UpdateOnlineRegistrationRequest $request, Registration $registration): RedirectResponse
+    {
+        $validated = $request->validated();
+        $receipt = $request->file('receipt');
+        $receiptDisk = (string) config('registration.receipts_disk');
+        $replacementReceiptPath = $receipt instanceof UploadedFile
+            ? $this->storeReceipt($receipt, $receiptDisk)
+            : null;
+        $replacementUploadedAt = $receipt instanceof UploadedFile ? now() : null;
+        $previousReceiptPath = null;
+
+        try {
+            $registrationId = DB::transaction(function () use (
+                $request,
+                $registration,
+                $validated,
+                $receipt,
+                $replacementReceiptPath,
+                $replacementUploadedAt,
+                &$previousReceiptPath,
+            ): int {
+                $registration = Registration::query()
+                    ->with([
+                        'items.feeCategory',
+                    ])
+                    ->lockForUpdate()
+                    ->findOrFail($registration->getKey());
+
+                Gate::authorize('updateOnline', $registration);
+
+                $pastor = $request->user()->pastor()->firstOrFail();
+
+                if ($pastor->status !== 'active') {
+                    throw ValidationException::withMessages([
+                        'event_id' => 'Your assigned church account must be active before it can register online.',
+                    ]);
+                }
+
+                $originalEventId = $registration->event_id;
+                $event = Event::query()
+                    ->lockForUpdate()
+                    ->findOrFail($validated['event_id']);
+                $event->loadSum('reservedRegistrationItems as reserved_quantity', 'quantity');
+
+                if (
+                    $originalEventId !== $event->getKey()
+                    && ! $event->canAcceptRegistrations()
+                ) {
+                    throw ValidationException::withMessages([
+                        'event_id' => 'The selected event is not open for online registration.',
+                    ]);
+                }
+
+                $lineItems = collect($validated['line_items']);
+                $feeCategories = EventFeeCategory::query()
+                    ->where('event_id', $event->getKey())
+                    ->whereIn('id', $lineItems->pluck('fee_category_id')->all())
+                    ->lockForUpdate()
+                    ->withSum('reservedRegistrationItems as reserved_quantity', 'quantity')
+                    ->get()
+                    ->keyBy('id');
+
+                $this->guardLineItems($event, $feeCategories, $lineItems, $registration);
+
+                if ($replacementReceiptPath !== null) {
+                    $previousReceiptPath = $registration->receipt_file_path;
+                }
+
+                $submittedAt = now();
+
+                $registration->forceFill([
+                    'event_id' => $event->getKey(),
+                    'payment_reference' => $validated['payment_reference'] ?: null,
+                    'remarks' => $validated['remarks'] ?: null,
+                    'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
+                    'submitted_at' => $submittedAt,
+                    'verified_at' => null,
+                    'verified_by_user_id' => null,
+                    'receipt_file_path' => $replacementReceiptPath ?? $registration->receipt_file_path,
+                    'receipt_original_name' => $receipt instanceof UploadedFile
+                        ? $receipt->getClientOriginalName()
+                        : $registration->receipt_original_name,
+                    'receipt_uploaded_at' => $replacementUploadedAt ?? $registration->receipt_uploaded_at,
+                    'receipt_uploaded_by_user_id' => $replacementReceiptPath !== null
+                        ? $request->user()->getKey()
+                        : $registration->receipt_uploaded_by_user_id,
+                ])->save();
+
+                $registration->items()->delete();
+                $this->persistLineItems($registration, $lineItems, $feeCategories);
+                $this->syncEventStatuses([$originalEventId, $registration->event_id]);
+
+                return $registration->getKey();
+            });
+        } catch (Throwable $throwable) {
+            if ($replacementReceiptPath !== null) {
+                Storage::disk($receiptDisk)->delete($replacementReceiptPath);
+            }
+
+            throw $throwable;
+        }
+
+        if (
+            $replacementReceiptPath !== null
+            && $previousReceiptPath !== null
+            && $previousReceiptPath !== $replacementReceiptPath
+        ) {
+            Storage::disk($receiptDisk)->delete($previousReceiptPath);
+        }
+
+        return to_route('registrations.online.index')
+            ->with('success', "Online registration #{$registrationId} updated successfully.");
+    }
+
+    public function cancel(CancelOnlineRegistrationRequest $request, Registration $registration): RedirectResponse
+    {
+        DB::transaction(function () use ($registration): void {
+            $registration = Registration::query()
+                ->with('event')
+                ->lockForUpdate()
+                ->findOrFail($registration->getKey());
+
+            Gate::authorize('cancelOnline', $registration);
+
+            $registration->forceFill([
+                'registration_status' => Registration::STATUS_CANCELLED,
+                'verified_at' => null,
+                'verified_by_user_id' => null,
+            ])->save();
+
+            $this->syncEventStatuses([$registration->event_id]);
+        });
+
+        return to_route('registrations.online.index')
+            ->with('success', "Online registration #{$registration->getKey()} cancelled successfully.");
+    }
+
     /**
      * Build the event options available to online registrants.
      *
      * @return array<int, array<string, mixed>>
      */
-    private function eventOptions(): array
+    private function eventOptions(?Registration $registration = null): array
     {
+        $currentEventId = $registration?->event_id;
+        $currentRegistrationQuantity = $registration?->totalQuantity() ?? 0;
+        $currentFeeItemQuantities = $registration?->items
+            ->mapWithKeys(fn (RegistrationItem $item): array => [
+                $item->fee_category_id => (int) $item->quantity,
+            ]) ?? collect();
+        $currentFeeCategoryIds = $currentFeeItemQuantities->keys()->all();
+
         return Event::query()
-            ->where('status', Event::STATUS_OPEN)
-            ->whereHas('feeCategories', function ($query): void {
-                $query->where('status', 'active');
-            })
+            ->when(
+                $currentEventId !== null,
+                fn (Builder $query) => $query->where(function (Builder $builder) use ($currentEventId): void {
+                    $builder
+                        ->where('status', Event::STATUS_OPEN)
+                        ->orWhere('id', $currentEventId);
+                }),
+                fn (Builder $query) => $query->where('status', Event::STATUS_OPEN),
+            )
             ->withCapacityMetrics()
             ->with([
                 'feeCategories' => fn ($query) => $query
-                    ->where('status', 'active')
+                    ->when(
+                        $currentFeeCategoryIds !== [],
+                        fn ($feeQuery) => $feeQuery->where(function (Builder $builder) use ($currentFeeCategoryIds): void {
+                            $builder
+                                ->where('status', 'active')
+                                ->orWhereIn('id', $currentFeeCategoryIds);
+                        }),
+                        fn ($feeQuery) => $feeQuery->where('status', 'active'),
+                    )
                     ->withSum('reservedRegistrationItems as reserved_quantity', 'quantity')
                     ->orderBy('category_name'),
             ])
             ->orderBy('date_from')
             ->get()
             ->each(fn (Event $event): bool => $event->syncOperationalStatus())
-            ->filter(function (Event $event): bool {
+            ->filter(function (Event $event) use ($currentEventId): bool {
+                if ($event->feeCategories->isEmpty()) {
+                    return false;
+                }
+
+                if ($currentEventId !== null && $event->getKey() === $currentEventId) {
+                    return true;
+                }
+
                 if (! $event->canAcceptRegistrations()) {
                     return false;
                 }
@@ -188,10 +363,19 @@ class OnlineRegistrationController extends Controller
                 return $event->feeCategories->contains(function (EventFeeCategory $feeCategory): bool {
                     $remainingSlots = $feeCategory->remainingSlots();
 
-                    return $remainingSlots === null || $remainingSlots > 0;
+                    return $feeCategory->status === 'active'
+                        && ($remainingSlots === null || $remainingSlots > 0);
                 });
             })
-            ->map(function (Event $event): array {
+            ->map(function (Event $event) use (
+                $currentEventId,
+                $currentRegistrationQuantity,
+                $currentFeeItemQuantities,
+            ): array {
+                $currentEventQuantity = $currentEventId !== null && $event->getKey() === $currentEventId
+                    ? $currentRegistrationQuantity
+                    : 0;
+
                 return [
                     'id' => $event->getKey(),
                     'name' => $event->name,
@@ -200,20 +384,36 @@ class OnlineRegistrationController extends Controller
                     'date_from' => $event->date_from->toDateString(),
                     'date_to' => $event->date_to->toDateString(),
                     'registration_close_at' => $event->registration_close_at->toIso8601String(),
-                    'remaining_slots' => $event->remainingSlots(),
+                    'remaining_slots' => $event->remainingSlots() + $currentEventQuantity,
                     'fee_categories' => $event->feeCategories
-                        ->filter(function (EventFeeCategory $feeCategory): bool {
-                            $remainingSlots = $feeCategory->remainingSlots();
+                        ->filter(function (EventFeeCategory $feeCategory) use ($currentEventId, $event, $currentFeeItemQuantities): bool {
+                            $currentQuantity = $currentEventId !== null && $event->getKey() === $currentEventId
+                                ? (int) $currentFeeItemQuantities->get($feeCategory->getKey(), 0)
+                                : 0;
 
-                            return $remainingSlots === null || $remainingSlots > 0;
+                            if ($currentQuantity > 0) {
+                                return true;
+                            }
+
+                            $remainingSlots = $this->availableFeeCategorySlots($feeCategory);
+
+                            return $feeCategory->status === 'active'
+                                && ($remainingSlots === null || $remainingSlots > 0);
                         })
-                        ->map(fn (EventFeeCategory $feeCategory): array => [
-                            'id' => $feeCategory->getKey(),
-                            'category_name' => $feeCategory->category_name,
-                            'amount' => (string) $feeCategory->amount,
-                            'slot_limit' => $feeCategory->slot_limit,
-                            'remaining_slots' => $feeCategory->remainingSlots(),
-                        ])
+                        ->map(function (EventFeeCategory $feeCategory) use ($currentEventId, $event, $currentFeeItemQuantities): array {
+                            $currentQuantity = $currentEventId !== null && $event->getKey() === $currentEventId
+                                ? (int) $currentFeeItemQuantities->get($feeCategory->getKey(), 0)
+                                : 0;
+
+                            return [
+                                'id' => $feeCategory->getKey(),
+                                'category_name' => $feeCategory->category_name,
+                                'amount' => (string) $feeCategory->amount,
+                                'slot_limit' => $feeCategory->slot_limit,
+                                'remaining_slots' => $this->availableFeeCategorySlots($feeCategory, $currentQuantity),
+                                'status' => $feeCategory->status,
+                            ];
+                        })
                         ->values()
                         ->all(),
                 ];
@@ -262,17 +462,44 @@ class OnlineRegistrationController extends Controller
         return $receipt->store($destination, $disk);
     }
 
+    private function availableFeeCategorySlots(EventFeeCategory $feeCategory, int $currentQuantity = 0): ?int
+    {
+        $remainingSlots = $feeCategory->remainingSlots();
+
+        if ($remainingSlots === null) {
+            return null;
+        }
+
+        return $remainingSlots + $currentQuantity;
+    }
+
     /**
      * Ensure the selected fee categories still satisfy event and category capacity.
      *
      * @param  Collection<int, EventFeeCategory>  $feeCategories
      * @param  Collection<int, array<string, mixed>>  $lineItems
      */
-    private function guardLineItems(Event $event, Collection $feeCategories, Collection $lineItems): void
-    {
+    private function guardLineItems(
+        Event $event,
+        Collection $feeCategories,
+        Collection $lineItems,
+        ?Registration $existingRegistration = null,
+    ): void {
+        $currentFeeItemQuantities = $existingRegistration?->items
+            ->mapWithKeys(fn (RegistrationItem $item): array => [
+                $item->fee_category_id => (int) $item->quantity,
+            ]) ?? collect();
+        $currentRegistrationQuantity = $existingRegistration?->totalQuantity() ?? 0;
+        $sameEvent = $existingRegistration !== null && $existingRegistration->event_id === $event->getKey();
+        $availableEventSlots = $event->remainingSlots() + ($sameEvent ? $currentRegistrationQuantity : 0);
         $totalQuantity = 0;
 
-        $lineItems->each(function (array $lineItem, int $index) use ($feeCategories, &$totalQuantity): void {
+        $lineItems->each(function (array $lineItem, int $index) use (
+            $feeCategories,
+            $currentFeeItemQuantities,
+            $sameEvent,
+            &$totalQuantity,
+        ): void {
             /** @var EventFeeCategory|null $feeCategory */
             $feeCategory = $feeCategories->get((int) $lineItem['fee_category_id']);
             $quantity = (int) $lineItem['quantity'];
@@ -283,13 +510,17 @@ class OnlineRegistrationController extends Controller
                 ]);
             }
 
-            if ($feeCategory->status !== 'active') {
+            $currentQuantity = $sameEvent
+                ? (int) $currentFeeItemQuantities->get($feeCategory->getKey(), 0)
+                : 0;
+
+            if ($feeCategory->status !== 'active' && $currentQuantity === 0) {
                 throw ValidationException::withMessages([
                     "line_items.{$index}.fee_category_id" => 'The selected fee category is not active.',
                 ]);
             }
 
-            $remainingSlots = $feeCategory->remainingSlots();
+            $remainingSlots = $this->availableFeeCategorySlots($feeCategory, $currentQuantity);
 
             if ($remainingSlots !== null && $quantity > $remainingSlots) {
                 throw ValidationException::withMessages([
@@ -300,11 +531,57 @@ class OnlineRegistrationController extends Controller
             $totalQuantity += $quantity;
         });
 
-        if ($totalQuantity > $event->remainingSlots()) {
+        if ($totalQuantity > $availableEventSlots) {
             throw ValidationException::withMessages([
                 'line_items' => 'The requested quantity exceeds the remaining event capacity.',
             ]);
         }
+    }
+
+    /**
+     * Persist the grouped registration line items.
+     *
+     * @param  Collection<int, array<string, mixed>>  $lineItems
+     * @param  Collection<int, EventFeeCategory>  $feeCategories
+     */
+    private function persistLineItems(Registration $registration, Collection $lineItems, Collection $feeCategories): void
+    {
+        $lineItems->each(function (array $lineItem) use ($feeCategories, $registration): void {
+            /** @var EventFeeCategory $feeCategory */
+            $feeCategory = $feeCategories->get((int) $lineItem['fee_category_id']);
+            $quantity = (int) $lineItem['quantity'];
+            $unitAmount = (string) $feeCategory->amount;
+
+            $registration->items()->create([
+                'fee_category_id' => $feeCategory->getKey(),
+                'quantity' => $quantity,
+                'unit_amount' => $unitAmount,
+                'subtotal_amount' => bcmul($unitAmount, (string) $quantity, 2),
+                'remarks' => null,
+            ]);
+        });
+    }
+
+    /**
+     * Sync event operational status for the affected event IDs.
+     *
+     * @param  array<int, int|null>  $eventIds
+     */
+    private function syncEventStatuses(array $eventIds): void
+    {
+        $uniqueEventIds = collect($eventIds)
+            ->filter()
+            ->map(fn (mixed $eventId): int => (int) $eventId)
+            ->unique()
+            ->values();
+
+        Event::query()
+            ->whereIn('id', $uniqueEventIds->all())
+            ->get()
+            ->each(function (Event $event): void {
+                $event->loadSum('reservedRegistrationItems as reserved_quantity', 'quantity');
+                $event->syncOperationalStatus();
+            });
     }
 
     private function onlineRegistrationIndexQuery(User $user, string $search): Builder
@@ -313,6 +590,7 @@ class OnlineRegistrationController extends Controller
             ->where('registration_mode', Registration::MODE_ONLINE)
             ->with([
                 'event',
+                'latestReview.reviewer',
                 'pastor.section.district',
                 'items.feeCategory',
             ])
@@ -348,7 +626,7 @@ class OnlineRegistrationController extends Controller
      *
      * @return array<string, mixed>
      */
-    private function registrationData(Registration $registration): array
+    private function registrationData(Registration $registration, User $viewer): array
     {
         return [
             'id' => $registration->getKey(),
@@ -371,12 +649,15 @@ class OnlineRegistrationController extends Controller
             'total_amount' => $registration->totalAmount(),
             'remarks' => $registration->remarks,
             'submitted_at' => $registration->submitted_at?->toIso8601String(),
+            'can_edit' => $viewer->can('updateOnline', $registration),
+            'can_cancel' => $viewer->can('cancelOnline', $registration),
+            'latest_review' => $this->reviewData($registration->latestReview),
             'receipt' => [
                 'original_name' => $registration->receipt_original_name,
                 'uploaded_at' => $registration->receipt_uploaded_at?->toIso8601String(),
             ],
             'items' => $registration->items
-                ->map(fn ($item): array => [
+                ->map(fn (RegistrationItem $item): array => [
                     'id' => $item->getKey(),
                     'category_name' => $item->feeCategory->category_name,
                     'quantity' => $item->quantity,
@@ -385,6 +666,63 @@ class OnlineRegistrationController extends Controller
                 ])
                 ->values()
                 ->all(),
+        ];
+    }
+
+    /**
+     * Transform an editable online registration for the edit page.
+     *
+     * @return array<string, mixed>
+     */
+    private function editableRegistrationData(Registration $registration): array
+    {
+        return [
+            'id' => $registration->getKey(),
+            'event_id' => (string) $registration->event_id,
+            'payment_reference' => $registration->payment_reference,
+            'registration_status' => $registration->registration_status,
+            'remarks' => $registration->remarks,
+            'submitted_at' => $registration->submitted_at?->toIso8601String(),
+            'receipt' => [
+                'original_name' => $registration->receipt_original_name,
+                'uploaded_at' => $registration->receipt_uploaded_at?->toIso8601String(),
+            ],
+            'latest_review' => $this->reviewData($registration->latestReview),
+            'review_history' => $registration->reviews
+                ->map(fn (RegistrationReview $review): array => $this->reviewData($review))
+                ->values()
+                ->all(),
+            'line_items' => $registration->items
+                ->map(fn (RegistrationItem $item): array => [
+                    'fee_category_id' => (string) $item->fee_category_id,
+                    'quantity' => (string) $item->quantity,
+                ])
+                ->values()
+                ->all(),
+        ];
+    }
+
+    /**
+     * Transform a review record for queue and history payloads.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function reviewData(?RegistrationReview $review): ?array
+    {
+        if ($review === null) {
+            return null;
+        }
+
+        return [
+            'id' => $review->getKey(),
+            'decision' => $review->decision,
+            'reason' => $review->reason,
+            'notes' => $review->notes,
+            'decided_at' => $review->decided_at?->toIso8601String(),
+            'reviewer' => $review->reviewer ? [
+                'id' => $review->reviewer->getKey(),
+                'name' => $review->reviewer->name,
+            ] : null,
         ];
     }
 }

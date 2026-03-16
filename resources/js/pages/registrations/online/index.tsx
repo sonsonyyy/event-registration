@@ -10,6 +10,7 @@ import DataTablePagination from '@/components/data-table-pagination';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
+import RegistrationRecordDialog from '@/components/registration-record-dialog';
 import { Button } from '@/components/ui/button';
 import { formatSystemDateTime } from '@/lib/date-time';
 import { successNoticeClassName } from '@/lib/ui-styles';
@@ -46,6 +47,19 @@ type RegistrationRecord = {
     total_amount: string;
     remarks: string | null;
     submitted_at: string | null;
+    can_edit: boolean;
+    can_cancel: boolean;
+    latest_review: {
+        id: number;
+        decision: string;
+        reason: string | null;
+        notes: string | null;
+        decided_at: string | null;
+        reviewer: {
+            id: number;
+            name: string;
+        } | null;
+    } | null;
     receipt: {
         original_name: string | null;
         uploaded_at: string | null;
@@ -108,6 +122,8 @@ export default function OnlineRegistrationIndex({
         | { success?: string | null }
         | undefined;
     const [search, setSearch] = useState(filters.search);
+    const [selectedRegistration, setSelectedRegistration] =
+        useState<RegistrationRecord | null>(null);
 
     useEffect(() => {
         setSearch(filters.search);
@@ -147,6 +163,24 @@ export default function OnlineRegistrationIndex({
             per_page: filters.per_page,
             ...(pageNumber > 1 ? { page: pageNumber } : {}),
         });
+    };
+
+    const cancelRegistration = (registration: RegistrationRecord): void => {
+        if (! window.confirm(`Cancel online registration #${registration.id}?`)) {
+            return;
+        }
+
+        router.patch(
+            OnlineRegistrationController.cancel(registration.id),
+            {},
+            {
+                preserveScroll: true,
+            },
+        );
+    };
+
+    const closeDetails = (): void => {
+        setSelectedRegistration(null);
     };
 
     return (
@@ -224,13 +258,20 @@ export default function OnlineRegistrationIndex({
                                     <th className={elevatedIndexTableStyles.headerCell}>
                                         Status
                                     </th>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.lastHeaderCellRight
+                                        }
+                                    >
+                                        Actions
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className={elevatedIndexTableStyles.tbody}>
                                 {registrations.data.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={6}
+                                            colSpan={7}
                                             className={
                                                 elevatedIndexTableStyles.emptyCell
                                             }
@@ -331,6 +372,8 @@ export default function OnlineRegistrationIndex({
                                                             {
                                                                 verified:
                                                                     'emerald',
+                                                                'needs correction':
+                                                                    'amber',
                                                                 completed:
                                                                     'emerald',
                                                                 rejected:
@@ -360,6 +403,22 @@ export default function OnlineRegistrationIndex({
                                                         {registration.payment_status}
                                                     </DataTableBadge>
                                                 </div>
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
+                                            >
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() =>
+                                                        setSelectedRegistration(
+                                                            registration,
+                                                        )
+                                                    }
+                                                >
+                                                    View
+                                                </Button>
                                             </td>
                                         </tr>
                                     ))
@@ -406,6 +465,89 @@ export default function OnlineRegistrationIndex({
                         />
                     </div>
                 </div>
+
+                <RegistrationRecordDialog
+                    open={selectedRegistration !== null}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            closeDetails();
+                        }
+                    }}
+                    title={
+                        selectedRegistration
+                            ? `Online registration #${selectedRegistration.id}`
+                            : 'Online registration'
+                    }
+                    description="Review the full record, submitted quantities, receipt details, and the latest verification feedback."
+                    registrationStatus={
+                        selectedRegistration?.registration_status ?? 'draft'
+                    }
+                    paymentStatus={selectedRegistration?.payment_status ?? null}
+                    totalQuantity={selectedRegistration?.total_quantity ?? 0}
+                    totalAmount={selectedRegistration?.total_amount ?? '0.00'}
+                    event={
+                        selectedRegistration?.event ?? {
+                            name: '',
+                            venue: '',
+                        }
+                    }
+                    pastor={
+                        selectedRegistration?.pastor ?? {
+                            church_name: '',
+                            pastor_name: '',
+                            section_name: '',
+                            district_name: '',
+                        }
+                    }
+                    submittedAt={selectedRegistration?.submitted_at}
+                    paymentReference={selectedRegistration?.payment_reference}
+                    remarks={selectedRegistration?.remarks}
+                    receipt={selectedRegistration?.receipt}
+                    items={selectedRegistration?.items ?? []}
+                    reviews={
+                        selectedRegistration?.latest_review
+                            ? [selectedRegistration.latest_review]
+                            : []
+                    }
+                    footer={
+                        selectedRegistration ? (
+                            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={closeDetails}
+                                >
+                                    Close
+                                </Button>
+                                {selectedRegistration.can_edit && (
+                                    <Button asChild variant="outline">
+                                        <Link
+                                            href={OnlineRegistrationController.edit(
+                                                selectedRegistration.id,
+                                            )}
+                                        >
+                                            Edit registration
+                                        </Link>
+                                    </Button>
+                                )}
+                                {selectedRegistration.can_cancel && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => {
+                                            closeDetails();
+                                            cancelRegistration(
+                                                selectedRegistration,
+                                            );
+                                        }}
+                                    >
+                                        Cancel registration
+                                    </Button>
+                                )}
+                            </div>
+                        ) : null
+                    }
+                />
             </div>
         </AppLayout>
     );

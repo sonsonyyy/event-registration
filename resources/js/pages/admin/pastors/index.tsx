@@ -8,6 +8,7 @@ import {
 import DataTablePagination from '@/components/data-table-pagination';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
+import EntityRecordDialog from '@/components/entity-record-dialog';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { successNoticeClassName } from '@/lib/ui-styles';
@@ -61,6 +62,7 @@ export default function PastorIndex({
     const page = usePage();
     const flash = page.props.flash as { success?: string | null } | undefined;
     const [search, setSearch] = useState(filters.search);
+    const [selectedPastor, setSelectedPastor] = useState<Pastor | null>(null);
 
     useEffect(() => {
         setSearch(filters.search);
@@ -276,6 +278,18 @@ export default function PastorIndex({
                                                     variant="outline"
                                                     size="sm"
                                                     className="rounded-md"
+                                                    onClick={() =>
+                                                        setSelectedPastor(
+                                                            pastor,
+                                                        )
+                                                    }
+                                                >
+                                                    View
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="rounded-md"
                                                     asChild
                                                 >
                                                     <Link
@@ -339,6 +353,105 @@ export default function PastorIndex({
                         />
                     </div>
                 </div>
+
+                <EntityRecordDialog
+                    open={selectedPastor !== null}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setSelectedPastor(null);
+                        }
+                    }}
+                    title={
+                        selectedPastor
+                            ? `Pastor record: ${selectedPastor.church_name}`
+                            : 'Pastor record'
+                    }
+                    description="Review the church, pastor, and contact details for this directory record."
+                    badges={
+                        selectedPastor ? (
+                            <DataTableBadge
+                                tone={resolveDataTableTone(
+                                    selectedPastor.status,
+                                    {
+                                        active: 'emerald',
+                                        inactive: 'rose',
+                                    },
+                                )}
+                            >
+                                {selectedPastor.status}
+                            </DataTableBadge>
+                        ) : null
+                    }
+                    sections={
+                        selectedPastor
+                            ? [
+                                  {
+                                      title: 'Church Profile',
+                                      fields: [
+                                          {
+                                              label: 'Church',
+                                              value: selectedPastor.church_name,
+                                          },
+                                          {
+                                              label: 'Pastor',
+                                              value: selectedPastor.pastor_name,
+                                          },
+                                          {
+                                              label: 'Section',
+                                              value: selectedPastor.section.name,
+                                          },
+                                          {
+                                              label: 'District',
+                                              value: selectedPastor.district.name,
+                                          },
+                                          {
+                                              label: 'Contact number',
+                                              value:
+                                                  selectedPastor.contact_number ??
+                                                  'No contact number',
+                                          },
+                                          {
+                                              label: 'Email',
+                                              value:
+                                                  selectedPastor.email ??
+                                                  'No email address',
+                                              breakWords: true,
+                                          },
+                                          {
+                                              label: 'Address',
+                                              value:
+                                                  selectedPastor.address ??
+                                                  'No address provided.',
+                                              fullWidth: true,
+                                          },
+                                      ],
+                                  },
+                              ]
+                            : []
+                    }
+                    footer={
+                        selectedPastor ? (
+                            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setSelectedPastor(null)}
+                                >
+                                    Close
+                                </Button>
+                                <Button asChild variant="outline">
+                                    <Link
+                                        href={PastorController.edit(
+                                            selectedPastor.id,
+                                        )}
+                                    >
+                                        Edit pastor record
+                                    </Link>
+                                </Button>
+                            </div>
+                        ) : null
+                    }
+                />
             </div>
         </AppLayout>
     );

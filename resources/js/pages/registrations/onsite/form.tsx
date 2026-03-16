@@ -24,6 +24,7 @@ type FeeCategoryOption = {
     amount: string;
     slot_limit: number | null;
     remaining_slots: number | null;
+    status: string;
 };
 
 type EventOption = {
@@ -72,6 +73,16 @@ type OnsiteRegistrationFormData = {
 type Props = {
     events: EventOption[];
     pastors: PastorOption[];
+    registration?: {
+        id: number;
+        event_id: string;
+        pastor_id: string;
+        payment_reference: string | null;
+        registration_status: string;
+        remarks: string | null;
+        submitted_at: string | null;
+        line_items: LineItemFormValue[];
+    };
 };
 
 const textareaClassName = formTextareaClassName;
@@ -104,15 +115,24 @@ function emptyLineItem(): LineItemFormValue {
 export default function OnsiteRegistrationForm({
     events,
     pastors,
+    registration,
 }: Props) {
+    const isEditing = registration !== undefined;
+    const initialPastor = registration
+        ? pastors.find(
+              (pastor) => pastor.id.toString() === registration.pastor_id,
+          ) ?? null
+        : null;
     const form = useForm<OnsiteRegistrationFormData>({
-        event_id: events[0]?.id.toString() ?? '',
-        district_id: '',
-        section_id: '',
-        pastor_id: '',
-        payment_reference: '',
-        remarks: '',
-        line_items: [emptyLineItem()],
+        event_id: registration?.event_id ?? events[0]?.id.toString() ?? '',
+        district_id: initialPastor?.district_id.toString() ?? '',
+        section_id: initialPastor?.section_id.toString() ?? '',
+        pastor_id: registration?.pastor_id ?? '',
+        payment_reference: registration?.payment_reference ?? '',
+        remarks: registration?.remarks ?? '',
+        line_items: registration?.line_items.length
+            ? registration.line_items
+            : [emptyLineItem()],
     });
     const selectedEvent =
         events.find((event) => event.id.toString() === form.data.event_id) ??
@@ -239,9 +259,14 @@ export default function OnsiteRegistrationForm({
     const submit = (event: FormEvent<HTMLFormElement>): void => {
         event.preventDefault();
 
-        form.submit(OnsiteRegistrationController.store(), {
-            preserveScroll: true,
-        });
+        form.submit(
+            isEditing
+                ? OnsiteRegistrationController.update(registration.id)
+                : OnsiteRegistrationController.store(),
+            {
+                preserveScroll: true,
+            },
+        );
     };
 
     return (
@@ -530,7 +555,7 @@ export default function OnsiteRegistrationForm({
                                             options={availableFeeCategories.map(
                                                 (feeCategory) => ({
                                                     value: feeCategory.id.toString(),
-                                                    label: `${feeCategory.category_name} · ${formatCurrency(feeCategory.amount)}`,
+                                                    label: `${feeCategory.category_name}${feeCategory.status !== 'active' ? ' (Inactive)' : ''} · ${formatCurrency(feeCategory.amount)}`,
                                                 }),
                                             )}
                                             disabled={selectedEvent === null}
@@ -698,7 +723,9 @@ export default function OnsiteRegistrationForm({
                     }
                 >
                     {form.processing && <Spinner />}
-                    Save onsite registration
+                    {isEditing
+                        ? 'Save onsite registration'
+                        : 'Save onsite registration'}
                 </Button>
             </div>
         </form>

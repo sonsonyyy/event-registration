@@ -5,6 +5,7 @@ use App\Models\Event;
 use App\Models\EventFeeCategory;
 use App\Models\Pastor;
 use App\Models\Registration;
+use App\Models\RegistrationItem;
 use App\Models\Section;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -210,6 +211,206 @@ test('pending registrant accounts cannot access online registration routes', fun
                 ],
             ],
         ])
+        ->assertForbidden();
+});
+
+test('online registrants can edit registrations that are awaiting review or correction', function () {
+    Storage::fake('local');
+    config()->set('registration.receipts_disk', 'local');
+
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $section = Section::factory()->for($district)->create([
+        'name' => 'Section 3',
+    ]);
+    $pastor = Pastor::factory()->for($section)->create([
+        'church_name' => 'UPC',
+        'pastor_name' => 'Junar Tongol',
+    ]);
+    $registrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'pastor_id' => $pastor->id,
+    ]);
+    $event = onlineRegistrationEvent();
+    $regular = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+        'slot_limit' => 50,
+    ]);
+    $oneDayPass = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'One-day Pass',
+        'amount' => '600.00',
+        'status' => 'inactive',
+        'slot_limit' => 10,
+    ]);
+
+    Storage::disk('local')->put(
+        'registration-receipts/2026/03/original.pdf',
+        'original-receipt',
+    );
+
+    $registration = Registration::factory()
+        ->for($event)
+        ->for($pastor)
+        ->for($registrant, 'encodedByUser')
+        ->for($registrant, 'receiptUploadedByUser')
+        ->create([
+            'registration_mode' => Registration::MODE_ONLINE,
+            'payment_status' => Registration::PAYMENT_STATUS_PAID,
+            'registration_status' => Registration::STATUS_NEEDS_CORRECTION,
+            'payment_reference' => 'DEP-2026-0099',
+            'receipt_file_path' => 'registration-receipts/2026/03/original.pdf',
+            'receipt_original_name' => 'original.pdf',
+            'receipt_uploaded_at' => now()->subDay(),
+            'submitted_at' => now()->subDay(),
+        ]);
+
+    RegistrationItem::factory()
+        ->for($registration)
+        ->for($oneDayPass, 'feeCategory')
+        ->create([
+            'quantity' => 2,
+            'unit_amount' => $oneDayPass->amount,
+            'subtotal_amount' => '1200.00',
+        ]);
+
+    $registration->reviews()->create([
+        'reviewer_user_id' => User::factory()->manager()->create([
+            'district_id' => $district->id,
+            'section_id' => $section->id,
+        ])->id,
+        'decision' => Registration::STATUS_NEEDS_CORRECTION,
+        'reason' => 'Please upload a clearer proof of payment.',
+        'notes' => 'Reference number is still valid.',
+        'decided_at' => now()->subHours(12),
+    ]);
+
+    $this->actingAs($registrant)
+        ->get(route('registrations.online.edit', $registration))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/online/edit')
+            ->where('registration.id', $registration->id)
+            ->where('registration.latest_review.decision', Registration::STATUS_NEEDS_CORRECTION)
+            ->where('registration.latest_review.reason', 'Please upload a clearer proof of payment.')
+            ->where('events.0.fee_categories.0.category_name', 'One-day Pass'));
+
+    $this->actingAs($registrant)
+        ->patch(route('registrations.online.update', $registration), [
+            'event_id' => $event->id,
+            'payment_reference' => 'DEP-2026-0100',
+            'receipt' => UploadedFile::fake()->create('updated.pdf', 256, 'application/pdf'),
+            'remarks' => 'Updated with corrected receipt image.',
+            'line_items' => [
+                [
+                    'fee_category_id' => $regular->id,
+                    'quantity' => 4,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('registrations.online.index'));
+
+    $registration->refresh()->load('items.feeCategory');
+
+    expect($registration->registration_status)->toBe(Registration::STATUS_PENDING_VERIFICATION)
+        ->and($registration->payment_reference)->toBe('DEP-2026-0100')
+        ->and($registration->remarks)->toBe('Updated with corrected receipt image.')
+        ->and($registration->verified_at)->toBeNull()
+        ->and($registration->verified_by_user_id)->toBeNull()
+        ->and($registration->items)->toHaveCount(1)
+        ->and($registration->items->first()->feeCategory->category_name)->toBe('Regular (Online)')
+        ->and($registration->items->first()->quantity)->toBe(4)
+        ->and($registration->receipt_original_name)->toBe('updated.pdf')
+        ->and($registration->receipt_file_path)->not->toBe('registration-receipts/2026/03/original.pdf');
+
+    Storage::disk('local')->assertMissing('registration-receipts/2026/03/original.pdf');
+    Storage::disk('local')->assertExists((string) $registration->receipt_file_path);
+});
+
+test('online registrants can cancel registrations before verification but cannot edit verified registrations', function () {
+    Storage::fake('local');
+    config()->set('registration.receipts_disk', 'local');
+
+    $pastor = Pastor::factory()->create();
+    $registrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $pastor->section->district_id,
+        'section_id' => $pastor->section_id,
+        'pastor_id' => $pastor->id,
+    ]);
+    $event = onlineRegistrationEvent();
+    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+    ]);
+
+    $pendingRegistration = Registration::factory()
+        ->for($event)
+        ->for($pastor)
+        ->for($registrant, 'encodedByUser')
+        ->for($registrant, 'receiptUploadedByUser')
+        ->create([
+            'registration_mode' => Registration::MODE_ONLINE,
+            'payment_status' => Registration::PAYMENT_STATUS_PAID,
+            'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
+            'receipt_file_path' => 'registration-receipts/2026/03/pending.pdf',
+            'receipt_original_name' => 'pending.pdf',
+            'receipt_uploaded_at' => now()->subHour(),
+            'submitted_at' => now()->subHour(),
+        ]);
+
+    RegistrationItem::factory()
+        ->for($pendingRegistration)
+        ->for($feeCategory, 'feeCategory')
+        ->create([
+            'quantity' => 3,
+            'unit_amount' => $feeCategory->amount,
+            'subtotal_amount' => '2400.00',
+        ]);
+
+    $verifiedRegistration = Registration::factory()
+        ->for($event)
+        ->for($pastor)
+        ->for($registrant, 'encodedByUser')
+        ->for($registrant, 'receiptUploadedByUser')
+        ->create([
+            'registration_mode' => Registration::MODE_ONLINE,
+            'payment_status' => Registration::PAYMENT_STATUS_PAID,
+            'registration_status' => Registration::STATUS_VERIFIED,
+            'receipt_file_path' => 'registration-receipts/2026/03/verified.pdf',
+            'receipt_original_name' => 'verified.pdf',
+            'receipt_uploaded_at' => now()->subHour(),
+            'submitted_at' => now()->subHour(),
+            'verified_at' => now()->subMinutes(30),
+            'verified_by_user_id' => User::factory()->manager()->create([
+                'district_id' => $pastor->section->district_id,
+                'section_id' => $pastor->section_id,
+            ])->id,
+        ]);
+
+    RegistrationItem::factory()
+        ->for($verifiedRegistration)
+        ->for($feeCategory, 'feeCategory')
+        ->create([
+            'quantity' => 2,
+            'unit_amount' => $feeCategory->amount,
+            'subtotal_amount' => '1600.00',
+        ]);
+
+    $this->actingAs($registrant)
+        ->patch(route('registrations.online.cancel', $pendingRegistration))
+        ->assertRedirect(route('registrations.online.index'));
+
+    expect($pendingRegistration->fresh()->registration_status)
+        ->toBe(Registration::STATUS_CANCELLED);
+
+    $this->actingAs($registrant)
+        ->get(route('registrations.online.edit', $verifiedRegistration))
+        ->assertForbidden();
+
+    $this->actingAs($registrant)
+        ->patch(route('registrations.online.cancel', $verifiedRegistration))
         ->assertForbidden();
 });
 

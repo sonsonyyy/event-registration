@@ -25,6 +25,8 @@ import {
 import {
     formTextareaClassName,
     formControlClassName,
+    mutedNoticeClassName,
+    warningNoticeClassName,
 } from '@/lib/ui-styles';
 
 type FeeCategoryOption = {
@@ -33,6 +35,7 @@ type FeeCategoryOption = {
     amount: string;
     slot_limit: number | null;
     remaining_slots: number | null;
+    status: string;
 };
 
 type EventOption = {
@@ -61,6 +64,34 @@ type LineItemFormValue = {
     quantity: string;
 };
 
+type ReviewRecord = {
+    id: number;
+    decision: string;
+    reason: string | null;
+    notes: string | null;
+    decided_at: string | null;
+    reviewer: {
+        id: number;
+        name: string;
+    } | null;
+};
+
+type EditableRegistration = {
+    id: number;
+    event_id: string;
+    payment_reference: string | null;
+    registration_status: string;
+    remarks: string | null;
+    submitted_at: string | null;
+    receipt: {
+        original_name: string | null;
+        uploaded_at: string | null;
+    };
+    latest_review: ReviewRecord | null;
+    review_history: ReviewRecord[];
+    line_items: LineItemFormValue[];
+};
+
 type OnlineRegistrationFormData = {
     event_id: string;
     payment_reference: string;
@@ -72,6 +103,7 @@ type OnlineRegistrationFormData = {
 type Props = {
     assignedPastor: AssignedPastor;
     events: EventOption[];
+    registration?: EditableRegistration;
 };
 
 const textareaClassName = formTextareaClassName;
@@ -102,14 +134,18 @@ function emptyLineItem(): LineItemFormValue {
 export default function OnlineRegistrationForm({
     assignedPastor,
     events,
+    registration,
 }: Props) {
     const receiptInputRef = useRef<HTMLInputElement | null>(null);
+    const isEditing = registration !== undefined;
     const form = useForm<OnlineRegistrationFormData>({
-        event_id: events[0]?.id.toString() ?? '',
-        payment_reference: '',
+        event_id: registration?.event_id ?? events[0]?.id.toString() ?? '',
+        payment_reference: registration?.payment_reference ?? '',
         receipt: null,
-        remarks: '',
-        line_items: [emptyLineItem()],
+        remarks: registration?.remarks ?? '',
+        line_items: registration?.line_items.length
+            ? registration.line_items
+            : [emptyLineItem()],
     });
     const selectedEvent =
         events.find((event) => event.id.toString() === form.data.event_id) ??
@@ -172,10 +208,15 @@ export default function OnlineRegistrationForm({
     const submit = (event: FormEvent<HTMLFormElement>): void => {
         event.preventDefault();
 
-        form.submit(OnlineRegistrationController.store(), {
+        form.submit(
+            isEditing
+                ? OnlineRegistrationController.update(registration.id)
+                : OnlineRegistrationController.store(),
+            {
             forceFormData: true,
             preserveScroll: true,
-        });
+            },
+        );
     };
 
     return (
@@ -185,6 +226,45 @@ export default function OnlineRegistrationForm({
                     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch">
                         <div className="flex h-full flex-col gap-6">
                             <AssignedChurchCard assignedPastor={assignedPastor} />
+
+                            {isEditing && registration?.latest_review && (
+                                <div
+                                    className={
+                                        registration.registration_status ===
+                                        'needs correction'
+                                            ? warningNoticeClassName
+                                            : mutedNoticeClassName
+                                    }
+                                >
+                                    <div className="text-xs font-semibold tracking-[0.18em] uppercase">
+                                        Latest review
+                                    </div>
+                                    <div className="mt-2 text-sm font-medium">
+                                        {registration.latest_review.reviewer?.name ??
+                                            'Reviewer'}{' '}
+                                        marked this registration as{' '}
+                                        {registration.latest_review.decision}.
+                                    </div>
+                                    {registration.latest_review.reason && (
+                                        <div className="mt-2 text-sm leading-6">
+                                            {registration.latest_review.reason}
+                                        </div>
+                                    )}
+                                    {registration.latest_review.notes && (
+                                        <div className="mt-2 text-sm leading-6 opacity-90">
+                                            Reviewer notes:{' '}
+                                            {registration.latest_review.notes}
+                                        </div>
+                                    )}
+                                    {registration.latest_review.decided_at && (
+                                        <div className="mt-2 text-xs uppercase tracking-[0.16em] opacity-75">
+                                            {formatDate(
+                                                registration.latest_review.decided_at,
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="grid gap-2">
                                 <Label htmlFor="event_id">Event</Label>
@@ -326,14 +406,23 @@ export default function OnlineRegistrationForm({
                                         className={`truncate ${
                                             form.data.receipt
                                                 ? 'font-medium text-foreground'
-                                                : 'text-muted-foreground'
+                                                : registration?.receipt
+                                                        .original_name
+                                                  ? 'font-medium text-foreground'
+                                                  : 'text-muted-foreground'
                                         }`}
                                     >
                                         {form.data.receipt?.name ??
+                                            registration?.receipt.original_name ??
                                             'JPG, PNG, or PDF'}
                                     </span>
                                 </div>
                             </div>
+                            {isEditing && registration?.receipt.uploaded_at && ! form.data.receipt && (
+                                <div className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                                    Current proof uploaded {formatDate(registration.receipt.uploaded_at)}
+                                </div>
+                            )}
                             <InputError message={form.errors.receipt} />
                         </div>
                     </div>
@@ -416,12 +505,12 @@ export default function OnlineRegistrationForm({
                                                 ? 'Select a fee category'
                                                 : 'Select an event first'
                                         }
-                                        options={availableFeeCategories.map(
-                                            (feeCategory) => ({
-                                                value: feeCategory.id.toString(),
-                                                label: `${feeCategory.category_name} · ${formatCurrency(feeCategory.amount)}`,
-                                            }),
-                                        )}
+                                            options={availableFeeCategories.map(
+                                                (feeCategory) => ({
+                                                    value: feeCategory.id.toString(),
+                                                    label: `${feeCategory.category_name}${feeCategory.status !== 'active' ? ' (Inactive)' : ''} · ${formatCurrency(feeCategory.amount)}`,
+                                                }),
+                                            )}
                                         disabled={selectedEvent === null}
                                     />
                                     <InputError
@@ -597,7 +686,12 @@ export default function OnlineRegistrationForm({
                     }
                 >
                     {form.processing && <Spinner />}
-                    Submit online registration
+                    {isEditing &&
+                    registration?.registration_status === 'needs correction'
+                        ? 'Resubmit online registration'
+                        : isEditing
+                          ? 'Save online registration'
+                          : 'Submit online registration'}
                 </Button>
             </div>
         </form>

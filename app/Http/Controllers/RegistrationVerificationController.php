@@ -7,6 +7,8 @@ use App\Http\Requests\UpdateRegistrationVerificationRequest;
 use App\Models\Event;
 use App\Models\EventFeeCategory;
 use App\Models\Registration;
+use App\Models\RegistrationItem;
+use App\Models\RegistrationReview;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -56,8 +58,10 @@ class RegistrationVerificationController extends Controller
     public function update(UpdateRegistrationVerificationRequest $request, Registration $registration): RedirectResponse
     {
         $decision = $request->decision();
+        $reviewReason = $request->reviewReason();
+        $reviewNotes = $request->reviewNotes();
 
-        DB::transaction(function () use ($decision, $request, $registration): void {
+        DB::transaction(function () use ($decision, $request, $registration, $reviewReason, $reviewNotes): void {
             $registration = Registration::query()
                 ->with([
                     'event',
@@ -90,6 +94,14 @@ class RegistrationVerificationController extends Controller
                     : null,
             ])->save();
 
+            $registration->reviews()->create([
+                'reviewer_user_id' => $request->user()->getKey(),
+                'decision' => $decision,
+                'reason' => $reviewReason,
+                'notes' => $reviewNotes,
+                'decided_at' => now(),
+            ]);
+
             $registration->event
                 ->loadSum('reservedRegistrationItems as reserved_quantity', 'quantity')
                 ->syncOperationalStatus();
@@ -97,17 +109,22 @@ class RegistrationVerificationController extends Controller
 
         return back()->with(
             'success',
-            $decision === Registration::STATUS_VERIFIED
-                ? 'Registration verified successfully.'
-                : 'Registration rejected successfully.',
+            match ($decision) {
+                Registration::STATUS_VERIFIED => 'Registration verified successfully.',
+                Registration::STATUS_NEEDS_CORRECTION => 'Registration returned for correction successfully.',
+                default => 'Registration rejected successfully.',
+            },
         );
     }
 
     public function receipt(Registration $registration): StreamedResponse
     {
-        Gate::authorize('verifyReceipt', $registration);
+        Gate::authorize('view', $registration);
 
-        if (! $registration->canBeReviewed() || $registration->receipt_file_path === null) {
+        if (
+            $registration->registration_mode !== Registration::MODE_ONLINE
+            || $registration->receipt_file_path === null
+        ) {
             abort(404);
         }
 
@@ -131,15 +148,18 @@ class RegistrationVerificationController extends Controller
                 'encodedByUser',
                 'event',
                 'items.feeCategory',
+                'latestReview.reviewer',
                 'pastor.section.district',
+                'reviews.reviewer',
                 'verifiedByUser',
             ])
             ->withSum('items as total_amount', 'subtotal_amount')
             ->withSum('items as total_quantity', 'quantity')
             ->orderByRaw(
-                'case when registration_status = ? then 0 when registration_status = ? then 1 when registration_status = ? then 2 else 3 end',
+                'case when registration_status = ? then 0 when registration_status = ? then 1 when registration_status = ? then 2 when registration_status = ? then 3 else 4 end',
                 [
                     Registration::STATUS_PENDING_VERIFICATION,
+                    Registration::STATUS_NEEDS_CORRECTION,
                     Registration::STATUS_VERIFIED,
                     Registration::STATUS_REJECTED,
                 ],
@@ -194,7 +214,7 @@ class RegistrationVerificationController extends Controller
     /**
      * Build the queue summary counts for the authenticated reviewer scope.
      *
-     * @return array{pending_verification: int, verified: int, rejected: int}
+     * @return array{pending_verification: int, needs_correction: int, verified: int, rejected: int}
      */
     private function summaryData(User $user): array
     {
@@ -210,6 +230,9 @@ class RegistrationVerificationController extends Controller
         return [
             'pending_verification' => (clone $query)
                 ->where('registration_status', Registration::STATUS_PENDING_VERIFICATION)
+                ->count(),
+            'needs_correction' => (clone $query)
+                ->where('registration_status', Registration::STATUS_NEEDS_CORRECTION)
                 ->count(),
             'verified' => (clone $query)
                 ->where('registration_status', Registration::STATUS_VERIFIED)
@@ -248,6 +271,10 @@ class RegistrationVerificationController extends Controller
             [
                 'value' => Registration::STATUS_PENDING_VERIFICATION,
                 'label' => 'Pending review',
+            ],
+            [
+                'value' => Registration::STATUS_NEEDS_CORRECTION,
+                'label' => 'Needs correction',
             ],
             [
                 'value' => Registration::STATUS_VERIFIED,
@@ -292,6 +319,7 @@ class RegistrationVerificationController extends Controller
             ] : null,
             'payment_reference' => $registration->payment_reference,
             'registration_status' => $registration->registration_status,
+            'can_review' => $registration->canBeReviewed(),
             'total_quantity' => $registration->totalQuantity(),
             'total_amount' => $registration->totalAmount(),
             'remarks' => $registration->remarks,
@@ -301,53 +329,63 @@ class RegistrationVerificationController extends Controller
                 'id' => $registration->verifiedByUser->getKey(),
                 'name' => $registration->verifiedByUser->name,
             ] : null,
+            'latest_review' => $this->reviewData($registration->latestReview),
+            'review_history' => $registration->reviews
+                ->map(fn (RegistrationReview $review): array => $this->reviewData($review))
+                ->values()
+                ->all(),
             'receipt' => [
                 'original_name' => $registration->receipt_original_name,
                 'uploaded_at' => $registration->receipt_uploaded_at?->toIso8601String(),
                 'url' => route('registrations.verification.receipt', $registration),
             ],
             'items' => $registration->items
-                ->map(fn ($item): array => [
+                ->map(fn (RegistrationItem $item): array => [
                     'id' => $item->getKey(),
                     'category_name' => $item->feeCategory->category_name,
                     'quantity' => $item->quantity,
-                    'unit_amount' => number_format((float) $item->unit_amount, 2, '.', ''),
-                    'subtotal_amount' => number_format((float) $item->subtotal_amount, 2, '.', ''),
+                    'unit_amount' => $item->unit_amount,
+                    'subtotal_amount' => $item->subtotal_amount,
                 ])
                 ->values()
                 ->all(),
         ];
     }
 
+    /**
+     * Ensure a non-reserved registration can still be verified against capacity.
+     */
     private function guardVerificationCapacity(Registration $registration): void
     {
         $event = Event::query()
+            ->whereKey($registration->event_id)
             ->withSum('reservedRegistrationItems as reserved_quantity', 'quantity')
-            ->lockForUpdate()
-            ->findOrFail($registration->event_id);
+            ->firstOrFail();
 
         if ($registration->totalQuantity() > $event->remainingSlots()) {
             throw ValidationException::withMessages([
-                'decision' => 'This registration can no longer be verified because the event has no remaining capacity.',
+                'decision' => 'This registration can no longer be verified because the event capacity is already exhausted.',
             ]);
         }
 
-        $feeCategoryIds = $registration->items->pluck('fee_category_id')->all();
+        $eventFeeCategoryIds = $registration->items
+            ->pluck('fee_category_id')
+            ->values()
+            ->all();
+
         $feeCategories = EventFeeCategory::query()
-            ->where('event_id', $registration->event_id)
-            ->whereIn('id', $feeCategoryIds)
+            ->whereIn('id', $eventFeeCategoryIds)
             ->withSum('reservedRegistrationItems as reserved_quantity', 'quantity')
-            ->lockForUpdate()
             ->get()
             ->keyBy('id');
 
-        foreach ($registration->items as $item) {
+        $registration->items->each(function (RegistrationItem $item) use ($feeCategories): void {
             /** @var EventFeeCategory|null $feeCategory */
             $feeCategory = $feeCategories->get($item->fee_category_id);
 
-            if ($feeCategory === null || $feeCategory->status !== 'active') {
+            if ($feeCategory === null) {
                 throw ValidationException::withMessages([
-                    'decision' => 'One or more fee categories are no longer active for this event.',
+                    'decision' => 'One or more fee categories attached to this registration are no longer available.',
                 ]);
             }
 
@@ -355,9 +393,33 @@ class RegistrationVerificationController extends Controller
 
             if ($remainingSlots !== null && $item->quantity > $remainingSlots) {
                 throw ValidationException::withMessages([
-                    'decision' => 'This registration can no longer be verified because one or more fee categories are already full.',
+                    'decision' => 'This registration can no longer be verified because one of its fee categories is already full.',
                 ]);
             }
+        });
+    }
+
+    /**
+     * Transform a review record for queue history payloads.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function reviewData(?RegistrationReview $review): ?array
+    {
+        if ($review === null) {
+            return null;
         }
+
+        return [
+            'id' => $review->getKey(),
+            'decision' => $review->decision,
+            'reason' => $review->reason,
+            'notes' => $review->notes,
+            'decided_at' => $review->decided_at?->toIso8601String(),
+            'reviewer' => $review->reviewer ? [
+                'id' => $review->reviewer->getKey(),
+                'name' => $review->reviewer->name,
+            ] : null,
+        ];
     }
 }

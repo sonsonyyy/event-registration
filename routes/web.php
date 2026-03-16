@@ -42,7 +42,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->group(function (): void {
             Route::get('/', [OnlineRegistrationController::class, 'index'])->name('index');
             Route::get('create', [OnlineRegistrationController::class, 'create'])->name('create');
+            Route::get('{registration}/edit', [OnlineRegistrationController::class, 'edit'])->name('edit');
             Route::post('/', [OnlineRegistrationController::class, 'store'])->name('store');
+            Route::match(['put', 'patch'], '{registration}', [OnlineRegistrationController::class, 'update'])->name('update');
+            Route::patch('{registration}/cancel', [OnlineRegistrationController::class, 'cancel'])->name('cancel');
         });
 
     Route::prefix('registrations/onsite')
@@ -51,7 +54,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->group(function (): void {
             Route::get('/', [OnsiteRegistrationController::class, 'index'])->name('index');
             Route::get('create', [OnsiteRegistrationController::class, 'create'])->name('create');
+            Route::get('{registration}/edit', [OnsiteRegistrationController::class, 'edit'])->name('edit');
             Route::post('/', [OnsiteRegistrationController::class, 'store'])->name('store');
+            Route::match(['put', 'patch'], '{registration}', [OnsiteRegistrationController::class, 'update'])->name('update');
         });
 
     Route::prefix('registrations/verification')

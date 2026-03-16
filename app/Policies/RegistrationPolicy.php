@@ -58,6 +58,39 @@ class RegistrationPolicy
         return false;
     }
 
+    public function updateOnsite(User $user, Registration $registration): bool
+    {
+        if (! $registration->canBeUpdatedOnsite()) {
+            return false;
+        }
+
+        if ($user->isManager()) {
+            return $user->canAccessRegistration($registration);
+        }
+
+        if ($user->isRegistrationStaff()) {
+            return $registration->encoded_by_user_id === $user->getKey();
+        }
+
+        return false;
+    }
+
+    public function updateOnline(User $user, Registration $registration): bool
+    {
+        return $registration->canBeCorrectedOnline()
+            && $registration->registration_mode === Registration::MODE_ONLINE
+            && $user->hasApprovedOnlineRegistrationAccess()
+            && $user->belongsToPastor($registration->pastor_id);
+    }
+
+    public function cancelOnline(User $user, Registration $registration): bool
+    {
+        return $registration->canBeCancelledOnline()
+            && $registration->registration_mode === Registration::MODE_ONLINE
+            && $user->hasApprovedOnlineRegistrationAccess()
+            && $user->belongsToPastor($registration->pastor_id);
+    }
+
     public function delete(User $user, Registration $registration): bool
     {
         return $user->isManager() && $user->canAccessRegistration($registration);
@@ -96,6 +129,7 @@ class RegistrationPolicy
     {
         return $user->isManager()
             && $registration->registration_mode === Registration::MODE_ONLINE
+            && $registration->canBeReviewed()
             && $user->canAccessRegistration($registration);
     }
 }

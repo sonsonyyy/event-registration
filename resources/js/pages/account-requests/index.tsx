@@ -12,6 +12,7 @@ import {
     reviewWorkspaceStyles,
 } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
+import EntityRecordDialog from '@/components/entity-record-dialog';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { formatSystemDateTime as formatManilaDateTime } from '@/lib/date-time';
@@ -110,6 +111,8 @@ export default function AccountRequestsIndex({
         | undefined;
     const [search, setSearch] = useState(filters.search);
     const [status, setStatus] = useState(filters.status);
+    const [selectedRequest, setSelectedRequest] =
+        useState<AccountRequestRecord | null>(null);
 
     useEffect(() => {
         setSearch(filters.search);
@@ -476,43 +479,19 @@ export default function AccountRequestsIndex({
                                             <td
                                                 className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
                                             >
-                                                <div className="flex justify-end gap-2">
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        className={reviewWorkspaceStyles.primaryButton}
-                                                        onClick={() =>
-                                                            reviewRequest(
-                                                                accountRequest,
-                                                                'approved',
-                                                            )
-                                                        }
-                                                        disabled={
-                                                            accountRequest.approval_status ===
-                                                            'approved'
-                                                        }
-                                                    >
-                                                        Approve
-                                                    </Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className={reviewWorkspaceStyles.dangerButton}
-                                                        onClick={() =>
-                                                            reviewRequest(
-                                                                accountRequest,
-                                                                'rejected',
-                                                            )
-                                                        }
-                                                        disabled={
-                                                            accountRequest.approval_status ===
-                                                            'rejected'
-                                                        }
-                                                    >
-                                                        Reject
-                                                    </Button>
-                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className={reviewWorkspaceStyles.surfaceButton}
+                                                    onClick={() =>
+                                                        setSelectedRequest(
+                                                            accountRequest,
+                                                        )
+                                                    }
+                                                >
+                                                    View
+                                                </Button>
                                             </td>
                                         </tr>
                                     ))
@@ -569,6 +548,177 @@ export default function AccountRequestsIndex({
                         />
                     </div>
                 </div>
+
+                <EntityRecordDialog
+                    open={selectedRequest !== null}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setSelectedRequest(null);
+                        }
+                    }}
+                    title={
+                        selectedRequest
+                            ? `Account request #${selectedRequest.id}`
+                            : 'Account request'
+                    }
+                    description="Review the representative details, assigned church scope, and approval history."
+                    badges={
+                        selectedRequest ? (
+                            <>
+                                <DataTableBadge
+                                    tone={resolveDataTableTone(
+                                        selectedRequest.approval_status,
+                                        {
+                                            approved: 'emerald',
+                                            rejected: 'rose',
+                                            pending: 'amber',
+                                        },
+                                    )}
+                                >
+                                    {selectedRequest.approval_status}
+                                </DataTableBadge>
+                                <DataTableBadge
+                                    tone={
+                                        selectedRequest.status === 'active'
+                                            ? 'emerald'
+                                            : 'rose'
+                                    }
+                                >
+                                    {selectedRequest.status}
+                                </DataTableBadge>
+                            </>
+                        ) : null
+                    }
+                    sections={
+                        selectedRequest
+                            ? [
+                                  {
+                                      title: 'Representative',
+                                      fields: [
+                                          {
+                                              label: 'Name',
+                                              value: selectedRequest.name,
+                                          },
+                                          {
+                                              label: 'Email',
+                                              value: selectedRequest.email,
+                                              breakWords: true,
+                                          },
+                                      ],
+                                  },
+                                  {
+                                      title: 'Church Scope',
+                                      fields: [
+                                          {
+                                              label: 'Church',
+                                              value:
+                                                  selectedRequest.pastor
+                                                      ?.church_name ??
+                                                  'No church assigned',
+                                          },
+                                          {
+                                              label: 'Pastor',
+                                              value:
+                                                  selectedRequest.pastor
+                                                      ?.pastor_name ??
+                                                  'No pastor assigned',
+                                          },
+                                          {
+                                              label: 'District',
+                                              value:
+                                                  selectedRequest.pastor
+                                                      ?.district_name ??
+                                                  'No district',
+                                          },
+                                          {
+                                              label: 'Section',
+                                              value:
+                                                  selectedRequest.pastor
+                                                      ?.section_name ??
+                                                  'No section',
+                                          },
+                                      ],
+                                  },
+                                  {
+                                      title: 'Review Timeline',
+                                      fields: [
+                                          {
+                                              label: 'Requested',
+                                              value: formatDateTime(
+                                                  selectedRequest.created_at,
+                                              ),
+                                          },
+                                          {
+                                              label: 'Reviewed',
+                                              value: selectedRequest.approval_reviewer ? (
+                                                  <>
+                                                      <div>
+                                                          {
+                                                              selectedRequest
+                                                                  .approval_reviewer
+                                                                  .name
+                                                          }
+                                                      </div>
+                                                      <div className="text-slate-500 dark:text-slate-400">
+                                                          {formatDateTime(
+                                                              selectedRequest.approval_reviewed_at,
+                                                          )}
+                                                      </div>
+                                                  </>
+                                              ) : (
+                                                  'Waiting for reviewer action'
+                                              ),
+                                          },
+                                      ],
+                                  },
+                              ]
+                            : []
+                    }
+                    footer={
+                        selectedRequest ? (
+                            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setSelectedRequest(null)}
+                                >
+                                    Close
+                                </Button>
+                                <Button
+                                    type="button"
+                                    className={reviewWorkspaceStyles.primaryButton}
+                                    onClick={() => {
+                                        const request = selectedRequest;
+                                        setSelectedRequest(null);
+                                        reviewRequest(request, 'approved');
+                                    }}
+                                    disabled={
+                                        selectedRequest.approval_status ===
+                                        'approved'
+                                    }
+                                >
+                                    Approve
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className={reviewWorkspaceStyles.dangerButton}
+                                    onClick={() => {
+                                        const request = selectedRequest;
+                                        setSelectedRequest(null);
+                                        reviewRequest(request, 'rejected');
+                                    }}
+                                    disabled={
+                                        selectedRequest.approval_status ===
+                                        'rejected'
+                                    }
+                                >
+                                    Reject
+                                </Button>
+                            </div>
+                        ) : null
+                    }
+                />
             </div>
         </AppLayout>
     );

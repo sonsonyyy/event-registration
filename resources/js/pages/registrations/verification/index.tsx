@@ -1,5 +1,11 @@
-import { Head, router, usePage } from '@inertiajs/react';
-import { BadgeCheck, CircleX, Clock3 } from 'lucide-react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
+import {
+    AlertTriangle,
+    BadgeCheck,
+    CircleX,
+    Clock3,
+    FileSearch,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import RegistrationVerificationController from '@/actions/App/Http/Controllers/RegistrationVerificationController';
 import {
@@ -7,9 +13,16 @@ import {
     resolveDataTableTone,
 } from '@/components/data-table-badge';
 import DataTablePagination from '@/components/data-table-pagination';
+import {
+    elevatedIndexTableStyles,
+    reviewWorkspaceStyles,
+} from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
-import { reviewWorkspaceStyles } from '@/components/data-table-presets';
 import Heading from '@/components/heading';
+import InputError from '@/components/input-error';
+import RegistrationRecordDialog from '@/components/registration-record-dialog';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -17,18 +30,27 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
 import { formatSystemDateTime } from '@/lib/date-time';
+import { formTextareaClassName } from '@/lib/ui-styles';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
 
-type RegistrationItemRecord = {
+type StatusOption = {
+    value: string;
+    label: string;
+};
+
+type ReviewRecord = {
     id: number;
-    category_name: string;
-    quantity: number;
-    unit_amount: string;
-    subtotal_amount: string;
+    decision: string;
+    reason: string | null;
+    notes: string | null;
+    decided_at: string | null;
+    reviewer: {
+        id: number;
+        name: string;
+    } | null;
 };
 
 type RegistrationRecord = {
@@ -52,6 +74,7 @@ type RegistrationRecord = {
     } | null;
     payment_reference: string | null;
     registration_status: string;
+    can_review: boolean;
     total_quantity: number;
     total_amount: string;
     remarks: string | null;
@@ -61,23 +84,27 @@ type RegistrationRecord = {
         id: number;
         name: string;
     } | null;
+    latest_review: ReviewRecord | null;
+    review_history: ReviewRecord[];
     receipt: {
         original_name: string | null;
         uploaded_at: string | null;
         url: string;
     };
-    items: RegistrationItemRecord[];
-};
-
-type StatusOption = {
-    value: string;
-    label: string;
+    items: Array<{
+        id: number;
+        category_name: string;
+        quantity: number;
+        unit_amount: string;
+        subtotal_amount: string;
+    }>;
 };
 
 type Props = {
     scopeSummary: string;
     summary: {
         pending_verification: number;
+        needs_correction: number;
         verified: number;
         rejected: number;
     };
@@ -89,6 +116,14 @@ type Props = {
     };
     statusOptions: StatusOption[];
     perPageOptions: number[];
+};
+
+type ReviewDecision = 'verified' | 'needs correction' | 'rejected';
+
+type ReviewFormData = {
+    decision: ReviewDecision;
+    review_reason: string;
+    review_notes: string;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -108,12 +143,35 @@ const formatCurrency = (value: string): string =>
         currency: 'PHP',
     }).format(Number.parseFloat(value || '0'));
 
-const formatDate = (value: string | null): string => {
-    if (! value) {
-        return 'Not submitted';
-    }
+const formatDateTime = (value: string | null, fallback = 'Not available'): string =>
+    value ? formatSystemDateTime(value) : fallback;
 
-    return formatSystemDateTime(value);
+const decisionContent: Record<
+    ReviewDecision,
+    {
+        title: string;
+        description: string;
+        submitLabel: string;
+    }
+> = {
+    verified: {
+        title: 'Verify registration',
+        description:
+            'Confirm this payment and complete the online registration review.',
+        submitLabel: 'Verify registration',
+    },
+    'needs correction': {
+        title: 'Return for correction',
+        description:
+            'Send the registration back to the church representative with a clear correction note.',
+        submitLabel: 'Return for correction',
+    },
+    rejected: {
+        title: 'Reject registration',
+        description:
+            'Reject this registration and record the reason for the decision.',
+        submitLabel: 'Reject registration',
+    },
 };
 
 export default function RegistrationVerificationIndex({
@@ -131,13 +189,15 @@ export default function RegistrationVerificationIndex({
               error?: string | null;
           }
         | undefined;
-    const errors = page.props.errors as
-        | {
-              decision?: string;
-          }
-        | undefined;
     const [search, setSearch] = useState(filters.search);
     const [status, setStatus] = useState(filters.status);
+    const [selectedRegistration, setSelectedRegistration] =
+        useState<RegistrationRecord | null>(null);
+    const form = useForm<ReviewFormData>({
+        decision: 'verified',
+        review_reason: '',
+        review_notes: '',
+    });
 
     useEffect(() => {
         setSearch(filters.search);
@@ -146,6 +206,46 @@ export default function RegistrationVerificationIndex({
     useEffect(() => {
         setStatus(filters.status);
     }, [filters.status]);
+
+    const activeDecision = form.data.decision;
+    const activeDecisionContent = decisionContent[activeDecision];
+    const reviewError = (page.props.errors as Record<string, string> | undefined)
+        ?.decision;
+
+    const summaryCards = [
+        {
+            title: 'Pending Review',
+            value: summary.pending_verification,
+            subtitle: 'Ready for receipt checking',
+            icon: Clock3,
+            cardClassName: reviewWorkspaceStyles.summaryCardPending,
+            iconWrapperClassName: reviewWorkspaceStyles.summaryIconPending,
+        },
+        {
+            title: 'Needs Correction',
+            value: summary.needs_correction,
+            subtitle: 'Waiting for church updates',
+            icon: AlertTriangle,
+            cardClassName: reviewWorkspaceStyles.summaryCardPending,
+            iconWrapperClassName: reviewWorkspaceStyles.summaryIconPending,
+        },
+        {
+            title: 'Verified',
+            value: summary.verified,
+            subtitle: 'Completed verification',
+            icon: BadgeCheck,
+            cardClassName: reviewWorkspaceStyles.summaryCardApproved,
+            iconWrapperClassName: reviewWorkspaceStyles.summaryIconApproved,
+        },
+        {
+            title: 'Rejected',
+            value: summary.rejected,
+            subtitle: 'Closed without approval',
+            icon: CircleX,
+            cardClassName: reviewWorkspaceStyles.summaryCardRejected,
+            iconWrapperClassName: reviewWorkspaceStyles.summaryIconRejected,
+        },
+    ] as const;
 
     const visitIndex = (query: {
         search?: string;
@@ -160,69 +260,49 @@ export default function RegistrationVerificationIndex({
         });
     };
 
-    const reviewRegistration = (
-        registration: RegistrationRecord,
-        decision: 'verified' | 'rejected',
-    ): void => {
-        const confirmationMessage =
-            decision === 'verified'
-                ? `Verify registration #${registration.id}?`
-                : `Reject registration #${registration.id}?`;
+    const closeDialog = (): void => {
+        setSelectedRegistration(null);
+        form.reset();
+        form.clearErrors();
+    };
 
-        if (! window.confirm(confirmationMessage)) {
+    const openRegistrationDialog = (registration: RegistrationRecord): void => {
+        setSelectedRegistration(registration);
+        form.setData({
+            decision: 'verified',
+            review_reason: '',
+            review_notes: '',
+        });
+        form.clearErrors();
+    };
+
+    const submitReview = (): void => {
+        if (selectedRegistration === null) {
             return;
         }
 
-        router.patch(
-            RegistrationVerificationController.update.url(registration.id),
-            {
-                decision,
-            },
+        form.patch(
+            RegistrationVerificationController.update.url(
+                selectedRegistration.id,
+            ),
             {
                 preserveScroll: true,
+                onSuccess: () => closeDialog(),
             },
         );
     };
 
-    const errorMessage = flash?.error ?? errors?.decision ?? null;
-    const summaryCards = [
-        {
-            title: 'Pending Review',
-            value: summary.pending_verification,
-            subtitle: 'Awaiting receipt review',
-            icon: Clock3,
-            cardClassName: reviewWorkspaceStyles.summaryCardPending,
-            iconWrapperClassName: reviewWorkspaceStyles.summaryIconPending,
-        },
-        {
-            title: 'Verified',
-            value: summary.verified,
-            subtitle: 'Approved registrations',
-            icon: BadgeCheck,
-            cardClassName: reviewWorkspaceStyles.summaryCardApproved,
-            iconWrapperClassName: reviewWorkspaceStyles.summaryIconApproved,
-        },
-        {
-            title: 'Rejected',
-            value: summary.rejected,
-            subtitle: 'Needs resubmission',
-            icon: CircleX,
-            cardClassName: reviewWorkspaceStyles.summaryCardRejected,
-            iconWrapperClassName: reviewWorkspaceStyles.summaryIconRejected,
-        },
-    ] as const;
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Registration Verification" />
+            <Head title="Verification" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
                 <Heading
                     title="Registration verification"
-                    description={`Review uploaded receipts and update online registration statuses within ${scopeSummary}.`}
+                    description={`Review uploaded receipts and resolve registrations within ${scopeSummary}.`}
                 />
 
-                <div className="grid gap-4 xl:grid-cols-3">
+                <div className="grid gap-4 xl:grid-cols-4">
                     {summaryCards.map((card) => (
                         <div
                             key={card.title}
@@ -263,9 +343,9 @@ export default function RegistrationVerificationIndex({
                     </div>
                 )}
 
-                {errorMessage && (
+                {(flash?.error ?? reviewError) && (
                     <div className={reviewWorkspaceStyles.flashError}>
-                        {errorMessage}
+                        {flash?.error ?? reviewError}
                     </div>
                 )}
 
@@ -282,38 +362,48 @@ export default function RegistrationVerificationIndex({
                                     page: 1,
                                 })
                             }
-                            placeholder="Search by event, church, pastor, reference, or receipt"
+                            placeholder="Search event, church, pastor, reference, or submitter"
                             className={reviewWorkspaceStyles.toolbar}
-                            searchWrapperClassName={reviewWorkspaceStyles.searchWrapper}
+                            searchWrapperClassName={
+                                reviewWorkspaceStyles.searchWrapper
+                            }
                             inputClassName={reviewWorkspaceStyles.input}
                             actionClassName={reviewWorkspaceStyles.action}
                             action={
                                 <div className="flex w-full sm:w-auto">
                                     <Select
                                         value={status}
-                                        onValueChange={(value) => {
-                                            setStatus(value);
+                                        onValueChange={(nextStatus) => {
+                                            setStatus(nextStatus);
                                             visitIndex({
                                                 search:
                                                     search.trim() || undefined,
-                                                status: value,
+                                                status: nextStatus,
                                                 per_page: filters.per_page,
                                                 page: 1,
                                             });
                                         }}
                                     >
-                                        <SelectTrigger className={reviewWorkspaceStyles.selectTrigger}>
+                                        <SelectTrigger
+                                            className={
+                                                reviewWorkspaceStyles.selectTrigger
+                                            }
+                                        >
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent
                                             align="end"
-                                            className={reviewWorkspaceStyles.selectContent}
+                                            className={
+                                                reviewWorkspaceStyles.selectContent
+                                            }
                                         >
                                             {statusOptions.map((option) => (
                                                 <SelectItem
                                                     key={option.value}
                                                     value={option.value}
-                                                    className={reviewWorkspaceStyles.selectItem}
+                                                    className={
+                                                        reviewWorkspaceStyles.selectItem
+                                                    }
                                                 >
                                                     {option.label}
                                                 </SelectItem>
@@ -326,44 +416,62 @@ export default function RegistrationVerificationIndex({
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-slate-200/80 text-sm dark:divide-slate-800">
-                            <thead className="bg-slate-50/80 dark:bg-slate-900/50">
-                                <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground dark:text-slate-400">
-                                    <th className="py-3 pr-4 pl-6 font-medium text-slate-500 dark:text-slate-400">
-                                        Transaction
+                        <table className={elevatedIndexTableStyles.table}>
+                            <thead className={elevatedIndexTableStyles.thead}>
+                                <tr className={elevatedIndexTableStyles.headerRow}>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.firstHeaderCell
+                                        }
+                                    >
+                                        Registration
                                     </th>
-                                    <th className="py-3 pr-4 font-medium text-slate-500 dark:text-slate-400">
+                                    <th className={elevatedIndexTableStyles.headerCell}>
                                         Church
                                     </th>
-                                    <th className="py-3 pr-4 font-medium text-slate-500 dark:text-slate-400">
-                                        Event
-                                    </th>
-                                    <th className="py-3 pr-4 font-medium text-slate-500 dark:text-slate-400">
+                                    <th className={elevatedIndexTableStyles.headerCell}>
                                         Items
                                     </th>
-                                    <th className="py-3 pr-4 font-medium text-slate-500 dark:text-slate-400">
+                                    <th className={elevatedIndexTableStyles.headerCell}>
                                         Receipt
                                     </th>
-                                    <th className="py-3 pr-6 font-medium text-slate-500 dark:text-slate-400">
+                                    <th className={elevatedIndexTableStyles.headerCell}>
                                         Status
+                                    </th>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.lastHeaderCellRight
+                                        }
+                                    >
+                                        Review
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800">
+                            <tbody className={elevatedIndexTableStyles.tbody}>
                                 {registrations.data.length === 0 ? (
                                     <tr>
                                         <td
                                             colSpan={6}
-                                            className="px-6 py-16 text-center"
+                                            className={
+                                                elevatedIndexTableStyles.emptyCell
+                                            }
                                         >
                                             <div className="space-y-2">
-                                                <div className="text-base font-medium text-slate-900 dark:text-slate-100">
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.emptyTitle
+                                                    }
+                                                >
                                                     {filters.search === ''
-                                                        ? 'No registrations matched the current verification filter.'
+                                                        ? 'No registrations matched the current queue filter.'
                                                         : `No registrations matched "${filters.search}".`}
                                                 </div>
-                                                <div className="text-sm text-slate-500 dark:text-slate-400">
-                                                    Adjust the search term or switch the status filter to review other submissions.
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.emptyDescription
+                                                    }
+                                                >
+                                                    Adjust the search term or switch the queue filter to review another set of registrations.
                                                 </div>
                                             </div>
                                         </td>
@@ -372,179 +480,260 @@ export default function RegistrationVerificationIndex({
                                     registrations.data.map((registration) => (
                                         <tr
                                             key={registration.id}
-                                            className="bg-background transition-colors odd:bg-white even:bg-slate-50/70 hover:bg-[#f3f8f6] dark:bg-slate-950 dark:odd:bg-slate-950 dark:even:bg-slate-900/50 dark:hover:bg-slate-900"
+                                            className={elevatedIndexTableStyles.row}
                                         >
-                                            <td className="px-6 py-4 align-middle">
-                                                <div className="font-medium text-slate-900 dark:text-slate-100">
+                                            <td className={elevatedIndexTableStyles.firstCell}>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                >
                                                     #{registration.id}
                                                 </div>
-                                                <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                                    Submitted {formatDate(registration.submitted_at)}
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.secondaryText
+                                                    }
+                                                >
+                                                    {registration.event.name}
+                                                </div>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.subMetaText
+                                                    }
+                                                >
+                                                    {formatDateTime(
+                                                        registration.submitted_at,
+                                                        'Not submitted',
+                                                    )}
                                                 </div>
                                                 {registration.submitted_by && (
-                                                    <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                                                        {registration.submitted_by.name}
-                                                    </div>
-                                                )}
-                                                {registration.payment_reference && (
                                                     <div
-                                                        className={reviewWorkspaceStyles.referenceTag}
+                                                        className={
+                                                            elevatedIndexTableStyles.detailText
+                                                        }
                                                     >
-                                                        Ref. {registration.payment_reference}
+                                                        Submitted by{' '}
+                                                        <span
+                                                            className={
+                                                                elevatedIndexTableStyles.strongText
+                                                            }
+                                                        >
+                                                            {
+                                                                registration
+                                                                    .submitted_by
+                                                                    .name
+                                                            }
+                                                        </span>
+                                                        <span className="block text-xs leading-6 text-slate-500 dark:text-slate-400">
+                                                            {
+                                                                registration
+                                                                    .submitted_by
+                                                                    .email
+                                                            }
+                                                        </span>
                                                     </div>
                                                 )}
+                                            </td>
+                                            <td className={elevatedIndexTableStyles.cell}>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                >
+                                                    {
+                                                        registration.pastor
+                                                            .church_name
+                                                    }
+                                                </div>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.secondaryText
+                                                    }
+                                                >
+                                                    {
+                                                        registration.pastor
+                                                            .pastor_name
+                                                    }
+                                                </div>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.metaText
+                                                    }
+                                                >
+                                                    {
+                                                        registration.pastor
+                                                            .section_name
+                                                    }{' '}
+                                                    •{' '}
+                                                    {
+                                                        registration.pastor
+                                                            .district_name
+                                                    }
+                                                </div>
                                                 {registration.remarks && (
-                                                    <div className="mt-3 max-w-sm text-sm leading-6 text-slate-500 dark:text-slate-400">
+                                                    <div
+                                                        className={
+                                                            elevatedIndexTableStyles.detailText
+                                                        }
+                                                    >
                                                         {registration.remarks}
                                                     </div>
                                                 )}
                                             </td>
-                                            <td className="py-4 pr-4 align-middle">
-                                                <div className="font-medium text-slate-900 dark:text-slate-100">
-                                                    {registration.pastor.church_name}
-                                                </div>
-                                                <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                                    {registration.pastor.pastor_name}
-                                                </div>
-                                                <div className="mt-3 text-xs font-semibold tracking-[0.18em] uppercase text-slate-500 dark:text-slate-400">
-                                                    {registration.pastor.district_name}
-                                                </div>
-                                                <div className="mt-1 text-xs font-semibold tracking-[0.18em] uppercase text-slate-500 dark:text-slate-400">
-                                                    {registration.pastor.section_name}
-                                                </div>
-                                            </td>
-                                            <td className="py-4 pr-4 align-middle">
-                                                <div className="font-medium text-slate-900 dark:text-slate-100">
-                                                    {registration.event.name}
-                                                </div>
-                                                <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                                    {registration.event.venue}
-                                                </div>
-                                            </td>
-                                            <td className="py-4 pr-4 align-middle">
-                                                <div className="space-y-2">
-                                                    {registration.items.map((item) => (
-                                                        <div
-                                                            key={item.id}
-                                                            className="text-sm text-slate-500 dark:text-slate-400"
-                                                        >
-                                                            <span className="font-medium text-slate-900 dark:text-slate-100">
-                                                                {item.category_name}
-                                                            </span>{' '}
-                                                            × {item.quantity}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                                <div className="mt-3 font-medium text-slate-900 dark:text-slate-100">
-                                                    {formatCurrency(
-                                                        registration.total_amount,
+                                            <td className={elevatedIndexTableStyles.cell}>
+                                                <div className="space-y-3">
+                                                    {registration.items.map(
+                                                        (item) => (
+                                                            <div
+                                                                key={item.id}
+                                                                className={
+                                                                    elevatedIndexTableStyles.subtleSurface
+                                                                }
+                                                            >
+                                                                <div
+                                                                    className={
+                                                                        elevatedIndexTableStyles.primaryText
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        item.category_name
+                                                                    }
+                                                                </div>
+                                                                <div
+                                                                    className={
+                                                                        elevatedIndexTableStyles.secondaryText
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        item.quantity
+                                                                    }{' '}
+                                                                    ×{' '}
+                                                                    {formatCurrency(
+                                                                        item.unit_amount,
+                                                                    )}{' '}
+                                                                    ={' '}
+                                                                    {formatCurrency(
+                                                                        item.subtotal_amount,
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ),
                                                     )}
-                                                </div>
-                                                <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                                    {registration.total_quantity}{' '}
-                                                    delegates
+                                                    <div
+                                                        className={
+                                                            elevatedIndexTableStyles.metaText
+                                                        }
+                                                    >
+                                                        {
+                                                            registration.total_quantity
+                                                        }{' '}
+                                                        delegates •{' '}
+                                                        {formatCurrency(
+                                                            registration.total_amount,
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </td>
-                                            <td className="py-4 pr-4 align-middle">
-                                                <div className="font-medium text-slate-900 dark:text-slate-100">
-                                                    {registration.receipt.original_name ??
+                                            <td className={elevatedIndexTableStyles.cell}>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                >
+                                                    {registration.receipt
+                                                        .original_name ??
                                                         'No receipt uploaded'}
                                                 </div>
-                                                <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                                    {formatDate(
-                                                        registration.receipt.uploaded_at,
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.secondaryText
+                                                    }
+                                                >
+                                                    {formatDateTime(
+                                                        registration.receipt
+                                                            .uploaded_at,
+                                                        'Not uploaded',
                                                     )}
                                                 </div>
+                                                {registration.payment_reference && (
+                                                    <div
+                                                        className={
+                                                            reviewWorkspaceStyles.referenceTag
+                                                        }
+                                                    >
+                                                        Ref.{' '}
+                                                        {
+                                                            registration.payment_reference
+                                                        }
+                                                    </div>
+                                                )}
                                                 <div className="mt-3">
                                                     <Button
                                                         asChild
-                                                        variant="outline"
                                                         size="sm"
-                                                        className={reviewWorkspaceStyles.surfaceButton}
+                                                        variant="outline"
+                                                        className={
+                                                            reviewWorkspaceStyles.surfaceButton
+                                                        }
                                                     >
                                                         <a
                                                             href={
-                                                                registration.receipt.url
+                                                                registration
+                                                                    .receipt
+                                                                    .url
                                                             }
                                                             target="_blank"
                                                             rel="noreferrer"
                                                         >
+                                                            <FileSearch className="size-4" />
                                                             View receipt
                                                         </a>
                                                     </Button>
                                                 </div>
                                             </td>
-                                            <td className="py-4 pr-6 align-middle">
-                                                <div className="flex flex-col gap-3">
+                                            <td className={elevatedIndexTableStyles.cell}>
+                                                <div className="space-y-3">
                                                     <DataTableBadge
                                                         tone={resolveDataTableTone(
                                                             registration.registration_status,
                                                             {
+                                                                'pending verification':
+                                                                    'amber',
+                                                                'needs correction':
+                                                                    'amber',
                                                                 verified:
                                                                     'emerald',
                                                                 rejected:
                                                                     'rose',
-                                                                'pending verification':
-                                                                    'amber',
                                                             },
+                                                            'slate',
                                                         )}
-                                                        className="w-fit rounded-md capitalize"
                                                     >
                                                         {
                                                             registration.registration_status
                                                         }
                                                     </DataTableBadge>
-
-                                                    {registration.verified_by &&
-                                                        registration.verified_at && (
-                                                            <div className="text-sm text-slate-500 dark:text-slate-400">
-                                                                {registration.verified_by.name}
-                                                                <div className="mt-1">
-                                                                    {formatDate(
-                                                                        registration.verified_at,
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                    <div className="flex flex-wrap gap-2">
-                                                        <Button
-                                                            type="button"
-                                                            size="sm"
-                                                            className={reviewWorkspaceStyles.primaryButton}
-                                                            disabled={
-                                                                registration.registration_status ===
-                                                                'verified'
-                                                            }
-                                                            onClick={() =>
-                                                                reviewRegistration(
-                                                                    registration,
-                                                                    'verified',
-                                                                )
-                                                            }
-                                                        >
-                                                            Verify
-                                                        </Button>
-                                                        <Button
-                                                            type="button"
-                                                            size="sm"
-                                                            variant="outline"
-                                                            className={reviewWorkspaceStyles.dangerButton}
-                                                            disabled={
-                                                                registration.registration_status ===
-                                                                'rejected'
-                                                            }
-                                                            onClick={() =>
-                                                                reviewRegistration(
-                                                                    registration,
-                                                                    'rejected',
-                                                                )
-                                                            }
-                                                        >
-                                                            Reject
-                                                        </Button>
-                                                    </div>
                                                 </div>
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
+                                            >
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className={
+                                                        reviewWorkspaceStyles.surfaceButton
+                                                    }
+                                                    onClick={() =>
+                                                        openRegistrationDialog(
+                                                            registration,
+                                                        )
+                                                    }
+                                                >
+                                                    View
+                                                </Button>
                                             </td>
                                         </tr>
                                     ))
@@ -558,6 +747,24 @@ export default function RegistrationVerificationIndex({
                             meta={registrations.meta}
                             rowsPerPage={filters.per_page}
                             rowOptions={perPageOptions}
+                            onRowsPerPageChange={(value) =>
+                                visitIndex({
+                                    search: filters.search || undefined,
+                                    status,
+                                    per_page: value,
+                                    page: 1,
+                                })
+                            }
+                            onPageChange={(pageNumber) =>
+                                visitIndex({
+                                    search: filters.search || undefined,
+                                    status,
+                                    per_page: filters.per_page,
+                                    ...(pageNumber > 1
+                                        ? { page: pageNumber }
+                                        : {}),
+                                })
+                            }
                             className={reviewWorkspaceStyles.pagination}
                             topRowClassName={
                                 reviewWorkspaceStyles.paginationTopRow
@@ -581,26 +788,222 @@ export default function RegistrationVerificationIndex({
                             inactivePageButtonClassName={
                                 reviewWorkspaceStyles.inactivePageButton
                             }
-                            ellipsisClassName={reviewWorkspaceStyles.ellipsis}
-                            onRowsPerPageChange={(value) =>
-                                visitIndex({
-                                    search: filters.search || undefined,
-                                    status: filters.status,
-                                    per_page: value,
-                                    page: 1,
-                                })
-                            }
-                            onPageChange={(pageNumber) =>
-                                visitIndex({
-                                    search: filters.search || undefined,
-                                    status: filters.status,
-                                    per_page: filters.per_page,
-                                    page: pageNumber,
-                                })
+                            ellipsisClassName={
+                                reviewWorkspaceStyles.ellipsis
                             }
                         />
                     </div>
                 </div>
+
+                <RegistrationRecordDialog
+                    open={selectedRegistration !== null}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            closeDialog();
+                        }
+                    }}
+                    title={
+                        selectedRegistration
+                            ? `Verification review #${selectedRegistration.id}`
+                            : 'Verification review'
+                    }
+                    description="Open the full registration record, inspect the uploaded receipt, and complete the review from one place."
+                    registrationStatus={
+                        selectedRegistration?.registration_status ?? 'draft'
+                    }
+                    totalQuantity={selectedRegistration?.total_quantity ?? 0}
+                    totalAmount={selectedRegistration?.total_amount ?? '0.00'}
+                    event={
+                        selectedRegistration?.event ?? {
+                            name: '',
+                            venue: '',
+                        }
+                    }
+                    pastor={
+                        selectedRegistration?.pastor ?? {
+                            church_name: '',
+                            pastor_name: '',
+                            section_name: '',
+                            district_name: '',
+                        }
+                    }
+                    submittedAt={selectedRegistration?.submitted_at}
+                    submittedBy={
+                        selectedRegistration?.submitted_by
+                            ? {
+                                  name: selectedRegistration.submitted_by.name,
+                                  email: selectedRegistration.submitted_by.email,
+                              }
+                            : null
+                    }
+                    verifiedAt={selectedRegistration?.verified_at}
+                    verifiedBy={selectedRegistration?.verified_by}
+                    paymentReference={selectedRegistration?.payment_reference}
+                    remarks={selectedRegistration?.remarks}
+                    receipt={selectedRegistration?.receipt}
+                    items={selectedRegistration?.items ?? []}
+                    reviews={selectedRegistration?.review_history ?? []}
+                    children={
+                        selectedRegistration?.can_review ? (
+                            <div className="space-y-5 rounded-md border border-slate-200/80 bg-slate-50/80 px-4 py-5 dark:border-slate-800 dark:bg-slate-950">
+                                <div className="space-y-1">
+                                    <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                                        Review action
+                                    </div>
+                                    <div className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                                        {activeDecisionContent.title}
+                                    </div>
+                                    <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">
+                                        {activeDecisionContent.description}
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2">
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={
+                                            activeDecision === 'verified'
+                                                ? 'default'
+                                                : 'outline'
+                                        }
+                                        onClick={() =>
+                                            form.setData(
+                                                'decision',
+                                                'verified',
+                                            )
+                                        }
+                                        className={
+                                            activeDecision === 'verified'
+                                                ? reviewWorkspaceStyles.primaryButton
+                                                : reviewWorkspaceStyles.surfaceButton
+                                        }
+                                    >
+                                        Verify
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={
+                                            activeDecision ===
+                                            'needs correction'
+                                                ? 'default'
+                                                : 'outline'
+                                        }
+                                        onClick={() =>
+                                            form.setData(
+                                                'decision',
+                                                'needs correction',
+                                            )
+                                        }
+                                        className={
+                                            activeDecision ===
+                                            'needs correction'
+                                                ? reviewWorkspaceStyles.primaryButton
+                                                : reviewWorkspaceStyles.surfaceButton
+                                        }
+                                    >
+                                        Needs correction
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={
+                                            activeDecision === 'rejected'
+                                                ? 'destructive'
+                                                : 'outline'
+                                        }
+                                        onClick={() =>
+                                            form.setData(
+                                                'decision',
+                                                'rejected',
+                                            )
+                                        }
+                                        className={
+                                            activeDecision === 'rejected'
+                                                ? undefined
+                                                : reviewWorkspaceStyles.dangerButton
+                                        }
+                                    >
+                                        Reject
+                                    </Button>
+                                </div>
+
+                                {(activeDecision === 'needs correction' ||
+                                    activeDecision === 'rejected') && (
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="review_reason">
+                                            Review reason
+                                        </Label>
+                                        <textarea
+                                            id="review_reason"
+                                            name="review_reason"
+                                            value={form.data.review_reason}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'review_reason',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            className={formTextareaClassName}
+                                            placeholder="Explain what the reviewer found and what the church should do next."
+                                        />
+                                        <InputError
+                                            message={form.errors.review_reason}
+                                        />
+                                    </div>
+                                )}
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="review_notes">
+                                        Reviewer notes
+                                    </Label>
+                                    <textarea
+                                        id="review_notes"
+                                        name="review_notes"
+                                        value={form.data.review_notes}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'review_notes',
+                                                event.target.value,
+                                            )
+                                        }
+                                        className={formTextareaClassName}
+                                        placeholder="Optional internal notes for follow-up or audit purposes."
+                                    />
+                                    <InputError
+                                        message={form.errors.review_notes}
+                                    />
+                                </div>
+                            </div>
+                        ) : null
+                    }
+                    footer={
+                        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={closeDialog}
+                            >
+                                Close
+                            </Button>
+                            {selectedRegistration?.can_review && (
+                                <Button
+                                    type="button"
+                                    onClick={submitReview}
+                                    disabled={form.processing}
+                                    variant={
+                                        activeDecision === 'rejected'
+                                            ? 'destructive'
+                                            : 'default'
+                                    }
+                                >
+                                    {activeDecisionContent.submitLabel}
+                                </Button>
+                            )}
+                        </div>
+                    }
+                />
             </div>
         </AppLayout>
     );

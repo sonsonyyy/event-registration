@@ -8,6 +8,7 @@ import {
 import DataTablePagination from '@/components/data-table-pagination';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
+import EntityRecordDialog from '@/components/entity-record-dialog';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import {
@@ -81,6 +82,7 @@ export default function UserIndex({
           }
         | undefined;
     const [search, setSearch] = useState(filters.search);
+    const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
 
     useEffect(() => {
         setSearch(filters.search);
@@ -335,6 +337,16 @@ export default function UserIndex({
                                                     variant="outline"
                                                     size="sm"
                                                     className="rounded-md"
+                                                    onClick={() =>
+                                                        setSelectedUser(user)
+                                                    }
+                                                >
+                                                    View
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="rounded-md"
                                                     asChild
                                                 >
                                                     <Link
@@ -409,6 +421,145 @@ export default function UserIndex({
                         />
                     </div>
                 </div>
+
+                <EntityRecordDialog
+                    open={selectedUser !== null}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setSelectedUser(null);
+                        }
+                    }}
+                    title={
+                        selectedUser
+                            ? `User account: ${selectedUser.name}`
+                            : 'User account'
+                    }
+                    description="Review role assignment, operational status, and scope before making changes."
+                    badges={
+                        selectedUser ? (
+                            <>
+                                <DataTableBadge
+                                    tone={resolveDataTableTone(
+                                        selectedUser.role.name,
+                                        {
+                                            Admin: 'slate',
+                                            Manager: 'emerald',
+                                            'Registration Staff': 'blue',
+                                            'Online Registrant': 'violet',
+                                        },
+                                        'slate',
+                                    )}
+                                    capitalize={false}
+                                >
+                                    {selectedUser.role.name ?? 'No role'}
+                                </DataTableBadge>
+                                <DataTableBadge
+                                    tone={resolveDataTableTone(
+                                        selectedUser.status,
+                                        {
+                                            active: 'emerald',
+                                            inactive: 'rose',
+                                        },
+                                    )}
+                                >
+                                    {selectedUser.status}
+                                </DataTableBadge>
+                                {selectedUser.is_current_user && (
+                                    <DataTableBadge
+                                        tone="slate"
+                                        capitalize={false}
+                                    >
+                                        Current account
+                                    </DataTableBadge>
+                                )}
+                            </>
+                        ) : null
+                    }
+                    sections={
+                        selectedUser
+                            ? [
+                                  {
+                                      title: 'Account',
+                                      fields: [
+                                          {
+                                              label: 'Name',
+                                              value: selectedUser.name,
+                                          },
+                                          {
+                                              label: 'Email',
+                                              value: selectedUser.email,
+                                              breakWords: true,
+                                          },
+                                      ],
+                                  },
+                                  {
+                                      title: 'Scope',
+                                      fields: [
+                                          {
+                                              label: 'Scope summary',
+                                              value: selectedUser.scope_summary,
+                                              fullWidth: true,
+                                          },
+                                          {
+                                              label: 'District',
+                                              value:
+                                                  selectedUser.district?.name ??
+                                                  selectedUser.section
+                                                      ?.district_name ??
+                                                  selectedUser.pastor
+                                                      ?.district_name ??
+                                                  'No district',
+                                          },
+                                          {
+                                              label: 'Section',
+                                              value:
+                                                  selectedUser.section?.name ??
+                                                  selectedUser.pastor
+                                                      ?.section_name ??
+                                                  'No section',
+                                          },
+                                          {
+                                              label: 'Pastor',
+                                              value:
+                                                  selectedUser.pastor
+                                                      ?.pastor_name ??
+                                                  'No pastor assigned',
+                                          },
+                                          {
+                                              label: 'Church',
+                                              value:
+                                                  selectedUser.pastor
+                                                      ?.church_name ??
+                                                  'No church assigned',
+                                          },
+                                      ],
+                                  },
+                              ]
+                            : []
+                    }
+                    footer={
+                        selectedUser ? (
+                            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setSelectedUser(null)}
+                                >
+                                    Close
+                                </Button>
+                                <Button asChild variant="outline">
+                                    <Link
+                                        href={UserController.edit(
+                                            selectedUser.id,
+                                        )}
+                                    >
+                                        Edit user
+                                    </Link>
+                                </Button>
+                            </div>
+                        ) : null
+                    }
+                />
             </div>
         </AppLayout>
     );

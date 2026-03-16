@@ -117,6 +117,11 @@ class User extends Authenticatable
         return $this->hasMany(Registration::class, 'receipt_uploaded_by_user_id');
     }
 
+    public function registrationReviews(): HasMany
+    {
+        return $this->hasMany(RegistrationReview::class, 'reviewer_user_id');
+    }
+
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;

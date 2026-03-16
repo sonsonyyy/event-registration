@@ -96,9 +96,10 @@ test('managers can view a verification queue scoped to their assigned section', 
             ->where('filters.status', 'all')
             ->where('filters.search', 'Grace Community')
             ->where('summary.pending_verification', 1)
+            ->where('summary.needs_correction', 0)
             ->where('summary.verified', 1)
             ->where('summary.rejected', 0)
-            ->has('statusOptions', 4)
+            ->has('statusOptions', 5)
             ->has('registrations.data', 2)
             ->where('registrations.data.0.pastor.church_name', 'Grace Community Church')
             ->where('registrations.data.1.registration_status', Registration::STATUS_VERIFIED));
@@ -153,6 +154,114 @@ test('admins can open uploaded receipts and verify online registrations', functi
         ->and($registration->verified_at)->not->toBeNull();
 });
 
+test('reviewers can return registrations for correction with a reason and reviewer notes', function () {
+    Storage::fake('local');
+    config()->set('registration.receipts_disk', 'local');
+
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $manager = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+    ]);
+    $event = verificationEvent();
+    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+    ]);
+    $pastor = Pastor::factory()->for($section)->create();
+    $registrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $pastor->section->district_id,
+        'section_id' => $pastor->section_id,
+        'pastor_id' => $pastor->id,
+    ]);
+
+    $registration = createOnlineRegistrationForVerification(
+        $event,
+        $pastor,
+        $registrant,
+        $feeCategory,
+        [
+            'receipt_file_path' => 'registration-receipts/2026/03/correction.pdf',
+            'receipt_original_name' => 'correction.pdf',
+        ],
+    );
+
+    Storage::disk('local')->put(
+        'registration-receipts/2026/03/correction.pdf',
+        'correction-receipt',
+    );
+
+    $this->actingAs($manager)
+        ->from(route('registrations.verification.index'))
+        ->patch(route('registrations.verification.update', $registration), [
+            'decision' => Registration::STATUS_NEEDS_CORRECTION,
+            'review_reason' => 'The uploaded receipt is blurred.',
+            'review_notes' => 'Ask the church to upload a clearer file before the cutoff.',
+        ])
+        ->assertRedirect(route('registrations.verification.index'));
+
+    $registration->refresh()->load('reviews.reviewer');
+
+    expect($registration->registration_status)->toBe(Registration::STATUS_NEEDS_CORRECTION)
+        ->and($registration->verified_at)->toBeNull()
+        ->and($registration->verified_by_user_id)->toBeNull()
+        ->and($registration->reviews)->toHaveCount(1)
+        ->and($registration->reviews->first()->decision)->toBe(Registration::STATUS_NEEDS_CORRECTION)
+        ->and($registration->reviews->first()->reason)->toBe('The uploaded receipt is blurred.')
+        ->and($registration->reviews->first()->notes)->toBe('Ask the church to upload a clearer file before the cutoff.')
+        ->and($registration->reviews->first()->reviewer?->is($manager))->toBeTrue();
+});
+
+test('reviewers must provide a reason when returning registrations for correction or rejecting them', function () {
+    Storage::fake('local');
+    config()->set('registration.receipts_disk', 'local');
+
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $manager = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+    ]);
+    $event = verificationEvent();
+    $feeCategory = EventFeeCategory::factory()->for($event)->create();
+    $pastor = Pastor::factory()->for($section)->create();
+    $registrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $pastor->section->district_id,
+        'section_id' => $pastor->section_id,
+        'pastor_id' => $pastor->id,
+    ]);
+
+    $registration = createOnlineRegistrationForVerification(
+        $event,
+        $pastor,
+        $registrant,
+        $feeCategory,
+        [
+            'receipt_file_path' => 'registration-receipts/2026/03/reason-required.pdf',
+            'receipt_original_name' => 'reason-required.pdf',
+        ],
+    );
+
+    Storage::disk('local')->put(
+        'registration-receipts/2026/03/reason-required.pdf',
+        'reason-required-receipt',
+    );
+
+    $this->actingAs($manager)
+        ->from(route('registrations.verification.index'))
+        ->patch(route('registrations.verification.update', $registration), [
+            'decision' => Registration::STATUS_NEEDS_CORRECTION,
+            'review_reason' => '',
+            'review_notes' => '',
+        ])
+        ->assertRedirect(route('registrations.verification.index'))
+        ->assertSessionHasErrors('review_reason');
+
+    expect($registration->fresh()->registration_status)
+        ->toBe(Registration::STATUS_PENDING_VERIFICATION);
+});
+
 test('managers cannot review registrations outside their assigned section', function () {
     Storage::fake('local');
     config()->set('registration.receipts_disk', 'local');
@@ -204,26 +313,18 @@ test('managers cannot review registrations outside their assigned section', func
         ->toBe(Registration::STATUS_PENDING_VERIFICATION);
 });
 
-test('rejected registrations cannot be re-verified when capacity is already exhausted', function () {
+test('rejected registrations cannot be reviewed again', function () {
     Storage::fake('local');
     config()->set('registration.receipts_disk', 'local');
 
     $admin = User::factory()->admin()->create();
-    $event = verificationEvent([
-        'total_capacity' => 2,
-    ]);
+    $event = verificationEvent();
     $feeCategory = EventFeeCategory::factory()->for($event)->create([
         'category_name' => 'Regular (Online)',
         'amount' => '800.00',
-        'slot_limit' => 2,
     ]);
     $pastor = Pastor::factory()->create();
     $registrant = User::factory()->onlineRegistrant()->create([
-        'district_id' => $pastor->section->district_id,
-        'section_id' => $pastor->section_id,
-        'pastor_id' => $pastor->id,
-    ]);
-    $otherRegistrant = User::factory()->onlineRegistrant()->create([
         'district_id' => $pastor->section->district_id,
         'section_id' => $pastor->section_id,
         'pastor_id' => $pastor->id,
@@ -247,26 +348,6 @@ test('rejected registrations cannot be re-verified when capacity is already exha
     Storage::disk('local')->put(
         (string) $rejectedRegistration->receipt_file_path,
         'rejected-receipt',
-    );
-
-    $fullRegistration = createOnlineRegistrationForVerification(
-        $event,
-        $pastor,
-        $otherRegistrant,
-        $feeCategory,
-        [
-            'registration_status' => Registration::STATUS_VERIFIED,
-            'verified_at' => now()->subMinutes(30),
-            'verified_by_user_id' => $admin->id,
-            'receipt_file_path' => 'registration-receipts/2026/03/full.pdf',
-            'receipt_original_name' => 'full.pdf',
-        ],
-        2,
-    );
-
-    Storage::disk('local')->put(
-        (string) $fullRegistration->receipt_file_path,
-        'full-receipt',
     );
 
     $this->actingAs($admin)

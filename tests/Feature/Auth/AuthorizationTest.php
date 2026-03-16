@@ -187,6 +187,7 @@ function authorizationContext(): array
         ->for($encoder, 'encodedByUser')
         ->create([
             'registration_mode' => 'online',
+            'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
         ]);
     $onlineRegistrationOutsideSection = Registration::factory()
         ->for($event)
@@ -194,6 +195,7 @@ function authorizationContext(): array
         ->for($encoder, 'encodedByUser')
         ->create([
             'registration_mode' => 'online',
+            'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
         ]);
 
     return compact(

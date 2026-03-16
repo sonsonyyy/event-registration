@@ -9,6 +9,7 @@ import DataTablePagination from '@/components/data-table-pagination';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
+import RegistrationRecordDialog from '@/components/registration-record-dialog';
 import { Button } from '@/components/ui/button';
 import { formatSystemDateTime } from '@/lib/date-time';
 import { successNoticeClassName } from '@/lib/ui-styles';
@@ -44,6 +45,7 @@ type RegistrationRecord = {
     total_amount: string;
     remarks: string | null;
     submitted_at: string | null;
+    can_edit: boolean;
     encoded_by: {
         id: number;
         name: string;
@@ -93,6 +95,8 @@ export default function OnsiteRegistrationIndex({
     const page = usePage();
     const flash = page.props.flash as { success?: string | null } | undefined;
     const [search, setSearch] = useState(filters.search);
+    const [selectedRegistration, setSelectedRegistration] =
+        useState<RegistrationRecord | null>(null);
 
     useEffect(() => {
         setSearch(filters.search);
@@ -205,13 +209,20 @@ export default function OnsiteRegistrationIndex({
                                     <th className={elevatedIndexTableStyles.headerCell}>
                                     Encoded by
                                     </th>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.lastHeaderCellRight
+                                        }
+                                    >
+                                    Actions
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className={elevatedIndexTableStyles.tbody}>
                                 {registrations.data.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={6}
+                                            colSpan={7}
                                             className={
                                                 elevatedIndexTableStyles.emptyCell
                                             }
@@ -370,7 +381,23 @@ export default function OnsiteRegistrationIndex({
                                             <td
                                                 className={`${elevatedIndexTableStyles.cell} text-muted-foreground`}
                                             >
-                                            {registration.encoded_by.name}
+                                            <div>{registration.encoded_by.name}</div>
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
+                                            >
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() =>
+                                                    setSelectedRegistration(
+                                                        registration,
+                                                    )
+                                                }
+                                            >
+                                                View
+                                            </Button>
                                             </td>
                                         </tr>
                                     ))
@@ -413,6 +440,79 @@ export default function OnsiteRegistrationIndex({
                         />
                     </div>
                 </div>
+
+                <RegistrationRecordDialog
+                    open={selectedRegistration !== null}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setSelectedRegistration(null);
+                        }
+                    }}
+                    title={
+                        selectedRegistration
+                            ? `Onsite registration #${selectedRegistration.id}`
+                            : 'Onsite registration'
+                    }
+                    description="Review the full onsite transaction, grouped quantities, payment reference, and encoder details."
+                    registrationStatus={
+                        selectedRegistration?.registration_status ?? 'draft'
+                    }
+                    paymentStatus={selectedRegistration?.payment_status ?? null}
+                    totalQuantity={selectedRegistration?.total_quantity ?? 0}
+                    totalAmount={selectedRegistration?.total_amount ?? '0.00'}
+                    event={
+                        selectedRegistration?.event ?? {
+                            id: 0,
+                            name: '',
+                        }
+                    }
+                    pastor={
+                        selectedRegistration?.pastor ?? {
+                            id: 0,
+                            church_name: '',
+                            pastor_name: '',
+                            section_name: '',
+                            district_name: '',
+                        }
+                    }
+                    submittedAt={selectedRegistration?.submitted_at}
+                    submittedBy={
+                        selectedRegistration?.encoded_by
+                            ? {
+                                  name: selectedRegistration.encoded_by.name,
+                              }
+                            : null
+                    }
+                    paymentReference={selectedRegistration?.payment_reference}
+                    remarks={selectedRegistration?.remarks}
+                    items={selectedRegistration?.items ?? []}
+                    footer={
+                        selectedRegistration ? (
+                            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() =>
+                                        setSelectedRegistration(null)
+                                    }
+                                >
+                                    Close
+                                </Button>
+                                {selectedRegistration.can_edit && (
+                                    <Button asChild variant="outline">
+                                        <Link
+                                            href={OnsiteRegistrationController.edit(
+                                                selectedRegistration.id,
+                                            )}
+                                        >
+                                            Edit transaction
+                                        </Link>
+                                    </Button>
+                                )}
+                            </div>
+                        ) : null
+                    }
+                />
             </div>
         </AppLayout>
     );

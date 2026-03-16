@@ -6,6 +6,7 @@ use App\Models\EventFeeCategory;
 use App\Models\Pastor;
 use App\Models\Registration;
 use App\Models\RegistrationItem;
+use App\Models\RegistrationReview;
 use App\Models\Role;
 use App\Models\Section;
 use App\Models\User;
@@ -21,6 +22,7 @@ test('mvp schema tables and key columns exist', function () {
     expect(Schema::hasTable('event_fee_categories'))->toBeTrue();
     expect(Schema::hasTable('registrations'))->toBeTrue();
     expect(Schema::hasTable('registration_items'))->toBeTrue();
+    expect(Schema::hasTable('registration_reviews'))->toBeTrue();
     expect(Schema::hasColumns('users', ['role_id', 'district_id', 'section_id', 'pastor_id', 'status']))->toBeTrue();
     expect(Schema::hasColumns('registrations', [
         'event_id',
@@ -44,6 +46,14 @@ test('mvp schema tables and key columns exist', function () {
         'quantity',
         'unit_amount',
         'subtotal_amount',
+    ]))->toBeTrue();
+    expect(Schema::hasColumns('registration_reviews', [
+        'registration_id',
+        'reviewer_user_id',
+        'decision',
+        'reason',
+        'notes',
+        'decided_at',
     ]))->toBeTrue();
 });
 
@@ -94,6 +104,13 @@ test('core mvp model relationships resolve correctly', function () {
             'unit_amount' => 250,
             'subtotal_amount' => 750,
         ]);
+    $review = RegistrationReview::factory()
+        ->for($registration)
+        ->for($user, 'reviewer')
+        ->create([
+            'decision' => Registration::STATUS_NEEDS_CORRECTION,
+            'reason' => 'Receipt image is incomplete.',
+        ]);
 
     expect($district->sections)->toHaveCount(1);
     expect($district->sections->first()->is($section))->toBeTrue();
@@ -110,6 +127,10 @@ test('core mvp model relationships resolve correctly', function () {
     expect($registration->encodedByUser->is($user))->toBeTrue();
     expect($registration->receiptUploadedByUser->is($user))->toBeTrue();
     expect($registration->items->first()->is($item))->toBeTrue();
+    expect($registration->reviews->first()->is($review))->toBeTrue();
+    expect($registration->latestReview->is($review))->toBeTrue();
     expect($item->registration->is($registration))->toBeTrue();
     expect($item->feeCategory->is($feeCategory))->toBeTrue();
+    expect($review->registration->is($registration))->toBeTrue();
+    expect($review->reviewer->is($user))->toBeTrue();
 });

@@ -251,6 +251,84 @@ test('onsite registration rejects invalid fee-category selections and capacity o
         ->and(RegistrationItem::query()->count())->toBe(1);
 });
 
+test('staff can edit onsite registrations and replace grouped quantities', function () {
+    $staff = User::factory()->registrationStaff()->create();
+    $pastor = Pastor::factory()->create([
+        'church_name' => 'UPC',
+        'pastor_name' => 'Jefhte Inso',
+    ]);
+    $updatedPastor = Pastor::factory()->create([
+        'church_name' => 'UPC',
+        'pastor_name' => 'Junar Tongol',
+    ]);
+    $event = onsiteRegistrationEvent();
+    $regular = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Onsite)',
+        'amount' => '950.00',
+        'slot_limit' => 40,
+    ]);
+    $oneDayPass = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'One-day Pass',
+        'amount' => '600.00',
+        'status' => 'inactive',
+        'slot_limit' => 15,
+    ]);
+
+    $registration = Registration::factory()
+        ->for($event)
+        ->for($pastor)
+        ->for($staff, 'encodedByUser')
+        ->create([
+            'registration_mode' => Registration::MODE_ONSITE,
+            'payment_status' => Registration::PAYMENT_STATUS_PAID,
+            'registration_status' => Registration::STATUS_COMPLETED,
+            'payment_reference' => 'OR-2026-3001',
+            'remarks' => 'Original onsite transaction',
+        ]);
+
+    RegistrationItem::factory()
+        ->for($registration)
+        ->for($oneDayPass, 'feeCategory')
+        ->create([
+            'quantity' => 2,
+            'unit_amount' => $oneDayPass->amount,
+            'subtotal_amount' => '1200.00',
+        ]);
+
+    $this->actingAs($staff)
+        ->get(route('registrations.onsite.edit', $registration))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/onsite/edit')
+            ->where('registration.id', $registration->id)
+            ->where('registration.pastor_id', (string) $pastor->id)
+            ->where('registration.line_items.0.fee_category_id', (string) $oneDayPass->id));
+
+    $this->actingAs($staff)
+        ->patch(route('registrations.onsite.update', $registration), [
+            'event_id' => $event->id,
+            'pastor_id' => $updatedPastor->id,
+            'payment_reference' => 'OR-2026-3002',
+            'remarks' => 'Corrected onsite transaction',
+            'line_items' => [
+                [
+                    'fee_category_id' => $regular->id,
+                    'quantity' => 5,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('registrations.onsite.index'));
+
+    $registration->refresh()->load('items.feeCategory');
+
+    expect($registration->pastor_id)->toBe($updatedPastor->id)
+        ->and($registration->payment_reference)->toBe('OR-2026-3002')
+        ->and($registration->remarks)->toBe('Corrected onsite transaction')
+        ->and($registration->items)->toHaveCount(1)
+        ->and($registration->items->first()->feeCategory->category_name)->toBe('Regular (Onsite)')
+        ->and($registration->items->first()->quantity)->toBe(5);
+});
+
 function onsiteRegistrationEvent(array $attributes = []): Event
 {
     return Event::factory()->create([

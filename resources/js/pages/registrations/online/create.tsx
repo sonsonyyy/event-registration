@@ -13,6 +13,7 @@ type FeeCategoryOption = {
     amount: string;
     slot_limit: number | null;
     remaining_slots: number | null;
+    status: string;
 };
 
 type EventOption = {

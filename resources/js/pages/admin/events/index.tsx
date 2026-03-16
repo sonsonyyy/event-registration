@@ -8,6 +8,7 @@ import {
 import DataTablePagination from '@/components/data-table-pagination';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
+import EntityRecordDialog from '@/components/entity-record-dialog';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import {
@@ -65,6 +66,7 @@ export default function EventIndex({
     const page = usePage();
     const flash = page.props.flash as { success?: string | null } | undefined;
     const [search, setSearch] = useState(filters.search);
+    const [selectedEvent, setSelectedEvent] = useState<EventRecord | null>(null);
 
     useEffect(() => {
         setSearch(filters.search);
@@ -323,6 +325,16 @@ export default function EventIndex({
                                                     variant="outline"
                                                     size="sm"
                                                     className="rounded-md"
+                                                    onClick={() =>
+                                                        setSelectedEvent(event)
+                                                    }
+                                                >
+                                                    View
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="rounded-md"
                                                     asChild
                                                 >
                                                     <Link
@@ -386,6 +398,153 @@ export default function EventIndex({
                         />
                     </div>
                 </div>
+
+                <EntityRecordDialog
+                    open={selectedEvent !== null}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setSelectedEvent(null);
+                        }
+                    }}
+                    title={
+                        selectedEvent
+                            ? `Event: ${selectedEvent.name}`
+                            : 'Event'
+                    }
+                    description="Review the event schedule, operational status, capacity, and registration window."
+                    badges={
+                        selectedEvent ? (
+                            <>
+                                <DataTableBadge
+                                    tone={resolveDataTableTone(
+                                        selectedEvent.status,
+                                        {
+                                            open: 'emerald',
+                                            draft: 'slate',
+                                            closed: 'amber',
+                                            completed: 'blue',
+                                            cancelled: 'rose',
+                                        },
+                                    )}
+                                >
+                                    {selectedEvent.status}
+                                </DataTableBadge>
+                                <DataTableBadge
+                                    tone={
+                                        selectedEvent.accepting_registrations
+                                            ? 'emerald'
+                                            : 'slate'
+                                    }
+                                    capitalize={false}
+                                >
+                                    {selectedEvent.accepting_registrations
+                                        ? 'Accepting registrations'
+                                        : 'Not accepting'}
+                                </DataTableBadge>
+                            </>
+                        ) : null
+                    }
+                    sections={
+                        selectedEvent
+                            ? [
+                                  {
+                                      title: 'Event Profile',
+                                      fields: [
+                                          {
+                                              label: 'Event',
+                                              value: selectedEvent.name,
+                                          },
+                                          {
+                                              label: 'Venue',
+                                              value: selectedEvent.venue,
+                                          },
+                                          {
+                                              label: 'Description',
+                                              value:
+                                                  selectedEvent.description ??
+                                                  'No description provided.',
+                                              fullWidth: true,
+                                          },
+                                      ],
+                                  },
+                                  {
+                                      title: 'Schedule',
+                                      fields: [
+                                          {
+                                              label: 'Event dates',
+                                              value: `${formatSystemDateOnly(selectedEvent.date_from)} to ${formatSystemDateOnly(selectedEvent.date_to)}`,
+                                          },
+                                          {
+                                              label: 'Registration window',
+                                              value: (
+                                                  <>
+                                                      <div>
+                                                          Opens{' '}
+                                                          {formatSystemDateTime(
+                                                              selectedEvent.registration_open_at,
+                                                          )}
+                                                      </div>
+                                                      <div className="text-slate-500 dark:text-slate-400">
+                                                          Closes{' '}
+                                                          {formatSystemDateTime(
+                                                              selectedEvent.registration_close_at,
+                                                          )}
+                                                      </div>
+                                                  </>
+                                              ),
+                                          },
+                                      ],
+                                  },
+                                  {
+                                      title: 'Operations',
+                                      fields: [
+                                          {
+                                              label: 'Capacity',
+                                              value: `${selectedEvent.remaining_slots} of ${selectedEvent.total_capacity} remaining`,
+                                          },
+                                          {
+                                              label: 'Reserved',
+                                              value: `${selectedEvent.reserved_quantity} reserved`,
+                                          },
+                                          {
+                                              label: 'Fee categories',
+                                              value: `${selectedEvent.fee_categories_count} configured`,
+                                          },
+                                          {
+                                              label: 'Status reason',
+                                              value:
+                                                  selectedEvent.status_reason ??
+                                                  'Registration rules are satisfied.',
+                                              fullWidth: true,
+                                          },
+                                      ],
+                                  },
+                              ]
+                            : []
+                    }
+                    footer={
+                        selectedEvent ? (
+                            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setSelectedEvent(null)}
+                                >
+                                    Close
+                                </Button>
+                                <Button asChild variant="outline">
+                                    <Link
+                                        href={EventController.edit(
+                                            selectedEvent.id,
+                                        )}
+                                    >
+                                        Edit event
+                                    </Link>
+                                </Button>
+                            </div>
+                        ) : null
+                    }
+                />
             </div>
         </AppLayout>
     );

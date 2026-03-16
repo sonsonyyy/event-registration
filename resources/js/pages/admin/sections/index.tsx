@@ -1,10 +1,12 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import SectionController from '@/actions/App/Http/Controllers/Admin/SectionController';
 import {
     DataTableBadge,
     resolveDataTableTone,
 } from '@/components/data-table-badge';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
+import EntityRecordDialog from '@/components/entity-record-dialog';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { successNoticeClassName } from '@/lib/ui-styles';
@@ -42,6 +44,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function SectionIndex({ sections }: Props) {
     const page = usePage();
     const flash = page.props.flash as { success?: string | null } | undefined;
+    const [selectedSection, setSelectedSection] = useState<Section | null>(null);
 
     const destroy = (section: Section): void => {
         if (! window.confirm(`Delete "${section.name}"? This will also remove its pastors.`)) {
@@ -190,6 +193,18 @@ export default function SectionIndex({ sections }: Props) {
                                                     variant="outline"
                                                     size="sm"
                                                     className="rounded-md"
+                                                    onClick={() =>
+                                                        setSelectedSection(
+                                                            section,
+                                                        )
+                                                    }
+                                                >
+                                                    View
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="rounded-md"
                                                     asChild
                                                 >
                                                     <Link
@@ -219,6 +234,88 @@ export default function SectionIndex({ sections }: Props) {
                         </table>
                     </div>
                 </div>
+
+                <EntityRecordDialog
+                    open={selectedSection !== null}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setSelectedSection(null);
+                        }
+                    }}
+                    title={
+                        selectedSection
+                            ? `Section: ${selectedSection.name}`
+                            : 'Section'
+                    }
+                    description="Review the section scope, district assignment, and pastor count."
+                    badges={
+                        selectedSection ? (
+                            <DataTableBadge
+                                tone={resolveDataTableTone(
+                                    selectedSection.status,
+                                    {
+                                        active: 'emerald',
+                                        inactive: 'rose',
+                                    },
+                                )}
+                            >
+                                {selectedSection.status}
+                            </DataTableBadge>
+                        ) : null
+                    }
+                    sections={
+                        selectedSection
+                            ? [
+                                  {
+                                      title: 'Details',
+                                      fields: [
+                                          {
+                                              label: 'Section',
+                                              value: selectedSection.name,
+                                          },
+                                          {
+                                              label: 'District',
+                                              value: selectedSection.district.name,
+                                          },
+                                          {
+                                              label: 'Pastor records',
+                                              value: `${selectedSection.pastors_count} pastors`,
+                                          },
+                                          {
+                                              label: 'Description',
+                                              value:
+                                                  selectedSection.description ??
+                                                  'No description provided.',
+                                              fullWidth: true,
+                                          },
+                                      ],
+                                  },
+                              ]
+                            : []
+                    }
+                    footer={
+                        selectedSection ? (
+                            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setSelectedSection(null)}
+                                >
+                                    Close
+                                </Button>
+                                <Button asChild variant="outline">
+                                    <Link
+                                        href={SectionController.edit(
+                                            selectedSection.id,
+                                        )}
+                                    >
+                                        Edit section
+                                    </Link>
+                                </Button>
+                            </div>
+                        ) : null
+                    }
+                />
             </div>
         </AppLayout>
     );

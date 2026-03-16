@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Registration extends Model
 {
@@ -28,6 +29,8 @@ class Registration extends Model
     public const STATUS_SUBMITTED = 'submitted';
 
     public const STATUS_PENDING_VERIFICATION = 'pending verification';
+
+    public const STATUS_NEEDS_CORRECTION = 'needs correction';
 
     public const STATUS_VERIFIED = 'verified';
 
@@ -104,6 +107,19 @@ class Registration extends Model
         return $this->hasMany(RegistrationItem::class);
     }
 
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(RegistrationReview::class)
+            ->orderByDesc('decided_at')
+            ->orderByDesc('id');
+    }
+
+    public function latestReview(): HasOne
+    {
+        return $this->hasOne(RegistrationReview::class)
+            ->latestOfMany('decided_at');
+    }
+
     /**
      * Get the supported registration modes.
      *
@@ -141,6 +157,7 @@ class Registration extends Model
         return [
             self::STATUS_SUBMITTED,
             self::STATUS_PENDING_VERIFICATION,
+            self::STATUS_NEEDS_CORRECTION,
             self::STATUS_VERIFIED,
             self::STATUS_COMPLETED,
         ];
@@ -155,8 +172,35 @@ class Registration extends Model
     {
         return [
             self::STATUS_PENDING_VERIFICATION,
+            self::STATUS_NEEDS_CORRECTION,
             self::STATUS_VERIFIED,
             self::STATUS_REJECTED,
+        ];
+    }
+
+    /**
+     * Get the online statuses that can still be reviewed.
+     *
+     * @return array<int, string>
+     */
+    public static function reviewableStatuses(): array
+    {
+        return [
+            self::STATUS_PENDING_VERIFICATION,
+            self::STATUS_NEEDS_CORRECTION,
+        ];
+    }
+
+    /**
+     * Get the online statuses that registrants can still correct.
+     *
+     * @return array<int, string>
+     */
+    public static function editableOnlineStatuses(): array
+    {
+        return [
+            self::STATUS_PENDING_VERIFICATION,
+            self::STATUS_NEEDS_CORRECTION,
         ];
     }
 
@@ -168,7 +212,24 @@ class Registration extends Model
     public function canBeReviewed(): bool
     {
         return $this->registration_mode === self::MODE_ONLINE
-            && in_array($this->registration_status, self::verificationStatuses(), true);
+            && in_array($this->registration_status, self::reviewableStatuses(), true);
+    }
+
+    public function canBeCorrectedOnline(): bool
+    {
+        return $this->registration_mode === self::MODE_ONLINE
+            && in_array($this->registration_status, self::editableOnlineStatuses(), true);
+    }
+
+    public function canBeCancelledOnline(): bool
+    {
+        return $this->canBeCorrectedOnline();
+    }
+
+    public function canBeUpdatedOnsite(): bool
+    {
+        return $this->registration_mode === self::MODE_ONSITE
+            && $this->registration_status !== self::STATUS_CANCELLED;
     }
 
     public function totalQuantity(): int
