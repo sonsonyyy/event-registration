@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Department;
 use App\Models\District;
 use App\Models\Event;
 use App\Models\EventFeeCategory;
@@ -9,6 +10,7 @@ use App\Models\Pastor;
 use App\Models\Registration;
 use App\Models\Section;
 use App\Models\User;
+use App\Policies\DepartmentPolicy;
 use App\Policies\DistrictPolicy;
 use App\Policies\EventFeeCategoryPolicy;
 use App\Policies\EventPolicy;
@@ -71,7 +73,7 @@ class AppServiceProvider extends ServiceProvider
                 return false;
             }
 
-            if ($user->isAdmin()) {
+            if ($user->isSuperAdmin()) {
                 return true;
             }
 
@@ -79,6 +81,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Gate::policy(District::class, DistrictPolicy::class);
+        Gate::policy(Department::class, DepartmentPolicy::class);
         Gate::policy(Event::class, EventPolicy::class);
         Gate::policy(EventFeeCategory::class, EventFeeCategoryPolicy::class);
         Gate::policy(Pastor::class, PastorPolicy::class);
@@ -87,15 +90,17 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(User::class, UserPolicy::class);
 
         Gate::define('viewReports', function (User $user): bool {
-            return $user->isManager() && $user->section_id !== null;
+            return $user->hasAdminAccess()
+                || ($user->isManager() && $user->section_id !== null);
         });
 
         Gate::define('viewSectionReport', function (User $user, Section $section): bool {
-            return $user->canAccessSection($section);
+            return $user->hasAdminAccess() || $user->canAccessSection($section);
         });
 
         Gate::define('viewPastorReport', function (User $user, Pastor $pastor): bool {
-            return $user->isManager() && $user->managesSection($pastor->section_id);
+            return $user->hasAdminAccess()
+                || ($user->isManager() && $user->managesSection($pastor->section_id));
         });
     }
 }

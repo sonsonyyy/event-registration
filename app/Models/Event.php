@@ -162,6 +162,26 @@ class Event extends Model
         ];
     }
 
+    public function isDistrictScoped(): bool
+    {
+        return $this->scope_type === self::SCOPE_DISTRICT;
+    }
+
+    public function isSectionScoped(): bool
+    {
+        return $this->scope_type === self::SCOPE_SECTION;
+    }
+
+    public function isDepartmental(): bool
+    {
+        return $this->department_id !== null;
+    }
+
+    public function isGeneral(): bool
+    {
+        return $this->department_id === null;
+    }
+
     public function reservedQuantity(): int
     {
         if (array_key_exists('reserved_quantity', $this->attributes)) {

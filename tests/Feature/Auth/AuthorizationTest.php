@@ -1,10 +1,12 @@
 <?php
 
+use App\Models\Department;
 use App\Models\District;
 use App\Models\Event;
 use App\Models\EventFeeCategory;
 use App\Models\Pastor;
 use App\Models\Registration;
+use App\Models\RegistrationItem;
 use App\Models\Role;
 use App\Models\Section;
 use App\Models\User;
@@ -20,8 +22,27 @@ test('admins can perform all protected actions', function () {
     expect($gate->allows('update', $context['event']))->toBeTrue();
     expect($gate->allows('delete', $context['pastorOutsideSection']))->toBeTrue();
     expect($gate->allows('create', User::class))->toBeTrue();
-    expect($gate->allows('verifyReceipt', $context['onlineRegistrationOutsideSection']))->toBeTrue();
+    expect($gate->allows('verifyReceipt', $context['districtOnlineRegistration']))->toBeTrue();
     expect($gate->allows('viewAnyVerification', Registration::class))->toBeTrue();
+    expect($gate->allows('viewReports'))->toBeTrue();
+    expect($gate->allows('viewSectionReport', $context['section']))->toBeTrue();
+    expect($gate->allows('viewPastorReport', $context['pastorOutsideSection']))->toBeTrue();
+});
+
+test('super admins can perform all protected actions', function () {
+    $context = authorizationContext();
+    $superAdmin = User::factory()->superAdmin()->create();
+
+    $gate = Gate::forUser($superAdmin);
+
+    expect($gate->allows('create', Event::class))->toBeTrue();
+    expect($gate->allows('update', $context['event']))->toBeTrue();
+    expect($gate->allows('delete', $context['pastorOutsideSection']))->toBeTrue();
+    expect($gate->allows('create', User::class))->toBeTrue();
+    expect($gate->allows('verifyReceipt', $context['districtOnlineRegistration']))->toBeTrue();
+    expect($gate->allows('viewAnyVerification', Registration::class))->toBeTrue();
+    expect($gate->allows('viewAnyApprovalQueue', User::class))->toBeTrue();
+    expect($gate->allows('reviewRegistrantRequest', $context['pendingRegistrantRequest']))->toBeTrue();
     expect($gate->allows('viewReports'))->toBeTrue();
     expect($gate->allows('viewSectionReport', $context['section']))->toBeTrue();
     expect($gate->allows('viewPastorReport', $context['pastorOutsideSection']))->toBeTrue();
@@ -44,8 +65,9 @@ test('managers are limited to their assigned section', function () {
     expect($gate->allows('createOnsite', [Registration::class, $context['pastorOutsideSection']]))->toBeFalse();
     expect($gate->allows('update', $context['onlineRegistrationInSection']))->toBeTrue();
     expect($gate->allows('update', $context['onlineRegistrationOutsideSection']))->toBeFalse();
-    expect($gate->allows('verifyReceipt', $context['onlineRegistrationInSection']))->toBeTrue();
-    expect($gate->allows('verifyReceipt', $context['onlineRegistrationOutsideSection']))->toBeFalse();
+    expect($gate->allows('verifyReceipt', $context['sectionVerificationRegistration']))->toBeTrue();
+    expect($gate->allows('verifyReceipt', $context['outsideSectionVerificationRegistration']))->toBeFalse();
+    expect($gate->allows('verifyReceipt', $context['districtOnlineRegistration']))->toBeFalse();
     expect($gate->allows('viewAnyVerification', Registration::class))->toBeTrue();
     expect($gate->allows('create', Event::class))->toBeFalse();
     expect($gate->allows('update', $context['pastorInSection']))->toBeFalse();
@@ -95,6 +117,28 @@ test('registration staff can encode onsite registrations without master data acc
     expect($gate->allows('create', Event::class))->toBeFalse();
     expect($gate->allows('update', $context['pastorInSection']))->toBeFalse();
     expect($gate->allows('create', User::class))->toBeFalse();
+});
+
+test('department-scoped reviewers are limited to matching departments during verification', function () {
+    $context = authorizationContext();
+    $departmentAdmin = User::factory()->admin()->create([
+        'department_id' => $context['youthDepartment']->id,
+    ]);
+    $departmentManager = User::factory()->manager()->create([
+        'section_id' => $context['section']->id,
+        'department_id' => $context['youthDepartment']->id,
+    ]);
+
+    $adminGate = Gate::forUser($departmentAdmin);
+    $managerGate = Gate::forUser($departmentManager);
+
+    expect($adminGate->allows('verifyReceipt', $context['departmentDistrictRegistration']))->toBeTrue();
+    expect($adminGate->allows('verifyReceipt', $context['otherDepartmentDistrictRegistration']))->toBeFalse();
+    expect($adminGate->allows('verifyReceipt', $context['sectionVerificationRegistration']))->toBeFalse();
+
+    expect($managerGate->allows('verifyReceipt', $context['departmentSectionVerificationRegistration']))->toBeTrue();
+    expect($managerGate->allows('verifyReceipt', $context['otherDepartmentSectionVerificationRegistration']))->toBeFalse();
+    expect($managerGate->allows('verifyReceipt', $context['districtOnlineRegistration']))->toBeFalse();
 });
 
 test('online registrants are limited to their assigned pastor', function () {
@@ -176,10 +220,46 @@ function authorizationContext(): array
     $district = District::factory()->create();
     $section = Section::factory()->for($district)->create();
     $otherSection = Section::factory()->for($district)->create();
+    $youthDepartment = Department::factory()->create([
+        'name' => 'Youth Ministries',
+    ]);
+    $ladiesDepartment = Department::factory()->create([
+        'name' => 'Ladies Ministries',
+    ]);
     $pastorInSection = Pastor::factory()->for($section)->create();
     $pastorOutsideSection = Pastor::factory()->for($otherSection)->create();
     $event = Event::factory()->create();
-    EventFeeCategory::factory()->for($event)->create();
+    $districtFeeCategory = EventFeeCategory::factory()->for($event)->create();
+    $sectionEvent = Event::factory()->create([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+    ]);
+    $sectionFeeCategory = EventFeeCategory::factory()->for($sectionEvent)->create();
+    $otherSectionEvent = Event::factory()->create([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $otherSection->id,
+    ]);
+    $otherSectionFeeCategory = EventFeeCategory::factory()->for($otherSectionEvent)->create();
+    $departmentDistrictEvent = Event::factory()->create([
+        'department_id' => $youthDepartment->id,
+    ]);
+    $departmentDistrictFeeCategory = EventFeeCategory::factory()->for($departmentDistrictEvent)->create();
+    $otherDepartmentDistrictEvent = Event::factory()->create([
+        'department_id' => $ladiesDepartment->id,
+    ]);
+    $otherDepartmentDistrictFeeCategory = EventFeeCategory::factory()->for($otherDepartmentDistrictEvent)->create();
+    $departmentSectionEvent = Event::factory()->create([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+        'department_id' => $youthDepartment->id,
+    ]);
+    $departmentSectionFeeCategory = EventFeeCategory::factory()->for($departmentSectionEvent)->create();
+    $otherDepartmentSectionEvent = Event::factory()->create([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+        'department_id' => $ladiesDepartment->id,
+    ]);
+    $otherDepartmentSectionFeeCategory = EventFeeCategory::factory()->for($otherDepartmentSectionEvent)->create();
     $encoder = User::factory()->withRole(Role::REGISTRATION_STAFF)->create();
     $onlineRegistrationInSection = Registration::factory()
         ->for($event)
@@ -197,15 +277,126 @@ function authorizationContext(): array
             'registration_mode' => 'online',
             'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
         ]);
+    $districtOnlineRegistration = Registration::factory()
+        ->for($event)
+        ->for($pastorOutsideSection)
+        ->for($encoder, 'encodedByUser')
+        ->create([
+            'registration_mode' => 'online',
+            'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
+        ]);
+    $sectionVerificationRegistration = Registration::factory()
+        ->for($sectionEvent)
+        ->for($pastorInSection)
+        ->for($encoder, 'encodedByUser')
+        ->create([
+            'registration_mode' => 'online',
+            'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
+        ]);
+    RegistrationItem::factory()
+        ->for($sectionVerificationRegistration)
+        ->for($sectionFeeCategory, 'feeCategory')
+        ->create();
+    $outsideSectionVerificationRegistration = Registration::factory()
+        ->for($otherSectionEvent)
+        ->for($pastorOutsideSection)
+        ->for($encoder, 'encodedByUser')
+        ->create([
+            'registration_mode' => 'online',
+            'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
+        ]);
+    RegistrationItem::factory()
+        ->for($outsideSectionVerificationRegistration)
+        ->for($otherSectionFeeCategory, 'feeCategory')
+        ->create();
+    $departmentDistrictRegistration = Registration::factory()
+        ->for($departmentDistrictEvent)
+        ->for($pastorInSection)
+        ->for($encoder, 'encodedByUser')
+        ->create([
+            'registration_mode' => 'online',
+            'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
+        ]);
+    RegistrationItem::factory()
+        ->for($departmentDistrictRegistration)
+        ->for($departmentDistrictFeeCategory, 'feeCategory')
+        ->create();
+    $otherDepartmentDistrictRegistration = Registration::factory()
+        ->for($otherDepartmentDistrictEvent)
+        ->for($pastorInSection)
+        ->for($encoder, 'encodedByUser')
+        ->create([
+            'registration_mode' => 'online',
+            'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
+        ]);
+    RegistrationItem::factory()
+        ->for($otherDepartmentDistrictRegistration)
+        ->for($otherDepartmentDistrictFeeCategory, 'feeCategory')
+        ->create();
+    $departmentSectionVerificationRegistration = Registration::factory()
+        ->for($departmentSectionEvent)
+        ->for($pastorInSection)
+        ->for($encoder, 'encodedByUser')
+        ->create([
+            'registration_mode' => 'online',
+            'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
+        ]);
+    RegistrationItem::factory()
+        ->for($departmentSectionVerificationRegistration)
+        ->for($departmentSectionFeeCategory, 'feeCategory')
+        ->create();
+    $otherDepartmentSectionVerificationRegistration = Registration::factory()
+        ->for($otherDepartmentSectionEvent)
+        ->for($pastorInSection)
+        ->for($encoder, 'encodedByUser')
+        ->create([
+            'registration_mode' => 'online',
+            'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
+        ]);
+    RegistrationItem::factory()
+        ->for($otherDepartmentSectionVerificationRegistration)
+        ->for($otherDepartmentSectionFeeCategory, 'feeCategory')
+        ->create();
+    $pendingRegistrantRequest = User::factory()
+        ->onlineRegistrant()
+        ->selfServiceAccount()
+        ->pendingApproval()
+        ->create([
+            'district_id' => $district->id,
+            'section_id' => $section->id,
+            'pastor_id' => $pastorInSection->id,
+        ]);
+    RegistrationItem::factory()
+        ->for($onlineRegistrationInSection)
+        ->for($districtFeeCategory, 'feeCategory')
+        ->create();
+    RegistrationItem::factory()
+        ->for($onlineRegistrationOutsideSection)
+        ->for($districtFeeCategory, 'feeCategory')
+        ->create();
+    RegistrationItem::factory()
+        ->for($districtOnlineRegistration)
+        ->for($districtFeeCategory, 'feeCategory')
+        ->create();
 
     return compact(
         'district',
         'section',
         'otherSection',
+        'youthDepartment',
+        'ladiesDepartment',
         'pastorInSection',
         'pastorOutsideSection',
         'event',
         'onlineRegistrationInSection',
         'onlineRegistrationOutsideSection',
+        'districtOnlineRegistration',
+        'sectionVerificationRegistration',
+        'outsideSectionVerificationRegistration',
+        'departmentDistrictRegistration',
+        'otherDepartmentDistrictRegistration',
+        'departmentSectionVerificationRegistration',
+        'otherDepartmentSectionVerificationRegistration',
+        'pendingRegistrantRequest',
     );
 }

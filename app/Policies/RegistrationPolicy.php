@@ -31,7 +31,7 @@ class RegistrationPolicy
 
     public function viewAnyVerification(User $user): bool
     {
-        return $user->isManager() && $user->section_id !== null;
+        return $user->canViewVerificationQueue();
     }
 
     public function view(User $user, Registration $registration): bool
@@ -127,9 +127,11 @@ class RegistrationPolicy
 
     public function verifyReceipt(User $user, Registration $registration): bool
     {
-        return $user->isManager()
-            && $registration->registration_mode === Registration::MODE_ONLINE
-            && $registration->canBeReviewed()
-            && $user->canAccessRegistration($registration);
+        return $user->canReviewRegistration($registration);
+    }
+
+    public function viewVerificationReceipt(User $user, Registration $registration): bool
+    {
+        return $user->canAccessVerificationRegistration($registration);
     }
 }

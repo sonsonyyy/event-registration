@@ -6,6 +6,7 @@ use App\Http\Requests\IndexRegistrantApprovalRequest;
 use App\Http\Requests\UpdateRegistrantApprovalRequest;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\DepartmentScopeAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -118,9 +119,7 @@ class RegistrantApprovalController extends Controller
             ->orderByDesc('created_at')
             ->orderByDesc('id');
 
-        if ($reviewer->isManager()) {
-            $query->where('section_id', $reviewer->section_id);
-        }
+        DepartmentScopeAccess::scopeRegistrantApprovalQueue($query, $reviewer);
 
         if ($status !== 'all') {
             $query->where('approval_status', $status);
@@ -165,9 +164,7 @@ class RegistrantApprovalController extends Controller
                 $roleQuery->where('name', Role::ONLINE_REGISTRANT);
             });
 
-        if ($reviewer->isManager()) {
-            $query->where('section_id', $reviewer->section_id);
-        }
+        DepartmentScopeAccess::scopeRegistrantApprovalQueue($query, $reviewer);
 
         return [
             'pending' => (clone $query)
@@ -184,19 +181,7 @@ class RegistrantApprovalController extends Controller
 
     private function scopeSummary(User $reviewer): string
     {
-        if ($reviewer->isAdmin()) {
-            return 'all sections';
-        }
-
-        $section = $reviewer->section()
-            ->with('district')
-            ->first();
-
-        if ($section === null) {
-            return 'your assigned scope';
-        }
-
-        return $section->district->name.' • '.$section->name;
+        return DepartmentScopeAccess::approvalScopeSummary($reviewer);
     }
 
     /**

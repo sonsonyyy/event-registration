@@ -10,11 +10,12 @@ class EventPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(
-            Role::MANAGER,
-            Role::REGISTRATION_STAFF,
-            Role::ONLINE_REGISTRANT,
-        );
+        return $user->hasAdminAccess()
+            || $user->hasAnyRole(
+                Role::MANAGER,
+                Role::REGISTRATION_STAFF,
+                Role::ONLINE_REGISTRANT,
+            );
     }
 
     public function view(User $user, Event $event): bool
@@ -24,16 +25,16 @@ class EventPolicy
 
     public function create(User $user): bool
     {
-        return false;
+        return $user->hasAdminAccess();
     }
 
     public function update(User $user, Event $event): bool
     {
-        return false;
+        return $user->hasAdminAccess();
     }
 
     public function delete(User $user, Event $event): bool
     {
-        return false;
+        return $user->hasAdminAccess();
     }
 }

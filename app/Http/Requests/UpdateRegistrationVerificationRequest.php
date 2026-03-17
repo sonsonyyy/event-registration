@@ -18,7 +18,7 @@ class UpdateRegistrationVerificationRequest extends FormRequest
         $registration = $this->route('registration');
 
         return $registration instanceof Registration
-            && ($this->user()?->can('verifyReceipt', $registration) ?? false);
+            && ($this->user()?->can('viewVerificationReceipt', $registration) ?? false);
     }
 
     /**

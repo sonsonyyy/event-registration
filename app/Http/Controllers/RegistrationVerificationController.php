@@ -10,6 +10,7 @@ use App\Models\Registration;
 use App\Models\RegistrationItem;
 use App\Models\RegistrationReview;
 use App\Models\User;
+use App\Support\DepartmentScopeAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -71,7 +72,7 @@ class RegistrationVerificationController extends Controller
                 ->lockForUpdate()
                 ->findOrFail($registration->getKey());
 
-            Gate::authorize('verifyReceipt', $registration);
+            Gate::authorize('viewVerificationReceipt', $registration);
 
             if (! $registration->canBeReviewed()) {
                 throw ValidationException::withMessages([
@@ -119,7 +120,7 @@ class RegistrationVerificationController extends Controller
 
     public function receipt(Registration $registration): StreamedResponse
     {
-        Gate::authorize('view', $registration);
+        Gate::authorize('viewVerificationReceipt', $registration);
 
         if (
             $registration->registration_mode !== Registration::MODE_ONLINE
@@ -167,11 +168,7 @@ class RegistrationVerificationController extends Controller
             ->orderByDesc('submitted_at')
             ->orderByDesc('id');
 
-        if ($user->isManager()) {
-            $query->whereHas('pastor', function (Builder $pastorQuery) use ($user): void {
-                $pastorQuery->where('section_id', $user->section_id);
-            });
-        }
+        DepartmentScopeAccess::scopeVerificationQueue($query, $user);
 
         if ($status === 'all') {
             $query->whereIn('registration_status', Registration::verificationStatuses());
@@ -221,11 +218,7 @@ class RegistrationVerificationController extends Controller
         $query = Registration::query()
             ->where('registration_mode', Registration::MODE_ONLINE);
 
-        if ($user->isManager()) {
-            $query->whereHas('pastor', function (Builder $pastorQuery) use ($user): void {
-                $pastorQuery->where('section_id', $user->section_id);
-            });
-        }
+        DepartmentScopeAccess::scopeVerificationQueue($query, $user);
 
         return [
             'pending_verification' => (clone $query)
@@ -245,19 +238,7 @@ class RegistrationVerificationController extends Controller
 
     private function scopeSummary(User $user): string
     {
-        if ($user->isAdmin()) {
-            return 'all sections';
-        }
-
-        $section = $user->section()
-            ->with('district')
-            ->first();
-
-        if ($section === null) {
-            return 'your assigned scope';
-        }
-
-        return $section->district->name.' • '.$section->name;
+        return DepartmentScopeAccess::verificationScopeSummary($user);
     }
 
     /**
