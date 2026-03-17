@@ -56,6 +56,11 @@ class Section extends Model
         return $this->hasMany(Pastor::class);
     }
 
+    public function events(): HasMany
+    {
+        return $this->hasMany(Event::class);
+    }
+
     public function assignedUsers(): HasMany
     {
         return $this->hasMany(User::class);

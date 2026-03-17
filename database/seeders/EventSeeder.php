@@ -24,6 +24,9 @@ class EventSeeder extends Seeder
                 'registration_close_at' => Carbon::parse('2026-04-12')->endOfDay(),
                 'total_capacity' => 1200,
                 'status' => Event::STATUS_OPEN,
+                'scope_type' => Event::SCOPE_DISTRICT,
+                'section_id' => null,
+                'department_id' => null,
             ],
         );
 

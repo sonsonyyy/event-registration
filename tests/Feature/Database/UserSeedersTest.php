@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Department;
 use App\Models\District;
 use App\Models\Pastor;
 use App\Models\Role;
@@ -39,6 +40,7 @@ test('database seeder creates demo users for each role', function () {
             ->and($admin->isActive())->toBeTrue()
             ->and($admin->district?->name)->toBe('Central Luzon')
             ->and($admin->section?->name)->toBe('Section 3')
+            ->and($admin->department_id)->toBeNull()
             ->and($admin->pastor_id)->toBeNull();
     });
 
@@ -55,6 +57,7 @@ test('database seeder creates demo users for each role', function () {
             ->and($manager->roleName())->toBe(Role::MANAGER)
             ->and($manager->isActive())->toBeTrue()
             ->and($manager->district?->name)->toBe('Central Luzon')
+            ->and($manager->department_id)->toBeNull()
             ->and($manager->pastor_id)->toBeNull();
     });
 
@@ -66,8 +69,19 @@ test('database seeder creates demo users for each role', function () {
     ])->exists())->toBeFalse();
 
     expect(District::query()->count())->toBe(1)
+        ->and(Department::query()->count())->toBe(6)
         ->and(Section::query()->count())->toBe(3)
         ->and(Pastor::query()->count())->toBe(221);
+
+    expect(Department::query()->orderBy('name')->pluck('name')->all())
+        ->toEqualCanonicalizing([
+            'Youth Ministries',
+            'Ladies Ministries',
+            "Apostolic Men's",
+            'Sunday School',
+            'Home Missions',
+            'Music Commission',
+        ]);
 
     expect(District::query()->orderBy('name')->pluck('name')->all())
         ->toBe([

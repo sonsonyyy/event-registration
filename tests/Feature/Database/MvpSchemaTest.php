@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Department;
 use App\Models\District;
 use App\Models\Event;
 use App\Models\EventFeeCategory;
@@ -17,6 +18,7 @@ test('mvp schema tables and key columns exist', function () {
     expect(Schema::hasTable('roles'))->toBeTrue();
     expect(Schema::hasTable('districts'))->toBeTrue();
     expect(Schema::hasTable('sections'))->toBeTrue();
+    expect(Schema::hasTable('departments'))->toBeTrue();
     expect(Schema::hasTable('pastors'))->toBeTrue();
     expect(Schema::hasTable('events'))->toBeTrue();
     expect(Schema::hasTable('event_fee_categories'))->toBeTrue();
@@ -25,11 +27,25 @@ test('mvp schema tables and key columns exist', function () {
     expect(Schema::hasTable('registration_reviews'))->toBeTrue();
     expect(Schema::hasColumns('districts', ['deleted_at']))->toBeTrue();
     expect(Schema::hasColumns('sections', ['deleted_at']))->toBeTrue();
+    expect(Schema::hasColumns('departments', ['deleted_at']))->toBeTrue();
     expect(Schema::hasColumns('pastors', ['deleted_at']))->toBeTrue();
     expect(Schema::hasColumns('events', ['deleted_at']))->toBeTrue();
     expect(Schema::hasColumns('event_fee_categories', ['deleted_at']))->toBeTrue();
     expect(Schema::hasColumns('users', ['deleted_at']))->toBeTrue();
-    expect(Schema::hasColumns('users', ['role_id', 'district_id', 'section_id', 'pastor_id', 'status']))->toBeTrue();
+    expect(Schema::hasColumns('users', [
+        'role_id',
+        'district_id',
+        'section_id',
+        'department_id',
+        'pastor_id',
+        'position_title',
+        'status',
+    ]))->toBeTrue();
+    expect(Schema::hasColumns('events', [
+        'scope_type',
+        'section_id',
+        'department_id',
+    ]))->toBeTrue();
     expect(Schema::hasColumns('registrations', [
         'event_id',
         'pastor_id',
@@ -67,6 +83,7 @@ test('role seeder creates the default application roles', function () {
     $this->seed(RoleSeeder::class);
 
     expect(Role::query()->pluck('name')->all())->toEqualCanonicalizing([
+        Role::SUPER_ADMIN,
         Role::ADMIN,
         Role::MANAGER,
         Role::REGISTRATION_STAFF,
@@ -78,14 +95,20 @@ test('core mvp model relationships resolve correctly', function () {
     $role = Role::factory()->admin()->create();
     $district = District::factory()->create();
     $section = Section::factory()->for($district)->create();
+    $department = Department::factory()->create();
     $pastor = Pastor::factory()->for($section)->create();
     $user = User::factory()
         ->for($role)
         ->for($district)
         ->for($section)
+        ->for($department)
         ->for($pastor)
         ->create();
-    $event = Event::factory()->create();
+    $event = Event::factory()->create([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+        'department_id' => $department->id,
+    ]);
     $feeCategory = EventFeeCategory::factory()->for($event)->create([
         'category_name' => 'Regular Online',
     ]);
@@ -126,7 +149,10 @@ test('core mvp model relationships resolve correctly', function () {
     expect($user->role->is($role))->toBeTrue();
     expect($user->district->is($district))->toBeTrue();
     expect($user->section->is($section))->toBeTrue();
+    expect($user->department->is($department))->toBeTrue();
     expect($user->pastor->is($pastor))->toBeTrue();
+    expect($event->section->is($section))->toBeTrue();
+    expect($event->department->is($department))->toBeTrue();
     expect($event->feeCategories->first()->is($feeCategory))->toBeTrue();
     expect($registration->event->is($event))->toBeTrue();
     expect($registration->pastor->is($pastor))->toBeTrue();

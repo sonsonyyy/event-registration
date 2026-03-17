@@ -31,7 +31,10 @@ class EventFactory extends Factory
             'registration_open_at' => $registrationOpenAt,
             'registration_close_at' => $registrationCloseAt,
             'total_capacity' => fake()->numberBetween(100, 1000),
-            'status' => 'draft',
+            'status' => Event::STATUS_DRAFT,
+            'scope_type' => Event::SCOPE_DISTRICT,
+            'section_id' => null,
+            'department_id' => null,
         ];
     }
 }

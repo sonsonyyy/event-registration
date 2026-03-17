@@ -21,6 +21,9 @@ test('database seeder creates the default open event with fee categories', funct
         ->and($event->registration_open_at->toDateTimeString())->toBe('2026-03-15 00:00:00')
         ->and($event->registration_close_at->toDateTimeString())->toBe('2026-04-12 23:59:59')
         ->and($event->status)->toBe(Event::STATUS_OPEN)
+        ->and($event->scope_type)->toBe(Event::SCOPE_DISTRICT)
+        ->and($event->section_id)->toBeNull()
+        ->and($event->department_id)->toBeNull()
         ->and($event->total_capacity)->toBe(1200)
         ->and($event->feeCategories)->toHaveCount(3)
         ->and($feeCategories->keys()->sort()->values()->all())->toBe([

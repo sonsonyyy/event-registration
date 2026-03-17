@@ -35,7 +35,9 @@ class UserFactory extends Factory
             ])->id,
             'district_id' => null,
             'section_id' => null,
+            'department_id' => null,
             'pastor_id' => null,
+            'position_title' => null,
             'status' => User::STATUS_ACTIVE,
             'approval_status' => User::APPROVAL_APPROVED,
             'account_source' => User::ACCOUNT_SOURCE_ADMIN,
@@ -82,6 +84,11 @@ class UserFactory extends Factory
     public function admin(): static
     {
         return $this->withRole(Role::ADMIN);
+    }
+
+    public function superAdmin(): static
+    {
+        return $this->withRole(Role::SUPER_ADMIN);
     }
 
     public function manager(): static

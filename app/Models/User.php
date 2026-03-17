@@ -50,7 +50,9 @@ class User extends Authenticatable
         'role_id',
         'district_id',
         'section_id',
+        'department_id',
         'pastor_id',
+        'position_title',
         'status',
         'approval_status',
         'account_source',
@@ -98,6 +100,11 @@ class User extends Authenticatable
     public function section(): BelongsTo
     {
         return $this->belongsTo(Section::class)->withTrashed();
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class)->withTrashed();
     }
 
     public function pastor(): BelongsTo
@@ -157,6 +164,11 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->hasRole(Role::ADMIN);
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->hasRole(Role::SUPER_ADMIN);
     }
 
     public function isManager(): bool

@@ -282,6 +282,7 @@ class UserController extends Controller
         });
 
         return Role::query()
+            ->where('name', '!=', Role::SUPER_ADMIN)
             ->get()
             ->sortBy(function (Role $role) use ($sortOrder): int {
                 $position = array_search($role->name, $sortOrder, true);

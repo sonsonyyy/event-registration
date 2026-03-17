@@ -13,6 +13,7 @@ class RoleSeeder extends Seeder
     public function run(): void
     {
         collect([
+            Role::SUPER_ADMIN,
             Role::ADMIN,
             Role::MANAGER,
             Role::REGISTRATION_STAFF,
