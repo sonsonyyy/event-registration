@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
 import FormSelect from '@/components/form-select';
 import InputError from '@/components/input-error';
+import SearchableFormSelect from '@/components/searchable-form-select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -337,18 +338,25 @@ export default function OnsiteRegistrationForm({
                                         <Label htmlFor="pastor_id">
                                             Pastor or church
                                         </Label>
-                                        <FormSelect
+                                        <SearchableFormSelect
                                             id="pastor_id"
                                             name="pastor_id"
                                             value={form.data.pastor_id}
                                             onValueChange={changePastor}
                                             placeholder="Select a pastor or church"
-                                            emptyLabel="Select a pastor or church"
                                             options={filteredPastors.map((pastor) => ({
                                                 value: pastor.id.toString(),
                                                 label: `${pastor.church_name} · ${pastor.pastor_name}`,
+                                                keywords: [
+                                                    pastor.church_name,
+                                                    pastor.pastor_name,
+                                                    pastor.section_name,
+                                                    pastor.district_name,
+                                                ],
                                             }))}
                                             disabled={pastors.length === 0}
+                                            searchPlaceholder="Search pastor, church, or section"
+                                            emptySearchMessage="No pastors match your search."
                                         />
                                         <InputError message={form.errors.pastor_id} />
                                     </div>

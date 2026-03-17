@@ -4,6 +4,7 @@ import RegistrantAccessController from '@/actions/App/Http/Controllers/Registran
 import FormSelect from '@/components/form-select';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
+import SearchableFormSelect from '@/components/searchable-form-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -177,17 +178,25 @@ export default function RegistrantAccess({
 
                     <div className="grid gap-2">
                         <Label htmlFor="pastor_id">Pastor</Label>
-                        <FormSelect
+                        <SearchableFormSelect
                             id="pastor_id"
                             name="pastor_id"
                             value={form.data.pastor_id}
                             onValueChange={changePastor}
                             placeholder="Select pastor"
-                            emptyLabel="Select pastor"
                             options={filteredPastors.map((pastor) => ({
                                 value: pastor.id.toString(),
                                 label: pastor.pastor_name,
+                                keywords: [
+                                    pastor.pastor_name,
+                                    pastor.church_name,
+                                    pastor.section_name ?? '',
+                                    pastor.district_name ?? '',
+                                ],
                             }))}
+                            disabled={filteredPastors.length === 0}
+                            searchPlaceholder="Search pastor or church"
+                            emptySearchMessage="No pastors match your search."
                         />
                         <InputError message={form.errors.pastor_id} />
                     </div>

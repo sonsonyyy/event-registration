@@ -4,6 +4,7 @@ import UserController from '@/actions/App/Http/Controllers/Admin/UserController'
 import FormSelect from '@/components/form-select';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
+import SearchableFormSelect from '@/components/searchable-form-select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -391,7 +392,7 @@ export default function UserForm({
                             <Label htmlFor="pastor_id">
                                 Assigned pastor
                             </Label>
-                            <FormSelect
+                            <SearchableFormSelect
                                 id="pastor_id"
                                 name="pastor_id"
                                 value={form.data.pastor_id}
@@ -401,7 +402,15 @@ export default function UserForm({
                                 options={filteredPastors.map((pastor) => ({
                                     value: pastor.id.toString(),
                                     label: formatPastorOptionLabel(pastor),
+                                    keywords: [
+                                        pastor.pastor_name,
+                                        pastor.church_name,
+                                        pastor.section_name,
+                                        pastor.district_name,
+                                    ],
                                 }))}
+                                searchPlaceholder="Search pastor, church, or section"
+                                emptySearchMessage="No pastors match your search."
                             />
                             <InputError message={form.errors.pastor_id} />
                         </div>
