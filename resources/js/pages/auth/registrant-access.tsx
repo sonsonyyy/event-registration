@@ -108,7 +108,7 @@ export default function RegistrantAccess({
     return (
         <AuthLayout
             title="Request a registrant account"
-            description="Church representatives can request online registration access here. Approval is still required before registration tools are unlocked."
+            description="Church representatives can request online registration access here. Each church may have up to two registrant accounts, and approval is still required before registration tools are unlocked."
             singleCard
         >
             <Head title="Request Registrant Access">
@@ -269,7 +269,7 @@ export default function RegistrantAccess({
 
                 {pastors.length === 0 && (
                     <div className={warningNoticeClassName}>
-                        No church accounts are currently available for self-service signup. Contact your administrator if your church still needs a registrant account.
+                        No church accounts are currently available for additional self-service signup. Contact your administrator if your church still needs registrant access.
                     </div>
                 )}
             </form>

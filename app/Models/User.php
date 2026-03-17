@@ -28,6 +28,13 @@ class User extends Authenticatable
 
     public const ACCOUNT_SOURCE_SELF_SERVICE = 'self_service';
 
+    public const MAX_REGISTRANT_ACCOUNTS_PER_PASTOR = 2;
+
+    public const REGISTRANT_OCCUPYING_APPROVAL_STATUSES = [
+        self::APPROVAL_PENDING,
+        self::APPROVAL_APPROVED,
+    ];
+
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, SoftDeletes, TwoFactorAuthenticatable;
 

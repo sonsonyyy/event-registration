@@ -663,7 +663,7 @@ The simplest stable version of this application should follow this model:
 - One district
 - Many sections under the district
 - Many pastors/churches under sections
-- One online registrant account per church/pastor
+- Up to two online registrant accounts per church/pastor
 - One event with multiple fee categories
 - One registration transaction with multiple fee-category quantities
 - One uploaded receipt per registration transaction

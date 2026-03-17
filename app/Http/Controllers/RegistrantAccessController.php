@@ -53,11 +53,14 @@ class RegistrantAccessController extends Controller
      */
     private function sectionOptions(): array
     {
+        $eligibleSectionIds = $this->eligiblePastorQuery()
+            ->select('section_id')
+            ->distinct()
+            ->pluck('section_id');
+
         return Section::query()
             ->where('status', 'active')
-            ->whereHas('pastors', function (Builder $query): void {
-                $this->eligiblePastorConstraint($query);
-            })
+            ->whereIn('id', $eligibleSectionIds)
             ->with('district:id,name')
             ->orderBy('name')
             ->get()
@@ -78,25 +81,8 @@ class RegistrantAccessController extends Controller
      */
     private function pastorOptions(): array
     {
-        return Pastor::query()
-            ->where('status', 'active')
-            ->whereHas('section', function (Builder $query): void {
-                $query->where('status', 'active')
-                    ->whereHas('district', function (Builder $districtQuery): void {
-                        $districtQuery->where('status', 'active');
-                    });
-            })
+        return $this->eligiblePastorQuery()
             ->with('section.district')
-            ->whereDoesntHave('assignedUsers', function (Builder $query): void {
-                $query->where('status', User::STATUS_ACTIVE)
-                    ->whereIn('approval_status', [
-                        User::APPROVAL_PENDING,
-                        User::APPROVAL_APPROVED,
-                    ])
-                    ->whereHas('role', function (Builder $roleQuery): void {
-                        $roleQuery->where('name', Role::ONLINE_REGISTRANT);
-                    });
-            })
             ->orderBy('church_name')
             ->orderBy('pastor_name')
             ->get()
@@ -113,19 +99,32 @@ class RegistrantAccessController extends Controller
             ->all();
     }
 
-    private function eligiblePastorConstraint(Builder $query): void
+    private function eligiblePastorQuery(): Builder
     {
-        $query
+        return Pastor::query()
             ->where('status', 'active')
-            ->whereDoesntHave('assignedUsers', function (Builder $userQuery): void {
-                $userQuery->where('status', User::STATUS_ACTIVE)
-                    ->whereIn('approval_status', [
-                        User::APPROVAL_PENDING,
-                        User::APPROVAL_APPROVED,
-                    ])
-                    ->whereHas('role', function (Builder $roleQuery): void {
-                        $roleQuery->where('name', Role::ONLINE_REGISTRANT);
+            ->whereHas('section', function (Builder $query): void {
+                $query->where('status', 'active')
+                    ->whereHas('district', function (Builder $districtQuery): void {
+                        $districtQuery->where('status', 'active');
                     });
+            })
+            ->whereHas(
+                'assignedUsers',
+                function (Builder $query): void {
+                    $this->registrantAccountConstraint($query);
+                },
+                '<',
+                User::MAX_REGISTRANT_ACCOUNTS_PER_PASTOR,
+            );
+    }
+
+    private function registrantAccountConstraint(Builder $query): void
+    {
+        $query->where('status', User::STATUS_ACTIVE)
+            ->whereIn('approval_status', User::REGISTRANT_OCCUPYING_APPROVAL_STATUSES)
+            ->whereHas('role', function (Builder $roleQuery): void {
+                $roleQuery->where('name', Role::ONLINE_REGISTRANT);
             });
     }
 }

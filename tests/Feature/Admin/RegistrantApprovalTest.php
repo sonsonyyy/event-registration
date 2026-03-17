@@ -34,6 +34,13 @@ test('admins can review self-service registrant account requests', function () {
     User::factory()->onlineRegistrant()->create([
         'district_id' => $district->id,
         'section_id' => $section->id,
+        'pastor_id' => $pastor->id,
+        'email' => 'existing@example.com',
+    ]);
+
+    User::factory()->onlineRegistrant()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
         'pastor_id' => $otherPastor->id,
         'email' => 'admin-created@example.com',
     ]);
@@ -132,4 +139,44 @@ test('managers can only review self-service registrant requests within their ass
             'decision' => User::APPROVAL_APPROVED,
         ])
         ->assertForbidden();
+});
+
+test('admins cannot approve a third registrant account for the same church', function () {
+    $admin = User::factory()->admin()->create();
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $pastor = Pastor::factory()->for($section)->create();
+    $pendingRequest = User::factory()
+        ->onlineRegistrant()
+        ->selfServiceAccount()
+        ->pendingApproval()
+        ->create([
+            'district_id' => $district->id,
+            'section_id' => $section->id,
+            'pastor_id' => $pastor->id,
+        ]);
+
+    User::factory()->onlineRegistrant()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'pastor_id' => $pastor->id,
+        'email' => 'first@example.com',
+    ]);
+
+    User::factory()->onlineRegistrant()->pendingApproval()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'pastor_id' => $pastor->id,
+        'email' => 'second@example.com',
+    ]);
+
+    $this->actingAs($admin)
+        ->from(route('account-requests.index'))
+        ->patch(route('account-requests.update', $pendingRequest), [
+            'decision' => User::APPROVAL_APPROVED,
+        ])
+        ->assertRedirect(route('account-requests.index'))
+        ->assertSessionHasErrors(['decision']);
+
+    expect($pendingRequest->refresh()->approval_status)->toBe(User::APPROVAL_PENDING);
 });

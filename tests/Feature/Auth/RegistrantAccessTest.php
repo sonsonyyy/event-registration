@@ -65,12 +65,54 @@ test('guests can submit self-service registrant account requests', function () {
         ->assertForbidden();
 });
 
-test('self-service requests cannot be created when a church already has an active registrant account', function () {
+test('self-service requests can create a second registrant account for the same church', function () {
     $district = District::factory()->create();
     $section = Section::factory()->for($district)->create();
     $pastor = Pastor::factory()->for($section)->create();
 
     User::factory()->onlineRegistrant()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'pastor_id' => $pastor->id,
+    ]);
+
+    $this->get(route('registrant-access.create'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('auth/registrant-access')
+            ->has('pastors', 1)
+            ->where('pastors.0.id', $pastor->id));
+
+    $this->post(route('registrant-access.store'), [
+        'name' => 'Second Representative',
+        'email' => 'second@example.com',
+        'section_id' => $section->id,
+        'pastor_id' => $pastor->id,
+        'password' => 'password',
+        'password_confirmation' => 'password',
+    ])
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', 'registrant-access-submitted');
+
+    $this->assertDatabaseHas('users', [
+        'email' => 'second@example.com',
+        'pastor_id' => $pastor->id,
+        'approval_status' => User::APPROVAL_PENDING,
+    ]);
+});
+
+test('self-service requests cannot be created when a church already has two active or pending registrant accounts', function () {
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $pastor = Pastor::factory()->for($section)->create();
+
+    User::factory()->onlineRegistrant()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'pastor_id' => $pastor->id,
+    ]);
+
+    User::factory()->onlineRegistrant()->pendingApproval()->create([
         'district_id' => $district->id,
         'section_id' => $section->id,
         'pastor_id' => $pastor->id,

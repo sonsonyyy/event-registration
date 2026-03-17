@@ -72,10 +72,10 @@ class RegistrantApprovalController extends Controller
 
             if (
                 $decision === User::APPROVAL_APPROVED
-                && $this->anotherRegistrantAlreadyExists($accountRequest)
+                && $this->pastorHasReachedRegistrantLimit($accountRequest)
             ) {
                 throw ValidationException::withMessages([
-                    'decision' => 'Another active registrant account already exists or is pending approval for this church.',
+                    'decision' => 'This church already has the maximum of 2 active or pending registrant accounts.',
                 ]);
             }
 
@@ -255,19 +255,16 @@ class RegistrantApprovalController extends Controller
         ];
     }
 
-    private function anotherRegistrantAlreadyExists(User $accountRequest): bool
+    private function pastorHasReachedRegistrantLimit(User $accountRequest): bool
     {
         return User::query()
             ->whereKeyNot($accountRequest->getKey())
             ->where('pastor_id', $accountRequest->pastor_id)
             ->where('status', User::STATUS_ACTIVE)
-            ->whereIn('approval_status', [
-                User::APPROVAL_PENDING,
-                User::APPROVAL_APPROVED,
-            ])
+            ->whereIn('approval_status', User::REGISTRANT_OCCUPYING_APPROVAL_STATUSES)
             ->whereHas('role', function (Builder $roleQuery): void {
                 $roleQuery->where('name', Role::ONLINE_REGISTRANT);
             })
-            ->exists();
+            ->count() >= User::MAX_REGISTRANT_ACCOUNTS_PER_PASTOR;
     }
 }

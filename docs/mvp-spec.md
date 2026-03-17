@@ -430,7 +430,7 @@ This is a very workable internal application. The simplest clean design is:
 - One district
 - Many sections under the district
 - Many pastors/churches under sections
-- One online registrant account per church
+- Up to two online registrant accounts per church
 - One event with many fee categories
 - One registration submission with multiple fee-category quantities and one receipt upload
 

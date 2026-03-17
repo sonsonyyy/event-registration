@@ -83,10 +83,10 @@ class StoreRegistrantAccessRequest extends FormRequest
                     );
                 }
 
-                if ($pastor !== null && $this->pastorAlreadyHasRegistrantAccess($pastor)) {
+                if ($pastor !== null && $this->pastorHasReachedRegistrantLimit($pastor)) {
                     $validator->errors()->add(
                         'pastor_id',
-                        'A registrant account for this church already exists or is currently pending approval.',
+                        'This church already has the maximum of 2 active or pending registrant accounts.',
                     );
                 }
             },
@@ -159,18 +159,15 @@ class StoreRegistrantAccessRequest extends FormRequest
             ->find($pastorId);
     }
 
-    private function pastorAlreadyHasRegistrantAccess(Pastor $pastor): bool
+    private function pastorHasReachedRegistrantLimit(Pastor $pastor): bool
     {
         return User::query()
             ->where('pastor_id', $pastor->getKey())
             ->where('status', User::STATUS_ACTIVE)
-            ->whereIn('approval_status', [
-                User::APPROVAL_PENDING,
-                User::APPROVAL_APPROVED,
-            ])
+            ->whereIn('approval_status', User::REGISTRANT_OCCUPYING_APPROVAL_STATUSES)
             ->whereHas('role', function ($query): void {
                 $query->where('name', Role::ONLINE_REGISTRANT);
             })
-            ->exists();
+            ->count() >= User::MAX_REGISTRANT_ACCOUNTS_PER_PASTOR;
     }
 }

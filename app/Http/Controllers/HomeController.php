@@ -93,7 +93,7 @@ class HomeController extends Controller
         return [
             [
                 'question' => 'How do I request a registrant account for our church?',
-                'answer' => 'Open the church representative access link and submit the representative name, section, pastor or church assignment, and password for the account request.',
+                'answer' => 'Open the church representative access link and submit the representative name, section, pastor or church assignment, and password for the account request. Each church may have up to two registrant accounts.',
             ],
             [
                 'question' => 'Who approves registrant account requests?',
@@ -125,7 +125,7 @@ class HomeController extends Controller
             [
                 'eyebrow' => 'Step 1',
                 'title' => 'Request a registrant account',
-                'description' => 'Use the church representative access link and submit the assigned section, pastor, church, and account password.',
+                'description' => 'Use the church representative access link and submit the assigned section, pastor, church, and account password. Each church may maintain up to two registrant accounts.',
             ],
             [
                 'eyebrow' => 'Step 2',
