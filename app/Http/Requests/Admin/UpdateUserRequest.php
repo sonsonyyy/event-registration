@@ -118,6 +118,7 @@ class UpdateUserRequest extends FormRequest
             'name.required' => 'Enter the user name.',
             'email.required' => 'Enter the user email address.',
             'email.email' => 'Enter a valid email address.',
+            'email.regex' => 'Enter a valid email address.',
             'email.unique' => 'That email address is already in use.',
             'password.confirmed' => 'The password confirmation does not match.',
             'role_id.required' => 'Choose a role.',

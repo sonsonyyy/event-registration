@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import AuthLayout from '@/layouts/auth-layout';
 import { update } from '@/routes/password';
 
@@ -26,8 +27,11 @@ export default function ResetPassword({ token, email }: Props) {
                 transform={(data) => ({ ...data, token, email })}
                 resetOnSuccess={['password', 'password_confirmation']}
             >
-                {({ processing, errors }) => (
-                    <div className="grid gap-6">
+                {({ processing, errors, clearErrors }) => (
+                    <div
+                        className="grid gap-6"
+                        {...createClearFormErrorHandlers(clearErrors)}
+                    >
                         <div className="grid gap-2">
                             <Label htmlFor="email">Email</Label>
                             <Input

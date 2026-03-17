@@ -88,3 +88,21 @@ test('self-service requests cannot be created when a church already has an activ
         ->assertRedirect(route('registrant-access.create'))
         ->assertSessionHasErrors(['pastor_id']);
 });
+
+test('self-service requests require an email address with a top-level domain', function () {
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $pastor = Pastor::factory()->for($section)->create();
+
+    $this->from(route('registrant-access.create'))
+        ->post(route('registrant-access.store'), [
+            'name' => 'Church Representative',
+            'email' => 'representative@example',
+            'section_id' => $section->id,
+            'pastor_id' => $pastor->id,
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ])
+        ->assertRedirect(route('registrant-access.create'))
+        ->assertSessionHasErrors(['email']);
+});

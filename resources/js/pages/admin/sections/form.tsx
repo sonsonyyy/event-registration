@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import {
     formTextareaClassName,
 } from '@/lib/ui-styles';
@@ -67,8 +68,10 @@ export default function SectionForm({
         );
     };
 
+    const clearFormErrorHandlers = createClearFormErrorHandlers(form.clearErrors);
+
     const formContent = (
-        <form className="space-y-6" onSubmit={submit}>
+        <form className="space-y-6" onSubmit={submit} {...clearFormErrorHandlers}>
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px]">
                 <div className="grid gap-2">
                     <Label htmlFor="district_id">District</Label>

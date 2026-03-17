@@ -31,6 +31,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { formatSystemDateTime } from '@/lib/date-time';
+import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import { formTextareaClassName } from '@/lib/ui-styles';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -202,6 +203,9 @@ export default function RegistrationVerificationIndex({
 
     const activeDecision = form.data.decision;
     const activeDecisionContent = decisionContent[activeDecision];
+    const reviewFormErrorHandlers = createClearFormErrorHandlers(
+        form.clearErrors,
+    );
     const summaryCards = [
         {
             title: 'Pending Review',
@@ -823,7 +827,10 @@ export default function RegistrationVerificationIndex({
                     reviews={selectedRegistration?.review_history ?? []}
                     children={
                         selectedRegistration?.can_review ? (
-                            <div className="space-y-5">
+                            <div
+                                className="space-y-5"
+                                {...reviewFormErrorHandlers}
+                            >
                                 <div className="space-y-1">
                                     <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                                         Review action

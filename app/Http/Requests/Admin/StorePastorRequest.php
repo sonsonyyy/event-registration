@@ -29,7 +29,7 @@ class StorePastorRequest extends FormRequest
             'pastor_name' => ['required', 'string', 'max:255'],
             'church_name' => ['required', 'string', 'max:255'],
             'contact_number' => ['nullable', 'string', 'max:50'],
-            'email' => ['nullable', 'email', 'max:255'],
+            'email' => ['nullable', 'email', 'regex:/^[^@\s]+@[^@\s]+\.[^@\s]+$/u', 'max:255'],
             'address' => ['nullable', 'string', 'max:1000'],
             'status' => ['required', Rule::in(['active', 'inactive'])],
         ];
@@ -60,6 +60,7 @@ class StorePastorRequest extends FormRequest
             'pastor_name.required' => 'Enter the pastor name.',
             'church_name.required' => 'Enter the church name.',
             'email.email' => 'Enter a valid email address.',
+            'email.regex' => 'Enter a valid email address.',
             'status.required' => 'Choose a pastor status.',
             'status.in' => 'Choose a valid pastor status.',
         ];

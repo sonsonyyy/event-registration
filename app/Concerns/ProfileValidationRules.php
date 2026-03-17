@@ -41,6 +41,7 @@ trait ProfileValidationRules
             'required',
             'string',
             'email',
+            'regex:/^[^@\s]+@[^@\s]+\.[^@\s]+$/u',
             'max:255',
             $userId === null
                 ? Rule::unique(User::class)

@@ -93,6 +93,7 @@ class StoreRegistrantAccessRequest extends FormRequest
             'name.required' => 'Enter the representative full name.',
             'email.required' => 'Enter the email address that will be used to log in.',
             'email.email' => 'Enter a valid email address.',
+            'email.regex' => 'Enter a valid email address.',
             'email.unique' => 'That email address is already in use.',
             'password.required' => 'Enter a password for this registrant account.',
             'password.confirmed' => 'The password confirmation does not match.',

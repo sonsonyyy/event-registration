@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import {
     formatSystemDateOnly,
     formatSystemDateTime,
@@ -269,8 +270,14 @@ export default function OnsiteRegistrationForm({
         );
     };
 
+    const clearFormErrorHandlers = createClearFormErrorHandlers(form.clearErrors);
+
     return (
-        <form className="space-y-8" onSubmit={submit}>
+        <form
+            className="space-y-8"
+            onSubmit={submit}
+            {...clearFormErrorHandlers}
+        >
             <div className="space-y-6">
                 <div className="grid gap-6">
                     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch">
@@ -347,8 +354,8 @@ export default function OnsiteRegistrationForm({
                                     </div>
                                 </div>
 
-                                <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-                                    <div className="grid gap-2">
+                                <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] xl:items-start">
+                                    <div className="flex flex-col gap-2">
                                         <Label htmlFor="payment_reference">
                                             Official receipt / reference
                                         </Label>

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
+import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import { edit } from '@/routes/user-password';
 import type { BreadcrumbItem } from '@/types';
 
@@ -59,8 +60,8 @@ export default function Password() {
                         }}
                         className="space-y-6"
                     >
-                        {({ errors, processing, recentlySuccessful }) => (
-                            <>
+                        {({ errors, processing, recentlySuccessful, clearErrors }) => (
+                            <div {...createClearFormErrorHandlers(clearErrors)}>
                                 <ActionStatusToast
                                     show={recentlySuccessful}
                                     title="Password updated."
@@ -127,7 +128,7 @@ export default function Password() {
                                         Save password
                                     </Button>
                                 </div>
-                            </>
+                            </div>
                         )}
                     </Form>
                 </div>

@@ -13,4 +13,6 @@ export type AuthLayoutProps = {
     name?: string;
     title?: string;
     description?: string;
+    singleCard?: boolean;
+    centerContent?: boolean;
 };

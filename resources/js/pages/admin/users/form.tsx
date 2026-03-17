@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import {
     mutedNoticeClassName,
 } from '@/lib/ui-styles';
@@ -222,8 +223,10 @@ export default function UserForm({
         );
     };
 
+    const clearFormErrorHandlers = createClearFormErrorHandlers(form.clearErrors);
+
     const formContent = (
-        <form className="space-y-6" onSubmit={submit}>
+        <form className="space-y-6" onSubmit={submit} {...clearFormErrorHandlers}>
                     <div className="grid gap-6 md:grid-cols-2">
                         <div className="grid gap-2">
                             <Label htmlFor="name">Full name</Label>

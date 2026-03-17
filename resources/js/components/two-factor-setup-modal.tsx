@@ -21,6 +21,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { useAppearance } from '@/hooks/use-appearance';
 import { useClipboard } from '@/hooks/use-clipboard';
 import { OTP_MAX_LENGTH } from '@/hooks/use-two-factor-auth';
+import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import { confirm } from '@/routes/two-factor';
 
 function GridScanIcon() {
@@ -164,11 +165,13 @@ function TwoFactorVerificationStep({
             {({
                 processing,
                 errors,
+                clearErrors,
             }: {
                 processing: boolean;
                 errors?: { confirmTwoFactorAuthentication?: { code?: string } };
+                clearErrors: (...fields: string[]) => void;
             }) => (
-                <>
+                <div {...createClearFormErrorHandlers(clearErrors)}>
                     <div
                         ref={pinInputContainerRef}
                         className="relative w-full space-y-3"
@@ -222,7 +225,7 @@ function TwoFactorVerificationStep({
                             </Button>
                         </div>
                     </div>
-                </>
+                </div>
             )}
         </Form>
     );

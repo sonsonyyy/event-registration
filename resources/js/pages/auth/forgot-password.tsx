@@ -6,6 +6,7 @@ import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import AuthLayout from '@/layouts/auth-layout';
 import { login } from '@/routes';
 import { email } from '@/routes/password';
@@ -20,8 +21,8 @@ export default function ForgotPassword() {
 
             <div className="space-y-6">
                 <Form {...email.form()}>
-                    {({ processing, errors }) => (
-                        <>
+                    {({ processing, errors, clearErrors }) => (
+                        <div {...createClearFormErrorHandlers(clearErrors)}>
                             <div className="grid gap-2">
                                 <Label htmlFor="email">Email address</Label>
                                 <Input
@@ -48,7 +49,7 @@ export default function ForgotPassword() {
                                     Email password reset link
                                 </Button>
                             </div>
-                        </>
+                        </div>
                     )}
                 </Form>
 

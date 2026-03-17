@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import {
     formControlClassName,
     warningNoticeClassName,
@@ -101,10 +102,13 @@ export default function RegistrantAccess({
         });
     };
 
+    const clearFormErrorHandlers = createClearFormErrorHandlers(form.clearErrors);
+
     return (
         <AuthLayout
             title="Request a registrant account"
             description="Church representatives can request online registration access here. Approval is still required before registration tools are unlocked."
+            singleCard
         >
             <Head title="Request Registrant Access">
                 <link rel="preconnect" href="https://fonts.bunny.net" />
@@ -114,7 +118,11 @@ export default function RegistrantAccess({
                 />
             </Head>
 
-            <form className="space-y-6" onSubmit={submit}>
+            <form
+                className="space-y-6"
+                onSubmit={submit}
+                {...clearFormErrorHandlers}
+            >
                 <div className="space-y-6">
                     <div className="grid gap-2">
                         <Label htmlFor="name">Full name</Label>

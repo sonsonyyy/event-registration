@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import {
     formTextareaClassName,
     mutedNoticeClassName,
@@ -159,8 +160,10 @@ export default function EventForm({
         );
     };
 
+    const clearFormErrorHandlers = createClearFormErrorHandlers(form.clearErrors);
+
     return (
-        <form className="space-y-8" onSubmit={submit}>
+        <form className="space-y-8" onSubmit={submit} {...clearFormErrorHandlers}>
             <div className="space-y-6">
                 <div className="grid gap-6 lg:grid-cols-2">
                     <div className="grid gap-2">

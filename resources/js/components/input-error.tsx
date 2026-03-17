@@ -6,12 +6,21 @@ export default function InputError({
     className = '',
     ...props
 }: HTMLAttributes<HTMLParagraphElement> & { message?: string }) {
-    return message ? (
+    if (!message) {
+        return null;
+    }
+
+    return (
         <p
             {...props}
-            className={cn('text-sm text-red-600 dark:text-red-400', className)}
+            role="alert"
+            aria-live="polite"
+            className={cn(
+                'text-[11px] leading-4 text-red-600 dark:text-red-400',
+                className,
+            )}
         >
             {message}
         </p>
-    ) : null;
+    );
 }

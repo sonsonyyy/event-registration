@@ -4,6 +4,7 @@ import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import AuthLayout from '@/layouts/auth-layout';
 import { store } from '@/routes/password/confirm';
 
@@ -16,8 +17,11 @@ export default function ConfirmPassword() {
             <Head title="Confirm password" />
 
             <Form {...store.form()} resetOnSuccess={['password']}>
-                {({ processing, errors }) => (
-                    <div className="space-y-6">
+                {({ processing, errors, clearErrors }) => (
+                    <div
+                        className="space-y-6"
+                        {...createClearFormErrorHandlers(clearErrors)}
+                    >
                         <div className="grid gap-2">
                             <Label htmlFor="password">Password</Label>
                             <PasswordInput

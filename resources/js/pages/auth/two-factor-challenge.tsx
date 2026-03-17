@@ -10,6 +10,7 @@ import {
     InputOTPSlot,
 } from '@/components/ui/input-otp';
 import { OTP_MAX_LENGTH } from '@/hooks/use-two-factor-auth';
+import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import AuthLayout from '@/layouts/auth-layout';
 import { store } from '@/routes/two-factor/login';
 
@@ -60,7 +61,7 @@ export default function TwoFactorChallenge() {
                     resetOnSuccess={!showRecoveryInput}
                 >
                     {({ errors, processing, clearErrors }) => (
-                        <>
+                        <div {...createClearFormErrorHandlers(clearErrors)}>
                             {showRecoveryInput ? (
                                 <>
                                     <Input
@@ -122,7 +123,7 @@ export default function TwoFactorChallenge() {
                                     {authConfigContent.toggleText}
                                 </button>
                             </div>
-                        </>
+                        </div>
                     )}
                 </Form>
             </div>

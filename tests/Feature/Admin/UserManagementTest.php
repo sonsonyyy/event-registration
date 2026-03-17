@@ -173,7 +173,7 @@ test('admins must satisfy role and scope validation rules when creating users', 
         ->from(route('admin.users.create'))
         ->post(route('admin.users.store'), [
             'name' => '',
-            'email' => 'not-an-email',
+            'email' => 'manager@example',
             'password' => 'password',
             'password_confirmation' => 'mismatch',
             'role_id' => $managerRole->id,
