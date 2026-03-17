@@ -59,8 +59,10 @@ test('admins can browse the master data pages', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/pastors/index')
+            ->where('filters.section_id', null)
             ->where('filters.search', '')
             ->where('filters.per_page', 10)
+            ->has('sections', 1)
             ->has('perPageOptions', 3)
             ->has('pastors.data', 1)
             ->where('pastors.meta.total', 1));
@@ -194,6 +196,7 @@ test('admins can search and paginate the pastor directory', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/pastors/index')
+            ->where('filters.section_id', null)
             ->where('filters.search', 'grace')
             ->where('filters.per_page', 2)
             ->where('pastors.meta.current_page', 2)
@@ -204,6 +207,68 @@ test('admins can search and paginate the pastor directory', function () {
             ->has('pastors.data', 2)
             ->where('pastors.data.0.church_name', 'Gamma Fellowship')
             ->where('pastors.data.1.church_name', 'Grace Beacon Church'));
+});
+
+test('admins can paginate pastors deterministically and filter by section', function () {
+    $admin = User::factory()->admin()->create();
+    $district = District::factory()->create();
+    $sectionOne = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $sectionTwo = Section::factory()->for($district)->create([
+        'name' => 'Section 2',
+    ]);
+
+    Pastor::factory()->for($sectionOne)->create([
+        'church_name' => 'UPC',
+        'pastor_name' => 'Zulu Pastor',
+    ]);
+    Pastor::factory()->for($sectionOne)->create([
+        'church_name' => 'UPC',
+        'pastor_name' => 'Alpha Pastor',
+    ]);
+    Pastor::factory()->for($sectionTwo)->create([
+        'church_name' => 'UPC',
+        'pastor_name' => 'Bravo Pastor',
+    ]);
+    Pastor::factory()->for($sectionTwo)->create([
+        'church_name' => 'UPC',
+        'pastor_name' => 'Charlie Pastor',
+    ]);
+    Pastor::factory()->for($sectionOne)->create([
+        'church_name' => 'UPC',
+        'pastor_name' => 'Echo Pastor',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.pastors.index', [
+            'per_page' => 2,
+            'page' => 2,
+        ]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/pastors/index')
+            ->where('filters.section_id', null)
+            ->where('filters.per_page', 2)
+            ->where('pastors.meta.total', 5)
+            ->where('pastors.meta.current_page', 2)
+            ->where('pastors.data.0.pastor_name', 'Charlie Pastor')
+            ->where('pastors.data.1.pastor_name', 'Echo Pastor'));
+
+    $this->actingAs($admin)
+        ->get(route('admin.pastors.index', [
+            'section_id' => $sectionOne->id,
+            'per_page' => 10,
+        ]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/pastors/index')
+            ->where('filters.section_id', $sectionOne->id)
+            ->where('pastors.meta.total', 3)
+            ->has('pastors.data', 3)
+            ->where('pastors.data.0.pastor_name', 'Alpha Pastor')
+            ->where('pastors.data.1.pastor_name', 'Echo Pastor')
+            ->where('pastors.data.2.pastor_name', 'Zulu Pastor'));
 });
 
 test('admins must pass the form request validation rules', function () {

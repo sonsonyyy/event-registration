@@ -7,6 +7,12 @@ export const elevatedIndexTableStyles = {
     input: 'h-11 rounded-md border-slate-200 bg-white pl-12 text-sm text-slate-900 shadow-none placeholder:text-slate-400 focus-visible:border-[#184d47]/35 focus-visible:ring-[#184d47]/15 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500',
     action: 'w-full lg:w-auto',
     primaryButton: 'h-11 rounded-md',
+    selectTrigger:
+        'h-11 w-full min-w-52 rounded-md border-slate-200 bg-white px-4 text-sm text-slate-700 shadow-none data-[placeholder]:text-slate-400 focus-visible:border-[#184d47]/35 focus-visible:ring-[#184d47]/15 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:data-[placeholder]:text-slate-500',
+    selectContent:
+        'rounded-md border-slate-200 bg-white p-1 text-slate-900 shadow-xl dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100',
+    selectItem:
+        'rounded-md px-3 py-2.5 text-slate-900 focus:bg-slate-100 focus:text-slate-900 dark:text-slate-100 dark:focus:bg-slate-800 dark:focus:text-white',
     headerActions:
         'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end',
     table: 'min-w-full divide-y divide-slate-200/80 text-sm dark:divide-slate-800',

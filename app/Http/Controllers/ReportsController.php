@@ -44,6 +44,8 @@ class ReportsController extends Controller
                 $filters['search'],
             )
                 ->orderBy('church_name')
+                ->orderBy('pastor_name')
+                ->orderBy('id')
                 ->paginate($filters['per_page'])
                 ->withQueryString()
             : null;
@@ -136,6 +138,8 @@ class ReportsController extends Controller
             $filters['search'],
         )
             ->orderBy('church_name')
+            ->orderBy('pastor_name')
+            ->orderBy('id')
             ->get();
 
         $filename = $this->churchesWithoutRegistrationFilename($selectedEvent, $selectedSection);

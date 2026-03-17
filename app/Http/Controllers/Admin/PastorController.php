@@ -25,6 +25,9 @@ class PastorController extends Controller
 
         $pastors = Pastor::query()
             ->with('section:id,name,district_id', 'section.district:id,name')
+            ->when($filters['section_id'] !== null, function (Builder $query) use ($filters): void {
+                $query->where('section_id', $filters['section_id']);
+            })
             ->when($filters['search'] !== '', function (Builder $query) use ($filters): void {
                 $search = $filters['search'];
 
@@ -37,6 +40,8 @@ class PastorController extends Controller
                 });
             })
             ->orderBy('church_name')
+            ->orderBy('pastor_name')
+            ->orderBy('id')
             ->paginate($filters['per_page'])
             ->withQueryString();
 
@@ -56,6 +61,7 @@ class PastorController extends Controller
                 ],
             ],
             'filters' => $filters,
+            'sections' => $this->indexSectionOptions(),
             'perPageOptions' => [10, 25, 50],
         ]);
     }
@@ -155,6 +161,27 @@ class PastorController extends Controller
         return Section::query()
             ->with('district:id,name')
             ->orderBy('name')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Section $section): array => [
+                'id' => $section->id,
+                'name' => $section->name,
+                'district_name' => $section->district->name,
+            ])
+            ->all();
+    }
+
+    /**
+     * Build the section filter options for the pastor index page.
+     *
+     * @return array<int, array{id: int, name: string, district_name: string}>
+     */
+    private function indexSectionOptions(): array
+    {
+        return Section::query()
+            ->with('district:id,name')
+            ->orderBy('name')
+            ->orderBy('id')
             ->get()
             ->map(fn (Section $section): array => [
                 'id' => $section->id,

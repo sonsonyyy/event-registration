@@ -38,6 +38,7 @@ class EventController extends Controller
             })
             ->withCapacityMetrics()
             ->orderByDesc('date_from')
+            ->orderByDesc('id')
             ->paginate($filters['per_page'])
             ->withQueryString();
 

@@ -592,7 +592,8 @@ class OnlineRegistrationController extends Controller
             ])
             ->withSum('items as total_amount', 'subtotal_amount')
             ->withSum('items as total_quantity', 'quantity')
-            ->latest('submitted_at');
+            ->latest('submitted_at')
+            ->latest('id');
 
         if (! $user->isAdmin()) {
             $query->where('pastor_id', $user->pastor_id);

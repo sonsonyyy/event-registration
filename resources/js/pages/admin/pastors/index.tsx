@@ -11,6 +11,13 @@ import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
@@ -36,9 +43,15 @@ type Pastor = {
 type Props = {
     pastors: PaginatedData<Pastor>;
     filters: {
+        section_id: number | null;
         search: string;
         per_page: number;
     };
+    sections: {
+        id: number;
+        name: string;
+        district_name: string;
+    }[];
     perPageOptions: number[];
 };
 
@@ -56,15 +69,22 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function PastorIndex({
     pastors,
     filters,
+    sections,
     perPageOptions,
 }: Props) {
     const [search, setSearch] = useState(filters.search);
+    const [sectionId, setSectionId] = useState(
+        filters.section_id !== null ? String(filters.section_id) : 'all',
+    );
     const [pastorToDelete, setPastorToDelete] = useState<Pastor | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         setSearch(filters.search);
-    }, [filters.search]);
+        setSectionId(
+            filters.section_id !== null ? String(filters.section_id) : 'all',
+        );
+    }, [filters.search, filters.section_id]);
 
     const destroyPastor = (): void => {
         if (pastorToDelete === null) {
@@ -83,6 +103,7 @@ export default function PastorIndex({
     };
 
     const visitIndex = (query: {
+        section_id?: number;
         search?: string;
         per_page: number;
         page?: number;
@@ -98,6 +119,7 @@ export default function PastorIndex({
         const normalizedSearch = search.trim();
 
         visitIndex({
+            ...(sectionId !== 'all' ? { section_id: Number(sectionId) } : {}),
             ...(normalizedSearch !== '' ? { search: normalizedSearch } : {}),
             per_page: filters.per_page,
         });
@@ -105,6 +127,9 @@ export default function PastorIndex({
 
     const updatePerPage = (value: number): void => {
         visitIndex({
+            ...(filters.section_id !== null
+                ? { section_id: filters.section_id }
+                : {}),
             ...(filters.search !== '' ? { search: filters.search } : {}),
             per_page: value,
         });
@@ -112,6 +137,9 @@ export default function PastorIndex({
 
     const changePage = (pageNumber: number): void => {
         visitIndex({
+            ...(filters.section_id !== null
+                ? { section_id: filters.section_id }
+                : {}),
             ...(filters.search !== '' ? { search: filters.search } : {}),
             per_page: filters.per_page,
             ...(pageNumber > 1 ? { page: pageNumber } : {}),
@@ -143,16 +171,74 @@ export default function PastorIndex({
                             inputClassName={elevatedIndexTableStyles.input}
                             actionClassName={elevatedIndexTableStyles.action}
                             action={(
-                                <Button
-                                    asChild
-                                    className={
-                                        elevatedIndexTableStyles.primaryButton
-                                    }
-                                >
-                                    <Link href={PastorController.create()}>
-                                        New pastor record
-                                    </Link>
-                                </Button>
+                                <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                                    <Select
+                                        value={sectionId}
+                                        onValueChange={(value) => {
+                                            setSectionId(value);
+                                            visitIndex({
+                                                ...(value !== 'all'
+                                                    ? {
+                                                          section_id:
+                                                              Number(value),
+                                                      }
+                                                    : {}),
+                                                ...(search.trim() !== ''
+                                                    ? {
+                                                          search: search.trim(),
+                                                      }
+                                                    : {}),
+                                                per_page: filters.per_page,
+                                            });
+                                        }}
+                                    >
+                                        <SelectTrigger
+                                            className={
+                                                elevatedIndexTableStyles.selectTrigger
+                                            }
+                                        >
+                                            <SelectValue placeholder="All sections" />
+                                        </SelectTrigger>
+                                        <SelectContent
+                                            align="end"
+                                            className={
+                                                elevatedIndexTableStyles.selectContent
+                                            }
+                                        >
+                                            <SelectItem
+                                                value="all"
+                                                className={
+                                                    elevatedIndexTableStyles.selectItem
+                                                }
+                                            >
+                                                All sections
+                                            </SelectItem>
+                                            {sections.map((section) => (
+                                                <SelectItem
+                                                    key={section.id}
+                                                    value={String(section.id)}
+                                                    className={
+                                                        elevatedIndexTableStyles.selectItem
+                                                    }
+                                                >
+                                                    {section.name} ·{' '}
+                                                    {section.district_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+
+                                    <Button
+                                        asChild
+                                        className={
+                                            elevatedIndexTableStyles.primaryButton
+                                        }
+                                    >
+                                        <Link href={PastorController.create()}>
+                                            New pastor record
+                                        </Link>
+                                    </Button>
+                                </div>
                             )}
                         />
                     </div>
@@ -202,8 +288,9 @@ export default function PastorIndex({
                                                     }
                                                 >
                                                     {filters.search === ''
+                                                        && filters.section_id === null
                                                         ? 'No pastor records yet.'
-                                                        : `No pastors matched "${filters.search}".`}
+                                                        : 'No pastors matched the current filters.'}
                                                 </div>
                                                 <div
                                                     className={
@@ -211,8 +298,9 @@ export default function PastorIndex({
                                                     }
                                                 >
                                                     {filters.search === ''
+                                                        && filters.section_id === null
                                                         ? 'Create the first pastor and church record to populate the directory.'
-                                                        : 'Try another church name, pastor name, contact number, or email address.'}
+                                                        : 'Try another church name, pastor name, contact number, email address, or section.'}
                                                 </div>
                                             </div>
                                         </td>

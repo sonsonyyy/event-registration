@@ -82,7 +82,8 @@ class UserController extends Controller
                 'pastor.section:id,name,district_id',
                 'pastor.section.district:id,name',
             ])
-            ->orderBy('name');
+            ->orderBy('name')
+            ->orderBy('id');
     }
 
     /**
