@@ -1,73 +1,157 @@
-# Church Event Registration Application – MVP Specification
+# Church Event Registration Application - MVP Specification
 
 ## Goal
-Build a simple district-level church event registration application that supports both **onsite registration** and **online church-based registration** without online payment processing. Online registrants will upload a **receipt / proof of payment** instead.
+Build a district event registration application that supports both onsite registration and church-based online registration, while introducing department-aware access control for privileged accounts and events.
+
+Online registrants continue to upload a receipt or proof of payment instead of paying through the system.
 
 ---
 
 ## 1. Scope Summary
-The system will support:
 
+The MVP will support:
 - Event setup and fee configuration
-- District / section / pastor master data
+- District / section / department / pastor master data
 - User and role management
+- Church representative access requests
 - Onsite registration
 - Online registration per church / pastor
-- Receipt upload for payment proof
+- Receipt upload and verification
 - Capacity tracking and registration limits
-- Reports by event and section
+- Reports by event, section, and department
+- Historical archiving through soft deletes
 
 ---
 
-## 2. User Roles
+## 2. Access Model
+
+### 2.1 Authorization Axes
+The MVP uses four separate concepts:
+- `role` for permissions
+- `geographic scope` for reach
+- `department` for organizational lane
+- `position/title` for metadata only
+
+### 2.2 Geographic Scope
+- District
+- Section
+- Church / Pastor
+
+### 2.3 Department Scope
+Supported departments:
+- Youth Ministries
+- Ladies Ministries
+- Apostolic Men's
+- Sunday School
+- Home Missions
+- Music Commission
+
+`department_id = null` means the account or event is general / non-departmental.
+
+### 2.4 Position Metadata
+Titles such as `President`, `Director`, `Presbyter`, and `Secretary` are not roles. They are descriptive metadata on user accounts.
+
+---
+
+## 3. User Roles
+
+### Super Admin
+Full deployment access.
+
+**Permissions**
+- All system configuration
+- All event, user, and master data management
+- All access approvals
+- All registration verification
+
+---
 
 ### Admin
-Full access to the whole system.
+District-scoped reviewer and operator.
 
-**Permissions:**
-- Manage events
+**Scope**
+- District
+- Optional department
+
+**Permissions**
 - Manage users
-- Manage districts, sections, pastors
-- Manage registrations
-- View all reports
-- Approve / verify uploaded receipts if needed
+- Manage districts, sections, departments, pastors/churches
+- Manage events and fee categories
+- Approve church access requests
+- Verify registrations
+- View district-level reports
 
-### Manager
-Operational access with limited administration.
-
-**Permissions:**
-- Manage registrations
-- View reports
-- Section-based access only
-- Cannot manage events
-- Cannot manage pastors / sections
-
-### Registration Staff
-Used for onsite event registration.
-
-**Permissions:**
-- Register delegates onsite
-- View event availability
-- Search churches / pastors
-- Print or view registration record if needed
-
-### Online Registrant
-Given access to register delegates for a specific church / pastor.
-
-**Permissions:**
-- Log in
-- Register delegates for their assigned church / pastor
-- Upload payment receipt / proof of payment
-- View registration history / status
+**Rules**
+- General admin (`department_id = null`) can access all district events across departments
+- Department admin can access only district activity for the assigned department
 
 ---
 
-## 3. Main Modules
+### Manager
+Section-scoped reviewer and operator.
 
-### A. Event Management
-Admin can create, edit, and archive events.
+**Scope**
+- Section
+- Optional department
 
-#### Event Fields
+**Permissions**
+- Approve church access requests
+- Verify registrations
+- View section-level reports
+- Perform allowed registration operations within assigned scope
+
+**Rules**
+- General manager (`department_id = null`) can access all section events across departments
+- Department manager can access only section activity for the assigned department
+
+---
+
+### Registration Staff
+Operational onsite encoder.
+
+**Permissions**
+- Create onsite registrations
+- Search pastors/churches
+- View event availability
+
+**MVP Rule**
+Registration staff remains department-neutral in this phase unless expanded later.
+
+---
+
+### Registrant
+Church representative account tied to one pastor/church.
+
+**Permissions**
+- Sign in
+- Submit online registrations
+- Upload payment proof
+- View registration history and status
+
+**Rules**
+- Registrant accounts are not department-based
+- Each church may have up to two registrant accounts
+- Each registrant may submit only for the assigned pastor/church
+
+---
+
+## 4. Event Model
+
+### 4.1 Event Ownership Types
+The MVP must support:
+- District event under a department
+- Sectional event under a department
+- District event with no department
+- Sectional event with no department
+
+### 4.2 Event Access Rules
+- General district events are handled by general district reviewers
+- General sectional events are handled by general section reviewers
+- Departmental district events are handled by same-department district reviewers or general district reviewers
+- Departmental sectional events are handled by same-department section reviewers or general section reviewers
+- Super Admin can handle all events
+
+### 4.3 Event Fields
 - Event name
 - Description
 - Date from
@@ -76,78 +160,50 @@ Admin can create, edit, and archive events.
 - Registration opening date
 - Registration closing date
 - Status (`Draft`, `Open`, `Closed`, `Completed`, `Cancelled`)
-- Total capacity / delegate limit
+- Total capacity
 - Remaining slots (computed)
+- Scope type (`district`, `section`)
+- Section assignment (nullable, required for sectional events)
+- Department assignment (nullable)
 
-#### Event Fee Types
+### 4.4 Fee Categories
 Each event can have multiple fee categories, for example:
 - `Regular (Online)`
 - `Regular (Onsite)`
 - `One-day Pass`
 
-#### Fee Setup Fields
-- Fee category name
+Fee fields:
+- Category name
 - Amount
-- Optional slot allocation per category
-- Is active
-
-#### Event Rules
-- Registration closes automatically when total capacity is reached
-- Registration closes when closing date is reached
-- Prevent registration if event is closed or cancelled
-- Show remaining slots in real time
-- Archived events and archived fee categories remain available for historical registration lookups and reports
+- Optional slot allocation
+- Active status
 
 ---
 
-### B. User Management
-Admin can create and manage users.
+## 5. Master Data Modules
 
-#### User Fields
-- Full name
-- Username / email
-- Password
-- Role
-- Assigned district / section / pastor if needed
-- Status (`Active`, `Inactive`)
-
-#### Role Assignment Rules
-- **Admin:** global access
-- **Manager:** section-based access
-- **Registration Staff:** onsite registration only
-- **Online Registrant:** limited to assigned pastor record
-- Archived user accounts remain in the database for historical traceability but are removed from active authentication and management lists
-
----
-
-### C. District Management
-Admin can add, edit, and archive districts.
-
-#### District Fields
-- District name
+### Districts
+Fields:
+- Name
 - Description (optional)
 - Status
 
----
-
-### D. Section Management
-Each section belongs to a district.
-
-#### Section Fields
-- Parent district
-- Section name
+### Sections
+Fields:
+- District
+- Name
 - Description (optional)
 - Status
 
-Archived sections remain in the database for historical reporting and audit trails, but they are removed from active setup and registration flows.
+### Departments
+Fields:
+- Name
+- Description (optional)
+- Status
 
----
-
-### E. Pastor Management
-Each pastor belongs to a section.
-
-#### Pastor Fields
-- Parent section
+### Pastors / Churches
+Fields:
+- Section
 - Pastor full name
 - Church name
 - Contact number
@@ -155,184 +211,173 @@ Each pastor belongs to a section.
 - Address (optional)
 - Status
 
-> Since the online registrant registers on behalf of a church/pastor, the pastor record may effectively represent the local church account owner.
-> Archived pastor/church records stay linked to historical registrations and users for future audit features.
+Archived records must remain available for historical reporting and future audit features.
 
 ---
 
-### F. Onsite Registration Page
-Used by registration staff, manager, or admin.
+## 6. User Management Module
 
-#### Functions
+### User Fields
+- Full name
+- Email
+- Password
+- Role
+- District assignment (nullable)
+- Section assignment (nullable)
+- Department assignment (nullable)
+- Pastor assignment (nullable, registrant only)
+- Position/title (nullable)
+- Status (`Active`, `Inactive`)
+
+### Role Assignment Rules
+- `Super Admin`: unrestricted
+- `Admin`: district-scoped, optional department
+- `Manager`: section-scoped, optional department
+- `Registration Staff`: operational only
+- `Registrant`: pastor/church scoped only
+
+### Important Rule
+Church access approval is scope-based, not department-restricted. Department-scoped and general admins/managers may approve access requests within their allowed geographic scope.
+
+---
+
+## 7. Church Access Request Module
+
+### Functions
+- Request church representative access
+- Assign request to a pastor/church
+- Approve request
+- Reject request
+
+### Approval Authority
+- Super Admin
+- Admin
+- Manager
+
+### Business Rules
+- Access requests are approved at the geographic scope level
+- Registrant accounts remain church-based even when approvers are department-scoped
+- Each church may have up to two active or pending registrant accounts
+
+---
+
+## 8. Onsite Registration Module
+
+### Functions
 - Select event
-- Search existing pastor / church
-- Add registration line items in a single transaction
-- Choose fee category
+- Search and select pastor/church
+- Add one or more registration line items
+- Choose fee category per line item
 - Enter quantity per fee category
-- Add another fee category with another quantity within the same transaction
-- Save the transaction as paid
-- Record OR number / manual receipt reference
-- Print or show confirmation
+- Record official receipt / reference
+- Save as paid
 
-#### Onsite Registration Structure
-Instead of capturing delegate details, the onsite registration page should allow quantity-based registration.
+### Structure
+Onsite registration is quantity-based, not delegate-based.
 
-Each onsite transaction may contain multiple registration line items, for example:
+Example:
 - `Regular (Onsite) x 10`
 - `One-day Pass x 3`
 
-This means a single registration record can contain multiple fee categories with corresponding quantities.
-
-#### Onsite Payment Status
-- Onsite transactions are recorded as `Paid` in the current MVP.
-- `Unpaid` and `Partial` remain reserved in the data model for future workflow expansion.
+### Payment Status Rule
+The data model may retain `Unpaid` and `Partial` for future use, but the MVP records onsite submissions as `Paid`.
 
 ---
 
-### G. Online Registration Page
-Used by the Online Registrant user assigned to a church / pastor.
+## 9. Online Registration Module
 
-#### Functions
+### Functions
 - Select open event
-- Add one or multiple registration line items
-- Choose fee category per group of delegates
-- Enter quantity per fee category
-- Upload proof of payment / receipt
+- Add one or more registration line items
+- Choose fee category per line item
+- Enter quantities
+- Enter receipt / reference number
+- Upload proof of payment
 - Submit registration
 - Track registration status
 
-#### Online Registration Rules
-- Online registrant can only register delegates for their assigned church / pastor
-- System validates capacity before submission
-- Receipt / reference number is required before final submission
-- Proof of payment is required before final submission
-- Registration may remain under status:
-  - `Pending Verification`
-  - `Verified`
-  - `Rejected`
+### Rules
+- Registrant is limited to assigned pastor/church
+- System validates event capacity before submission
+- Receipt / reference number is required
+- Proof of payment is required
+- One receipt may cover multiple fee-category quantities
 
-#### Receipt Upload
-- File types: `JPG`, `PNG`, `PDF`
-- Max file size configurable
-- Store upload date/time
-- Store uploaded by
-- Allow admin/manager to review
-
----
-
-### H. Reports
-
-#### Required Reports
-
-1. **Event Total Registration**
-   - Filter by event
-   - Filter by section
-   - Show total registered count
-   - Show counts per fee category
-   - Show verified vs pending if online receipt verification is used
-
-2. **No Registration Report**
-   - Show sections / pastors with no registration for a selected event
-
-#### Recommended Additional Reports
-- Remaining slots by event
-- Registration summary by district
-- Registration summary by pastor/church
-- Payment summary based on submitted receipt totals or marked payments
-
----
-
-## 4. Core Workflow
-
-### Event Setup
-1. Admin creates district, sections, pastors/churches
-2. Admin creates event
-3. Admin sets fee categories and capacity
-4. Admin creates users and assigns roles
-5. Admin opens registration
-
-### Online Registration Flow
-1. Online registrant logs in
-2. Selects event
-3. Adds registration line items under assigned church/pastor
-4. Uploads proof of payment
-5. Submits registration
-6. Admin/manager verifies receipt if needed
-7. Registration becomes verified/approved
-
-### Onsite Registration Flow
-1. Staff selects event
-2. Searches or selects church/pastor
-3. Adds one or more registration line items
-4. Chooses fee category for each line item
-5. Enters quantity for each fee category
-6. Records payment status
-7. Saves registration
-
----
-
-## 5. Recommended Registration Statuses
-
-### Registration Record Status
-- `Draft`
+### Registration Statuses
 - `Pending Verification`
 - `Verified`
 - `Rejected`
-- `Cancelled`
-
-### Payment Status
-- `Unpaid`
-- `Paid`
-- `Partial`
-- `For Verification`
-
-The data model keeps these values for future payment workflows. In the current MVP, both onsite and online submissions are recorded as `Paid`.
+- `Needs Correction` if retained in the existing workflow
 
 ---
 
-## 6. Suggested Database Entities
+## 10. Verification and Review Module
 
-### `users`
+### Review Responsibilities
+- General district events -> general district reviewer
+- General sectional events -> general section reviewer
+- Departmental district events -> matching department district reviewer or general district reviewer
+- Departmental sectional events -> matching department section reviewer or general section reviewer
+- Super Admin -> unrestricted override
+
+### Review Actions
+- Verify
+- Reject
+- Return for correction if the existing workflow keeps it
+- Store reviewer notes and review history
+
+### Critical Staffing Rule
+If general non-departmental events exist at a scope, a non-departmental reviewer account must exist at that scope.
+
+---
+
+## 11. Reports
+
+### Required Reports
+1. Event total registration
+   - Filter by event
+   - Filter by section
+   - Filter by department when applicable
+   - Show total quantity
+   - Show counts per fee category
+   - Show verification totals
+
+2. No registration report
+   - Filter by event
+   - Show sections / pastors with no registration
+
+### Recommended Additional Reports
+- Remaining slots by event
+- Registration summary by department
+- Registration summary by section
+- Registration summary by church
+
+---
+
+## 12. Target Database Changes
+
+### New / Updated Entities
+
+#### `departments`
 - `id`
 - `name`
-- `email` / `username`
+- `description`
+- `status`
+
+#### `users`
+- `id`
+- `name`
+- `email`
 - `password`
 - `role_id`
-- `pastor_id` (nullable)
-- `section_id` (nullable)
-- `district_id` (nullable)
-- `status`
-- `created_at`
-- `updated_at`
-
-### `roles`
-- `id`
-- `name`
-
-### `districts`
-- `id`
-- `name`
-- `description`
+- `district_id` nullable
+- `section_id` nullable
+- `department_id` nullable
+- `pastor_id` nullable
+- `position_title` nullable
 - `status`
 
-### `sections`
-- `id`
-- `district_id`
-- `name`
-- `description`
-- `status`
-
-### `pastors`
-- `id`
-- `section_id`
-- `pastor_name`
-- `church_name`
-- `contact_number`
-- `email`
-- `address`
-- `status`
-
-### `events`
+#### `events`
 - `id`
 - `name`
 - `description`
@@ -343,55 +388,29 @@ The data model keeps these values for future payment workflows. In the current M
 - `registration_close_at`
 - `total_capacity`
 - `status`
+- `scope_type`
+- `section_id` nullable
+- `department_id` nullable
 
-### `event_fee_categories`
-- `id`
-- `event_id`
-- `category_name`
-- `amount`
-- `slot_limit` (nullable)
-- `status`
-
-### `registrations`
-- `id`
-- `event_id`
-- `pastor_id`
-- `registration_mode` (`onsite` / `online`)
-- `encoded_by_user_id`
-- `payment_status`
-- `registration_status`
-- `receipt_file_path` (nullable)
-- `receipt_original_name` (nullable)
-- `remarks`
-- `submitted_at`
-- `verified_at` (nullable)
-- `verified_by_user_id` (nullable)
-
-### `registration_items`
-- `id`
-- `registration_id`
-- `fee_category_id`
-- `quantity`
-- `unit_amount`
-- `subtotal_amount`
-- `remarks` (nullable)
-
-> This structure allows one registration submission to contain multiple fee-category line items and one uploaded receipt.
+Existing registration and fee-category tables remain, but must respect event scope and department ownership during authorization and reporting.
 
 ---
 
-## 7. MVP Validation Rules
-- Prevent duplicate active event names if desired
+## 13. MVP Validation Rules
 - Prevent section creation without district
 - Prevent pastor creation without section
-- Prevent online user registration outside assigned pastor
+- Prevent event creation without a valid scope configuration
+- Require `section_id` for sectional events
+- Allow `department_id` to be null for general events and general privileged accounts
+- Prevent registrant access requests above the two-account church limit
+- Prevent online registration outside assigned pastor/church
 - Prevent registration when event is full or closed
 - Validate receipt upload type and size
-- Keep audit trail for create/edit/delete actions if possible
+- Preserve historical records through archive behavior instead of hard deletion
 
 ---
 
-## 8. Recommended MVP Screens
+## 14. Recommended MVP Screens
 1. Login
 2. Dashboard
 3. Event List / Event Form
@@ -399,39 +418,25 @@ The data model keeps these values for future payment workflows. In the current M
 5. User List / User Form
 6. District List / Form
 7. Section List / Form
-8. Pastor / Church List / Form
-9. Onsite Registration Page
-10. Online Registration Page
-11. Registration Review / Verification Page
-12. Reports Page
+8. Department List / Form
+9. Pastor / Church List / Form
+10. Church Access Request Page
+11. Onsite Registration Page
+12. Online Registration Page
+13. Registration Review / Verification Page
+14. Reports Page
 
 ---
 
-## 9. Important Decisions to Finalize
-These should be decided before development starts:
+## 15. Finalized Direction Before Implementation
 
-1. **Is one online registrant user tied to exactly one church/pastor?**
-   - Recommended: Yes, for simplicity and security.
+The implementation should follow this model:
+- role decides permission
+- geographic scope decides reach
+- department decides the lane
+- `null department` means general authority within that scope
+- title is metadata only
+- registrants remain church-based
+- general events require general reviewers
 
-2. **Should online registrations require admin approval before counting toward capacity?**
-   - Recommended: Count them immediately but mark as `Pending Verification`, or reserve slots for a limited time.
-
-3. **Can one receipt cover multiple fee-category quantities in one registration?**
-   - Recommended: Yes.
-
-4. **Will manager access be district-wide or section-based?**
-   - Recommended: Section-based.
-
----
-
-## 14. Final Recommendation
-This is a very workable internal application. The simplest clean design is:
-
-- One district
-- Many sections under the district
-- Many pastors/churches under sections
-- Up to two online registrant accounts per church
-- One event with many fee categories
-- One registration submission with multiple fee-category quantities and one receipt upload
-
-That model will stay simple, secure, and easy to maintain.
+This is the agreed target state for the next major update before application code changes begin.
