@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { createClearFormErrorHandlers } from '@/lib/form-errors';
+import { formControlClassName } from '@/lib/ui-styles';
 import { edit } from '@/routes/user-password';
 import type { BreadcrumbItem } from '@/types';
 
@@ -61,7 +62,10 @@ export default function Password() {
                         className="space-y-6"
                     >
                         {({ errors, processing, recentlySuccessful, clearErrors }) => (
-                            <div {...createClearFormErrorHandlers(clearErrors)}>
+                            <div
+                                className="space-y-6"
+                                {...createClearFormErrorHandlers(clearErrors)}
+                            >
                                 <ActionStatusToast
                                     show={recentlySuccessful}
                                     title="Password updated."
@@ -75,7 +79,7 @@ export default function Password() {
                                         id="current_password"
                                         ref={currentPasswordInput}
                                         name="current_password"
-                                        className="mt-1 block w-full"
+                                        className={formControlClassName}
                                         autoComplete="current-password"
                                         placeholder="Current password"
                                     />
@@ -94,7 +98,7 @@ export default function Password() {
                                         id="password"
                                         ref={passwordInput}
                                         name="password"
-                                        className="mt-1 block w-full"
+                                        className={formControlClassName}
                                         autoComplete="new-password"
                                         placeholder="New password"
                                     />
@@ -110,7 +114,7 @@ export default function Password() {
                                     <PasswordInput
                                         id="password_confirmation"
                                         name="password_confirmation"
-                                        className="mt-1 block w-full"
+                                        className={formControlClassName}
                                         autoComplete="new-password"
                                         placeholder="Confirm password"
                                     />
