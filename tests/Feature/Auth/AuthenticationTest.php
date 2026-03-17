@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
@@ -35,6 +36,21 @@ test('users can authenticate using the login screen', function () {
 
     $this->assertAuthenticated();
     $response->assertRedirect(route('dashboard', absolute: false));
+});
+
+test('users can authenticate with remember me enabled', function () {
+    $user = User::factory()->create();
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+        'remember' => 'on',
+    ]);
+
+    $this->assertAuthenticated();
+    expect($user->refresh()->remember_token)->not->toBeNull();
+    $response->assertRedirect(route('dashboard', absolute: false));
+    $response->assertCookie(Auth::getRecallerName());
 });
 
 test('users with two factor enabled are redirected to two factor challenge', function () {
