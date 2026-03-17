@@ -15,6 +15,16 @@ test('login screen can be rendered', function () {
             ->where('name', config('app.name')));
 });
 
+test('login screen receives the registrant access status key', function () {
+    $this->withSession([
+        'status' => 'registrant-access-submitted',
+    ])->get(route('login'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('auth/login')
+            ->where('status', 'registrant-access-submitted'));
+});
+
 test('users can authenticate using the login screen', function () {
     $user = User::factory()->create();
 

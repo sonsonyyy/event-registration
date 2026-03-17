@@ -36,7 +36,7 @@ test('guests can submit self-service registrant account requests', function () {
         'password_confirmation' => 'password',
     ])
         ->assertRedirect(route('login'))
-        ->assertSessionHas('status');
+        ->assertSessionHas('status', 'registrant-access-submitted');
 
     $requestUser = User::query()
         ->with('role')

@@ -91,7 +91,7 @@ class EventController extends Controller
             $event->syncOperationalStatus();
         });
 
-        return to_route('admin.events.index')->with('success', 'Event created successfully.');
+        return to_route('admin.events.index')->with('success', 'Event created.');
     }
 
     /**
@@ -132,7 +132,7 @@ class EventController extends Controller
             $event->syncOperationalStatus();
         });
 
-        return to_route('admin.events.index')->with('success', 'Event updated successfully.');
+        return to_route('admin.events.index')->with('success', 'Event updated.');
     }
 
     /**
@@ -142,9 +142,16 @@ class EventController extends Controller
     {
         Gate::authorize('delete', $event);
 
+        if ($event->registrations()->exists()) {
+            return to_route('admin.events.index')->with(
+                'error',
+                'Event has registrations and cannot be deleted.',
+            );
+        }
+
         $event->delete();
 
-        return to_route('admin.events.index')->with('success', 'Event deleted successfully.');
+        return to_route('admin.events.index')->with('success', 'Event deleted.');
     }
 
     /**
@@ -202,10 +209,12 @@ class EventController extends Controller
             'status' => $event->resolvedStatus(),
             'status_reason' => $event->statusReason(),
             'fee_categories_count' => $event->fee_categories_count,
+            'registrations_count' => $event->registrations_count,
             'reserved_quantity' => $event->reservedQuantity(),
             'total_capacity' => $event->total_capacity,
             'remaining_slots' => $event->remainingSlots(),
             'accepting_registrations' => $event->canAcceptRegistrations(),
+            'can_delete' => (int) $event->registrations_count === 0,
         ];
     }
 

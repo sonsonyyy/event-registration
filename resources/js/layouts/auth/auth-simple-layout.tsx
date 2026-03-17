@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import AppLogo from '@/components/app-logo';
+import FlashToaster from '@/components/flash-toaster';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
 
@@ -15,6 +16,7 @@ export default function AuthSimpleLayout({
             className="min-h-svh bg-[radial-gradient(circle_at_top,_rgba(193,223,214,0.42),_transparent_34%),linear-gradient(180deg,_#f7f5ef_0%,_#fffdf8_48%,_#f2efe7_100%)] px-4 py-6 sm:px-6 lg:px-8"
             style={{ fontFamily: 'Manrope, sans-serif' }}
         >
+            <FlashToaster includeStatus />
             <div className="mx-auto flex min-h-[calc(100svh-3rem)] w-full max-w-6xl items-center">
                 <div className="grid w-full gap-6 lg:grid-cols-[minmax(0,1.05fr)_420px] lg:items-center">
                     <div className="hidden rounded-md border border-white/70 bg-[linear-gradient(145deg,_rgba(255,255,255,0.88),_rgba(244,249,247,0.94))] p-8 shadow-2xl shadow-[#184d47]/10 backdrop-blur lg:flex lg:flex-col lg:gap-10">

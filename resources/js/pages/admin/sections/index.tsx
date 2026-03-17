@@ -1,5 +1,7 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import { useState } from 'react';
 import SectionController from '@/actions/App/Http/Controllers/Admin/SectionController';
+import ConfirmActionDialog from '@/components/confirm-action-dialog';
 import {
     DataTableBadge,
     resolveDataTableTone,
@@ -7,7 +9,6 @@ import {
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
-import { successNoticeClassName } from '@/lib/ui-styles';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -40,16 +41,24 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function SectionIndex({ sections }: Props) {
-    const page = usePage();
-    const flash = page.props.flash as { success?: string | null } | undefined;
+    const [sectionToDelete, setSectionToDelete] = useState<Section | null>(
+        null,
+    );
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    const destroy = (section: Section): void => {
-        if (! window.confirm(`Delete "${section.name}"? This will also remove its pastors.`)) {
+    const destroySection = (): void => {
+        if (sectionToDelete === null) {
             return;
         }
 
-        router.delete(SectionController.destroy.url(section.id), {
+        setIsDeleting(true);
+
+        router.delete(SectionController.destroy.url(sectionToDelete.id), {
             preserveScroll: true,
+            onFinish: () => {
+                setIsDeleting(false);
+                setSectionToDelete(null);
+            },
         });
     };
 
@@ -63,12 +72,6 @@ export default function SectionIndex({ sections }: Props) {
                     description="Create and maintain the section records that sit beneath each district."
                     className="mb-4"
                 />
-
-                {flash?.success && (
-                    <div className={successNoticeClassName}>
-                        {flash.success}
-                    </div>
-                )}
 
                 <div className={elevatedIndexTableStyles.shell}>
                     <div className={elevatedIndexTableStyles.band}>
@@ -205,7 +208,9 @@ export default function SectionIndex({ sections }: Props) {
                                                     size="sm"
                                                     className="rounded-md"
                                                     onClick={() =>
-                                                        destroy(section)
+                                                        setSectionToDelete(
+                                                            section,
+                                                        )
                                                     }
                                                 >
                                                     Delete
@@ -219,6 +224,26 @@ export default function SectionIndex({ sections }: Props) {
                         </table>
                     </div>
                 </div>
+
+                <ConfirmActionDialog
+                    open={sectionToDelete !== null}
+                    onOpenChange={(open) => {
+                        if (!open && !isDeleting) {
+                            setSectionToDelete(null);
+                        }
+                    }}
+                    title="Delete section"
+                    description="This removes the section and all of its pastor records. This action cannot be undone."
+                    confirmLabel="Delete section"
+                    confirmVariant="destructive"
+                    processing={isDeleting}
+                    details={
+                        sectionToDelete
+                            ? `"${sectionToDelete.name}" will be removed from ${sectionToDelete.district.name}.`
+                            : undefined
+                    }
+                    onConfirm={destroySection}
+                />
             </div>
         </AppLayout>
     );

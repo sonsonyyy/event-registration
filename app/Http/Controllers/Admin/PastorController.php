@@ -104,7 +104,7 @@ class PastorController extends Controller
     {
         Pastor::query()->create($request->validated());
 
-        return to_route('admin.pastors.index')->with('success', 'Pastor record created successfully.');
+        return to_route('admin.pastors.index')->with('success', 'Pastor created.');
     }
 
     /**
@@ -130,7 +130,7 @@ class PastorController extends Controller
     {
         $pastor->update($request->validated());
 
-        return to_route('admin.pastors.index')->with('success', 'Pastor record updated successfully.');
+        return to_route('admin.pastors.index')->with('success', 'Pastor updated.');
     }
 
     /**
@@ -142,7 +142,7 @@ class PastorController extends Controller
 
         $pastor->delete();
 
-        return to_route('admin.pastors.index')->with('success', 'Pastor record deleted successfully.');
+        return to_route('admin.pastors.index')->with('success', 'Pastor deleted.');
     }
 
     /**

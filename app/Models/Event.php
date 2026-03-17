@@ -90,6 +90,7 @@ class Event extends Model
     {
         $query
             ->withCount('feeCategories')
+            ->withCount('registrations')
             ->withSum('reservedRegistrationItems as reserved_quantity', 'quantity');
     }
 

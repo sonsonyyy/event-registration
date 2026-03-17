@@ -57,7 +57,7 @@ class SectionController extends Controller
     {
         Section::query()->create($request->validated());
 
-        return to_route('admin.sections.index')->with('success', 'Section created successfully.');
+        return to_route('admin.sections.index')->with('success', 'Section created.');
     }
 
     /**
@@ -83,7 +83,7 @@ class SectionController extends Controller
     {
         $section->update($request->validated());
 
-        return to_route('admin.sections.index')->with('success', 'Section updated successfully.');
+        return to_route('admin.sections.index')->with('success', 'Section updated.');
     }
 
     /**
@@ -95,7 +95,7 @@ class SectionController extends Controller
 
         $section->delete();
 
-        return to_route('admin.sections.index')->with('success', 'Section deleted successfully.');
+        return to_route('admin.sections.index')->with('success', 'Section deleted.');
     }
 
     /**

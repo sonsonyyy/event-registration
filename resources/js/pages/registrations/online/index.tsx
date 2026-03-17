@@ -1,7 +1,8 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import OnlineRegistrationController from '@/actions/App/Http/Controllers/OnlineRegistrationController';
 import AssignedChurchCard from '@/components/assigned-church-card';
+import ConfirmActionDialog from '@/components/confirm-action-dialog';
 import {
     DataTableBadge,
     resolveDataTableTone,
@@ -13,7 +14,6 @@ import Heading from '@/components/heading';
 import RegistrationRecordDialog from '@/components/registration-record-dialog';
 import { Button } from '@/components/ui/button';
 import { formatSystemDateTime } from '@/lib/date-time';
-import { successNoticeClassName } from '@/lib/ui-styles';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
@@ -117,13 +117,12 @@ export default function OnlineRegistrationIndex({
     filters,
     perPageOptions,
 }: Props) {
-    const page = usePage();
-    const flash = page.props.flash as
-        | { success?: string | null }
-        | undefined;
     const [search, setSearch] = useState(filters.search);
     const [selectedRegistration, setSelectedRegistration] =
         useState<RegistrationRecord | null>(null);
+    const [registrationToCancel, setRegistrationToCancel] =
+        useState<RegistrationRecord | null>(null);
+    const [isCancelling, setIsCancelling] = useState(false);
 
     useEffect(() => {
         setSearch(filters.search);
@@ -165,16 +164,22 @@ export default function OnlineRegistrationIndex({
         });
     };
 
-    const cancelRegistration = (registration: RegistrationRecord): void => {
-        if (! window.confirm(`Cancel online registration #${registration.id}?`)) {
+    const cancelRegistration = (): void => {
+        if (registrationToCancel === null) {
             return;
         }
 
+        setIsCancelling(true);
+
         router.patch(
-            OnlineRegistrationController.cancel(registration.id),
+            OnlineRegistrationController.cancel(registrationToCancel.id),
             {},
             {
                 preserveScroll: true,
+                onFinish: () => {
+                    setIsCancelling(false);
+                    setRegistrationToCancel(null);
+                },
             },
         );
     };
@@ -196,12 +201,6 @@ export default function OnlineRegistrationIndex({
 
                 {assignedPastor && (
                     <AssignedChurchCard assignedPastor={assignedPastor} />
-                )}
-
-                {flash?.success && (
-                    <div className={successNoticeClassName}>
-                        {flash.success}
-                    </div>
                 )}
 
                 <div className={elevatedIndexTableStyles.shell}>
@@ -536,7 +535,7 @@ export default function OnlineRegistrationIndex({
                                         variant="outline"
                                         onClick={() => {
                                             closeDetails();
-                                            cancelRegistration(
+                                            setRegistrationToCancel(
                                                 selectedRegistration,
                                             );
                                         }}
@@ -547,6 +546,38 @@ export default function OnlineRegistrationIndex({
                             </div>
                         ) : null
                     }
+                />
+
+                <ConfirmActionDialog
+                    open={registrationToCancel !== null}
+                    onOpenChange={(open) => {
+                        if (!open && !isCancelling) {
+                            setRegistrationToCancel(null);
+                        }
+                    }}
+                    title="Cancel online registration"
+                    description="This will stop the registration from being reviewed and keep it out of the active submission queue."
+                    confirmLabel="Cancel registration"
+                    confirmVariant="destructive"
+                    processing={isCancelling}
+                    details={
+                        registrationToCancel ? (
+                            <>
+                                <div className="font-medium text-slate-900 dark:text-slate-100">
+                                    #{registrationToCancel.id} ·{' '}
+                                    {registrationToCancel.event.name}
+                                </div>
+                                <div>
+                                    {registrationToCancel.total_quantity}{' '}
+                                    delegates ·{' '}
+                                    {formatCurrency(
+                                        registrationToCancel.total_amount,
+                                    )}
+                                </div>
+                            </>
+                        ) : undefined
+                    }
+                    onConfirm={cancelRegistration}
                 />
             </div>
         </AppLayout>

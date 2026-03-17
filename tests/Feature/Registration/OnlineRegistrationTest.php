@@ -69,7 +69,8 @@ test('online registrants can submit registrations with receipt upload stored on 
                 ],
             ],
         ])
-        ->assertRedirect(route('registrations.online.index'));
+        ->assertRedirect(route('registrations.online.index'))
+        ->assertInertiaFlash('toasts.0.title', 'Online registration submitted.');
 
     $registration = Registration::query()
         ->with('items.feeCategory')

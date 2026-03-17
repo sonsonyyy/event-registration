@@ -145,7 +145,8 @@ test('admins can open uploaded receipts and verify online registrations', functi
         ->patch(route('registrations.verification.update', $registration), [
             'decision' => Registration::STATUS_VERIFIED,
         ])
-        ->assertRedirect(route('registrations.verification.index'));
+        ->assertRedirect(route('registrations.verification.index'))
+        ->assertInertiaFlash('toasts.0.title', 'Registration verified successfully.');
 
     $registration->refresh();
 

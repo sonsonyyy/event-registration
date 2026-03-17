@@ -1,7 +1,8 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { BadgeCheck, CircleX, Clock3 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import RegistrantApprovalController from '@/actions/App/Http/Controllers/RegistrantApprovalController';
+import ConfirmActionDialog from '@/components/confirm-action-dialog';
 import {
     DataTableBadge,
     resolveDataTableTone,
@@ -97,22 +98,15 @@ export default function AccountRequestsIndex({
     statusOptions,
     perPageOptions,
 }: Props) {
-    const page = usePage();
-    const flash = page.props.flash as
-        | {
-              success?: string | null;
-              error?: string | null;
-          }
-        | undefined;
-    const errors = page.props.errors as
-        | {
-              decision?: string;
-          }
-        | undefined;
     const [search, setSearch] = useState(filters.search);
     const [status, setStatus] = useState(filters.status);
     const [selectedRequest, setSelectedRequest] =
         useState<AccountRequestRecord | null>(null);
+    const [pendingReview, setPendingReview] = useState<{
+        request: AccountRequestRecord;
+        decision: 'approved' | 'rejected';
+    } | null>(null);
+    const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
     useEffect(() => {
         setSearch(filters.search);
@@ -135,31 +129,27 @@ export default function AccountRequestsIndex({
         });
     };
 
-    const reviewRequest = (
-        accountRequest: AccountRequestRecord,
-        decision: 'approved' | 'rejected',
-    ): void => {
-        const confirmationMessage =
-            decision === 'approved'
-                ? `Approve ${accountRequest.name}'s registrant access?`
-                : `Reject ${accountRequest.name}'s registrant access?`;
-
-        if (! window.confirm(confirmationMessage)) {
+    const reviewRequest = (): void => {
+        if (pendingReview === null) {
             return;
         }
 
+        setIsSubmittingReview(true);
+
         router.patch(
-            RegistrantApprovalController.update.url(accountRequest.id),
+            RegistrantApprovalController.update.url(pendingReview.request.id),
             {
-                decision,
+                decision: pendingReview.decision,
             },
             {
                 preserveScroll: true,
+                onFinish: () => {
+                    setIsSubmittingReview(false);
+                    setPendingReview(null);
+                },
             },
         );
     };
-
-    const errorMessage = flash?.error ?? errors?.decision ?? null;
     const summaryCards = [
         {
             title: 'Pending Requests',
@@ -231,18 +221,6 @@ export default function AccountRequestsIndex({
                         </div>
                     ))}
                 </div>
-
-                {flash?.success && (
-                    <div className={reviewWorkspaceStyles.flashSuccess}>
-                        {flash.success}
-                    </div>
-                )}
-
-                {errorMessage && (
-                    <div className={reviewWorkspaceStyles.flashError}>
-                        {errorMessage}
-                    </div>
-                )}
 
                 <div className={reviewWorkspaceStyles.shell}>
                     <div className={reviewWorkspaceStyles.band}>
@@ -690,7 +668,10 @@ export default function AccountRequestsIndex({
                                     onClick={() => {
                                         const request = selectedRequest;
                                         setSelectedRequest(null);
-                                        reviewRequest(request, 'approved');
+                                        setPendingReview({
+                                            request,
+                                            decision: 'approved',
+                                        });
                                     }}
                                     disabled={
                                         selectedRequest.approval_status ===
@@ -706,7 +687,10 @@ export default function AccountRequestsIndex({
                                     onClick={() => {
                                         const request = selectedRequest;
                                         setSelectedRequest(null);
-                                        reviewRequest(request, 'rejected');
+                                        setPendingReview({
+                                            request,
+                                            decision: 'rejected',
+                                        });
                                     }}
                                     disabled={
                                         selectedRequest.approval_status ===
@@ -718,6 +702,51 @@ export default function AccountRequestsIndex({
                             </div>
                         ) : null
                     }
+                />
+
+                <ConfirmActionDialog
+                    open={pendingReview !== null}
+                    onOpenChange={(open) => {
+                        if (!open && !isSubmittingReview) {
+                            setPendingReview(null);
+                        }
+                    }}
+                    title={
+                        pendingReview?.decision === 'approved'
+                            ? 'Approve registrant account'
+                            : 'Reject registrant account'
+                    }
+                    description={
+                        pendingReview?.decision === 'approved'
+                            ? 'This will unlock online registration for the representative.'
+                            : 'This will keep the account request out of the approved access list.'
+                    }
+                    confirmLabel={
+                        pendingReview?.decision === 'approved'
+                            ? 'Approve account'
+                            : 'Reject account'
+                    }
+                    confirmVariant={
+                        pendingReview?.decision === 'approved'
+                            ? 'default'
+                            : 'destructive'
+                    }
+                    processing={isSubmittingReview}
+                    details={
+                        pendingReview ? (
+                            <>
+                                <div className="font-medium text-slate-900 dark:text-slate-100">
+                                    {pendingReview.request.name}
+                                </div>
+                                <div>{pendingReview.request.email}</div>
+                                <div>
+                                    {pendingReview.request.pastor
+                                        ?.church_name ?? 'No church assigned'}
+                                </div>
+                            </>
+                        ) : undefined
+                    }
+                    onConfirm={reviewRequest}
                 />
             </div>
         </AppLayout>

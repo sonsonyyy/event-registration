@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
 import {
@@ -12,7 +12,6 @@ import Heading from '@/components/heading';
 import RegistrationRecordDialog from '@/components/registration-record-dialog';
 import { Button } from '@/components/ui/button';
 import { formatSystemDateTime } from '@/lib/date-time';
-import { successNoticeClassName } from '@/lib/ui-styles';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
@@ -92,8 +91,6 @@ export default function OnsiteRegistrationIndex({
     filters,
     perPageOptions,
 }: Props) {
-    const page = usePage();
-    const flash = page.props.flash as { success?: string | null } | undefined;
     const [search, setSearch] = useState(filters.search);
     const [selectedRegistration, setSelectedRegistration] =
         useState<RegistrationRecord | null>(null);
@@ -148,12 +145,6 @@ export default function OnsiteRegistrationIndex({
                     description="Record walk-in quantities with multiple fee-category items in a single transaction."
                     className="mb-4"
                 />
-
-                {flash?.success && (
-                    <div className={successNoticeClassName}>
-                        {flash.success}
-                    </div>
-                )}
 
                 <div className={elevatedIndexTableStyles.shell}>
                     <div className={elevatedIndexTableStyles.band}>

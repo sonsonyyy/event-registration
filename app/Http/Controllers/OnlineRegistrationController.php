@@ -102,7 +102,7 @@ class OnlineRegistrationController extends Controller
         $receiptUploadedAt = now();
 
         try {
-            $registrationId = DB::transaction(function () use ($request, $validated, $receipt, $receiptPath, $receiptUploadedAt): int {
+            DB::transaction(function () use ($request, $validated, $receipt, $receiptPath, $receiptUploadedAt): void {
                 $event = Event::query()
                     ->lockForUpdate()
                     ->findOrFail($validated['event_id']);
@@ -154,8 +154,6 @@ class OnlineRegistrationController extends Controller
                 ]);
 
                 $this->persistLineItems($registration, $lineItems, $feeCategories);
-
-                return $registration->getKey();
             });
         } catch (Throwable $throwable) {
             Storage::disk($receiptDisk)->delete($receiptPath);
@@ -164,7 +162,7 @@ class OnlineRegistrationController extends Controller
         }
 
         return to_route('registrations.online.index')
-            ->with('success', "Online registration #{$registrationId} submitted successfully.");
+            ->with('success', 'Online registration submitted.');
     }
 
     public function update(UpdateOnlineRegistrationRequest $request, Registration $registration): RedirectResponse
@@ -179,7 +177,7 @@ class OnlineRegistrationController extends Controller
         $previousReceiptPath = null;
 
         try {
-            $registrationId = DB::transaction(function () use (
+            DB::transaction(function () use (
                 $request,
                 $registration,
                 $validated,
@@ -187,7 +185,7 @@ class OnlineRegistrationController extends Controller
                 $replacementReceiptPath,
                 $replacementUploadedAt,
                 &$previousReceiptPath,
-            ): int {
+            ): void {
                 $registration = Registration::query()
                     ->with([
                         'items.feeCategory',
@@ -258,8 +256,6 @@ class OnlineRegistrationController extends Controller
                 $registration->items()->delete();
                 $this->persistLineItems($registration, $lineItems, $feeCategories);
                 $this->syncEventStatuses([$originalEventId, $registration->event_id]);
-
-                return $registration->getKey();
             });
         } catch (Throwable $throwable) {
             if ($replacementReceiptPath !== null) {
@@ -278,7 +274,7 @@ class OnlineRegistrationController extends Controller
         }
 
         return to_route('registrations.online.index')
-            ->with('success', "Online registration #{$registrationId} updated successfully.");
+            ->with('success', 'Online registration updated.');
     }
 
     public function cancel(CancelOnlineRegistrationRequest $request, Registration $registration): RedirectResponse
@@ -301,7 +297,7 @@ class OnlineRegistrationController extends Controller
         });
 
         return to_route('registrations.online.index')
-            ->with('success', "Online registration #{$registration->getKey()} cancelled successfully.");
+            ->with('success', 'Online registration cancelled.');
     }
 
     /**

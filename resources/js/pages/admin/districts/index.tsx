@@ -1,5 +1,7 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import { useState } from 'react';
 import DistrictController from '@/actions/App/Http/Controllers/Admin/DistrictController';
+import ConfirmActionDialog from '@/components/confirm-action-dialog';
 import {
     DataTableBadge,
     resolveDataTableTone,
@@ -7,7 +9,6 @@ import {
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
-import { successNoticeClassName } from '@/lib/ui-styles';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -36,16 +37,24 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function DistrictIndex({ districts }: Props) {
-    const page = usePage();
-    const flash = page.props.flash as { success?: string | null } | undefined;
+    const [districtToDelete, setDistrictToDelete] = useState<District | null>(
+        null,
+    );
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    const destroy = (district: District): void => {
-        if (! window.confirm(`Delete "${district.name}"? This will also remove its sections and pastors.`)) {
+    const destroyDistrict = (): void => {
+        if (districtToDelete === null) {
             return;
         }
 
-        router.delete(DistrictController.destroy.url(district.id), {
+        setIsDeleting(true);
+
+        router.delete(DistrictController.destroy.url(districtToDelete.id), {
             preserveScroll: true,
+            onFinish: () => {
+                setIsDeleting(false);
+                setDistrictToDelete(null);
+            },
         });
     };
 
@@ -59,12 +68,6 @@ export default function DistrictIndex({ districts }: Props) {
                     description="Manage the top-level district records used to organize sections and pastors."
                     className="mb-4"
                 />
-
-                {flash?.success && (
-                    <div className={successNoticeClassName}>
-                        {flash.success}
-                    </div>
-                )}
 
                 <div className={elevatedIndexTableStyles.shell}>
                     <div className={elevatedIndexTableStyles.band}>
@@ -193,7 +196,9 @@ export default function DistrictIndex({ districts }: Props) {
                                                     size="sm"
                                                     className="rounded-md"
                                                     onClick={() =>
-                                                        destroy(district)
+                                                        setDistrictToDelete(
+                                                            district,
+                                                        )
                                                     }
                                                 >
                                                     Delete
@@ -207,6 +212,26 @@ export default function DistrictIndex({ districts }: Props) {
                         </table>
                     </div>
                 </div>
+
+                <ConfirmActionDialog
+                    open={districtToDelete !== null}
+                    onOpenChange={(open) => {
+                        if (!open && !isDeleting) {
+                            setDistrictToDelete(null);
+                        }
+                    }}
+                    title="Delete district"
+                    description="This removes the district and its related sections and pastors. This action cannot be undone."
+                    confirmLabel="Delete district"
+                    confirmVariant="destructive"
+                    processing={isDeleting}
+                    details={
+                        districtToDelete
+                            ? `"${districtToDelete.name}" will be permanently removed from the directory.`
+                            : undefined
+                    }
+                    onConfirm={destroyDistrict}
+                />
             </div>
         </AppLayout>
     );

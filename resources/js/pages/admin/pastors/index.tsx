@@ -1,6 +1,7 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import PastorController from '@/actions/App/Http/Controllers/Admin/PastorController';
+import ConfirmActionDialog from '@/components/confirm-action-dialog';
 import {
     DataTableBadge,
     resolveDataTableTone,
@@ -10,7 +11,6 @@ import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
-import { successNoticeClassName } from '@/lib/ui-styles';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
@@ -58,21 +58,27 @@ export default function PastorIndex({
     filters,
     perPageOptions,
 }: Props) {
-    const page = usePage();
-    const flash = page.props.flash as { success?: string | null } | undefined;
     const [search, setSearch] = useState(filters.search);
+    const [pastorToDelete, setPastorToDelete] = useState<Pastor | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         setSearch(filters.search);
     }, [filters.search]);
 
-    const destroy = (pastor: Pastor): void => {
-        if (! window.confirm(`Delete "${pastor.church_name}" and its pastor record?`)) {
+    const destroyPastor = (): void => {
+        if (pastorToDelete === null) {
             return;
         }
 
-        router.delete(PastorController.destroy.url(pastor.id), {
+        setIsDeleting(true);
+
+        router.delete(PastorController.destroy.url(pastorToDelete.id), {
             preserveScroll: true,
+            onFinish: () => {
+                setIsDeleting(false);
+                setPastorToDelete(null);
+            },
         });
     };
 
@@ -122,12 +128,6 @@ export default function PastorIndex({
                     description="Maintain the pastor and church records used by onsite staff and online registrants."
                     className="mb-4"
                 />
-
-                {flash?.success && (
-                    <div className={successNoticeClassName}>
-                        {flash.success}
-                    </div>
-                )}
 
                 <div className={elevatedIndexTableStyles.shell}>
                     <div className={elevatedIndexTableStyles.band}>
@@ -291,7 +291,9 @@ export default function PastorIndex({
                                                     size="sm"
                                                     className="rounded-md"
                                                     onClick={() =>
-                                                        destroy(pastor)
+                                                        setPastorToDelete(
+                                                            pastor,
+                                                        )
                                                     }
                                                 >
                                                     Delete
@@ -339,6 +341,35 @@ export default function PastorIndex({
                         />
                     </div>
                 </div>
+
+                <ConfirmActionDialog
+                    open={pastorToDelete !== null}
+                    onOpenChange={(open) => {
+                        if (!open && !isDeleting) {
+                            setPastorToDelete(null);
+                        }
+                    }}
+                    title="Delete pastor record"
+                    description="This removes the church and pastor assignment from the registration directory."
+                    confirmLabel="Delete pastor record"
+                    confirmVariant="destructive"
+                    processing={isDeleting}
+                    details={
+                        pastorToDelete ? (
+                            <>
+                                <div className="font-medium text-slate-900 dark:text-slate-100">
+                                    {pastorToDelete.church_name}
+                                </div>
+                                <div>
+                                    Pastor {pastorToDelete.pastor_name} in{' '}
+                                    {pastorToDelete.section.name},{' '}
+                                    {pastorToDelete.district.name}
+                                </div>
+                            </>
+                        ) : undefined
+                    }
+                    onConfirm={destroyPastor}
+                />
             </div>
         </AppLayout>
     );

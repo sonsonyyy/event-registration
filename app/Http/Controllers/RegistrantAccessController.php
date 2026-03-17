@@ -42,7 +42,7 @@ class RegistrantAccessController extends Controller
 
         return to_route('login')->with(
             'status',
-            'Registrant account request submitted. You can sign in now, but online registration stays locked until an admin or manager approves your church account.',
+            'registrant-access-submitted',
         );
     }
 

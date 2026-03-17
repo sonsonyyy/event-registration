@@ -94,7 +94,7 @@ class OnsiteRegistrationController extends Controller
     {
         $validated = $request->validated();
 
-        $registrationId = DB::transaction(function () use ($request, $validated): int {
+        DB::transaction(function () use ($request, $validated): void {
             $event = Event::query()
                 ->lockForUpdate()
                 ->findOrFail($validated['event_id']);
@@ -142,19 +142,17 @@ class OnsiteRegistrationController extends Controller
             ]);
 
             $this->persistLineItems($registration, $lineItems, $feeCategories);
-
-            return $registration->getKey();
         });
 
         return to_route('registrations.onsite.index')
-            ->with('success', "Onsite registration #{$registrationId} saved successfully.");
+            ->with('success', 'Onsite registration saved.');
     }
 
     public function update(UpdateOnsiteRegistrationRequest $request, Registration $registration): RedirectResponse
     {
         $validated = $request->validated();
 
-        $registrationId = DB::transaction(function () use ($registration, $validated): int {
+        DB::transaction(function () use ($registration, $validated): void {
             $registration = Registration::query()
                 ->with([
                     'items.feeCategory',
@@ -210,12 +208,10 @@ class OnsiteRegistrationController extends Controller
             $registration->items()->delete();
             $this->persistLineItems($registration, $lineItems, $feeCategories);
             $this->syncEventStatuses([$originalEventId, $registration->event_id]);
-
-            return $registration->getKey();
         });
 
         return to_route('registrations.onsite.index')
-            ->with('success', "Onsite registration #{$registrationId} updated successfully.");
+            ->with('success', 'Onsite registration updated.');
     }
 
     /**

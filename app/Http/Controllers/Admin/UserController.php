@@ -114,7 +114,7 @@ class UserController extends Controller
             'email_verified_at' => now(),
         ])->save();
 
-        return to_route('admin.users.index')->with('success', 'User created successfully.');
+        return to_route('admin.users.index')->with('success', 'User created.');
     }
 
     /**
@@ -157,12 +157,12 @@ class UserController extends Controller
                 'email_verified_at' => now(),
             ])->save();
 
-            return to_route('admin.users.index')->with('success', 'User updated successfully.');
+            return to_route('admin.users.index')->with('success', 'User updated.');
         }
 
         $user->update($payload);
 
-        return to_route('admin.users.index')->with('success', 'User updated successfully.');
+        return to_route('admin.users.index')->with('success', 'User updated.');
     }
 
     /**
@@ -173,7 +173,7 @@ class UserController extends Controller
         Gate::authorize('delete', $user);
 
         if (auth()->id() === $user->getKey()) {
-            return to_route('admin.users.index')->with('error', 'You cannot delete your own account.');
+            return to_route('admin.users.index')->with('error', "You can't delete your own account.");
         }
 
         try {
@@ -185,7 +185,7 @@ class UserController extends Controller
             );
         }
 
-        return to_route('admin.users.index')->with('success', 'User deleted successfully.');
+        return to_route('admin.users.index')->with('success', 'User deleted.');
     }
 
     /**

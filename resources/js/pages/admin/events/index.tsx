@@ -1,6 +1,7 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import EventController from '@/actions/App/Http/Controllers/Admin/EventController';
+import ConfirmActionDialog from '@/components/confirm-action-dialog';
 import {
     DataTableBadge,
     resolveDataTableTone,
@@ -15,7 +16,6 @@ import {
     formatSystemDateOnly,
     formatSystemDateTime,
 } from '@/lib/date-time';
-import { successNoticeClassName } from '@/lib/ui-styles';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
@@ -32,10 +32,12 @@ type EventRecord = {
     status: string;
     status_reason: string | null;
     fee_categories_count: number;
+    registrations_count: number;
     reserved_quantity: number;
     total_capacity: number;
     remaining_slots: number;
     accepting_registrations: boolean;
+    can_delete: boolean;
 };
 
 type Props = {
@@ -63,26 +65,30 @@ export default function EventIndex({
     filters,
     perPageOptions,
 }: Props) {
-    const page = usePage();
-    const flash = page.props.flash as { success?: string | null } | undefined;
     const [search, setSearch] = useState(filters.search);
     const [selectedEvent, setSelectedEvent] = useState<EventRecord | null>(null);
+    const [eventToDelete, setEventToDelete] = useState<EventRecord | null>(
+        null,
+    );
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         setSearch(filters.search);
     }, [filters.search]);
 
-    const destroy = (event: EventRecord): void => {
-        if (
-            ! window.confirm(
-                `Delete "${event.name}"? This also removes its fee categories and registrations.`,
-            )
-        ) {
+    const destroyEvent = (): void => {
+        if (eventToDelete === null) {
             return;
         }
 
-        router.delete(EventController.destroy.url(event.id), {
+        setIsDeleting(true);
+
+        router.delete(EventController.destroy.url(eventToDelete.id), {
             preserveScroll: true,
+            onFinish: () => {
+                setIsDeleting(false);
+                setEventToDelete(null);
+            },
         });
     };
 
@@ -132,12 +138,6 @@ export default function EventIndex({
                     description="Manage event schedules, fee categories, and registration capacity in one place."
                     className="mb-4"
                 />
-
-                {flash?.success && (
-                    <div className={successNoticeClassName}>
-                        {flash.success}
-                    </div>
-                )}
 
                 <div className={elevatedIndexTableStyles.shell}>
                     <div className={elevatedIndexTableStyles.band}>
@@ -346,14 +346,25 @@ export default function EventIndex({
                                                     </Link>
                                                 </Button>
                                                 <Button
-                                                    variant="destructive"
+                                                    variant={
+                                                        event.can_delete
+                                                            ? 'destructive'
+                                                            : 'outline'
+                                                    }
                                                     size="sm"
                                                     className="rounded-md"
                                                     onClick={() =>
-                                                        destroy(event)
+                                                        event.can_delete
+                                                            ? setEventToDelete(
+                                                                  event,
+                                                              )
+                                                            : undefined
                                                     }
+                                                    disabled={!event.can_delete}
                                                 >
-                                                    Delete
+                                                    {event.can_delete
+                                                        ? 'Delete'
+                                                        : 'Protected'}
                                                 </Button>
                                             </div>
                                             </td>
@@ -544,6 +555,38 @@ export default function EventIndex({
                             </div>
                         ) : null
                     }
+                />
+
+                <ConfirmActionDialog
+                    open={eventToDelete !== null}
+                    onOpenChange={(open) => {
+                        if (!open && !isDeleting) {
+                            setEventToDelete(null);
+                        }
+                    }}
+                    title="Delete event"
+                    description="Delete this event only if it has no recorded registrations. Events with transactions are retained for reporting integrity."
+                    confirmLabel="Delete event"
+                    confirmVariant="destructive"
+                    processing={isDeleting}
+                    details={
+                        eventToDelete ? (
+                            <>
+                                <div className="font-medium text-slate-900 dark:text-slate-100">
+                                    {eventToDelete.name}
+                                </div>
+                                <div>
+                                    {formatSystemDateOnly(eventToDelete.date_from)} at{' '}
+                                    {eventToDelete.venue}
+                                </div>
+                                <div>
+                                    {eventToDelete.registrations_count} recorded
+                                    {' '}registrations
+                                </div>
+                            </>
+                        ) : undefined
+                    }
+                    onConfirm={destroyEvent}
                 />
             </div>
         </AppLayout>

@@ -1,6 +1,7 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
+import ConfirmActionDialog from '@/components/confirm-action-dialog';
 import {
     DataTableBadge,
     resolveDataTableTone,
@@ -10,10 +11,6 @@ import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
-import {
-    dangerNoticeClassName,
-    successNoticeClassName,
-} from '@/lib/ui-styles';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
@@ -73,30 +70,27 @@ export default function UserIndex({
     filters,
     perPageOptions,
 }: Props) {
-    const page = usePage();
-    const flash = page.props.flash as
-        | {
-              success?: string | null;
-              error?: string | null;
-          }
-        | undefined;
     const [search, setSearch] = useState(filters.search);
+    const [userToDelete, setUserToDelete] = useState<UserRecord | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         setSearch(filters.search);
     }, [filters.search]);
 
-    const destroy = (user: UserRecord): void => {
-        if (
-            ! window.confirm(
-                `Delete "${user.name}"? Use inactive status instead if this account still has operational history.`,
-            )
-        ) {
+    const destroyUser = (): void => {
+        if (userToDelete === null) {
             return;
         }
 
-        router.delete(UserController.destroy.url(user.id), {
+        setIsDeleting(true);
+
+        router.delete(UserController.destroy.url(userToDelete.id), {
             preserveScroll: true,
+            onFinish: () => {
+                setIsDeleting(false);
+                setUserToDelete(null);
+            },
         });
     };
 
@@ -146,18 +140,6 @@ export default function UserIndex({
                     description="Manage system accounts, roles, and section or pastor scope assignments."
                     className="mb-4"
                 />
-
-                {flash?.success && (
-                    <div className={successNoticeClassName}>
-                        {flash.success}
-                    </div>
-                )}
-
-                {flash?.error && (
-                    <div className={dangerNoticeClassName}>
-                        {flash.error}
-                    </div>
-                )}
 
                 <div className={elevatedIndexTableStyles.shell}>
                     <div className={elevatedIndexTableStyles.band}>
@@ -351,7 +333,9 @@ export default function UserIndex({
                                                         size="sm"
                                                         className="rounded-md"
                                                         onClick={() =>
-                                                            destroy(user)
+                                                            setUserToDelete(
+                                                                user,
+                                                            )
                                                         }
                                                     >
                                                         Delete
@@ -409,6 +393,31 @@ export default function UserIndex({
                         />
                     </div>
                 </div>
+
+                <ConfirmActionDialog
+                    open={userToDelete !== null}
+                    onOpenChange={(open) => {
+                        if (!open && !isDeleting) {
+                            setUserToDelete(null);
+                        }
+                    }}
+                    title="Delete user account"
+                    description="Delete this account only if it no longer has operational history. Otherwise, set the account to inactive instead."
+                    confirmLabel="Delete user"
+                    confirmVariant="destructive"
+                    processing={isDeleting}
+                    details={
+                        userToDelete ? (
+                            <>
+                                <div className="font-medium text-slate-900 dark:text-slate-100">
+                                    {userToDelete.name}
+                                </div>
+                                <div>{userToDelete.email}</div>
+                            </>
+                        ) : undefined
+                    }
+                    onConfirm={destroyUser}
+                />
             </div>
         </AppLayout>
     );

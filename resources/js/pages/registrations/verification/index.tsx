@@ -1,4 +1,4 @@
-import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import {
     AlertTriangle,
     BadgeCheck,
@@ -182,13 +182,6 @@ export default function RegistrationVerificationIndex({
     statusOptions,
     perPageOptions,
 }: Props) {
-    const page = usePage();
-    const flash = page.props.flash as
-        | {
-              success?: string | null;
-              error?: string | null;
-          }
-        | undefined;
     const [search, setSearch] = useState(filters.search);
     const [status, setStatus] = useState(filters.status);
     const [selectedRegistration, setSelectedRegistration] =
@@ -209,9 +202,6 @@ export default function RegistrationVerificationIndex({
 
     const activeDecision = form.data.decision;
     const activeDecisionContent = decisionContent[activeDecision];
-    const reviewError = (page.props.errors as Record<string, string> | undefined)
-        ?.decision;
-
     const summaryCards = [
         {
             title: 'Pending Review',
@@ -336,18 +326,6 @@ export default function RegistrationVerificationIndex({
                         </div>
                     ))}
                 </div>
-
-                {flash?.success && (
-                    <div className={reviewWorkspaceStyles.flashSuccess}>
-                        {flash.success}
-                    </div>
-                )}
-
-                {(flash?.error ?? reviewError) && (
-                    <div className={reviewWorkspaceStyles.flashError}>
-                        {flash?.error ?? reviewError}
-                    </div>
-                )}
 
                 <div className={reviewWorkspaceStyles.shell}>
                     <div className={reviewWorkspaceStyles.band}>

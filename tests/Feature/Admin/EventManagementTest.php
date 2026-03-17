@@ -279,6 +279,42 @@ test('admins cannot reduce event capacity below reserved quantities or remove us
         ->assertSessionHasErrors(['fee_categories.0.slot_limit']);
 });
 
+test('admins can delete events without registrations', function () {
+    $admin = User::factory()->admin()->create();
+    $event = Event::factory()->create();
+    EventFeeCategory::factory()->for($event)->create();
+
+    $this->actingAs($admin)
+        ->delete(route('admin.events.destroy', $event))
+        ->assertRedirect(route('admin.events.index'))
+        ->assertInertiaFlash('toasts.0.title', 'Event deleted.')
+        ->assertSessionHas('success', 'Event deleted.');
+
+    expect(Event::query()->whereKey($event->id)->exists())->toBeFalse();
+});
+
+test('admins cannot delete events with recorded registrations', function () {
+    $admin = User::factory()->admin()->create();
+    $event = Event::factory()->create([
+        'status' => Event::STATUS_OPEN,
+        'registration_open_at' => now()->subDay(),
+        'registration_close_at' => now()->addDay(),
+    ]);
+    $feeCategory = EventFeeCategory::factory()->for($event)->create();
+
+    reserveQuantityForEvent($event, $feeCategory, 3, Registration::STATUS_VERIFIED);
+
+    $this->actingAs($admin)
+        ->delete(route('admin.events.destroy', $event))
+        ->assertRedirect(route('admin.events.index'))
+        ->assertSessionHas(
+            'error',
+            'Event has registrations and cannot be deleted.',
+        );
+
+    expect($event->fresh())->not->toBeNull();
+});
+
 test('full or expired open events are automatically surfaced as closed with no remaining slots', function () {
     $admin = User::factory()->admin()->create();
     $fullEvent = Event::factory()->create([

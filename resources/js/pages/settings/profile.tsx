@@ -1,6 +1,6 @@
-import { Transition } from '@headlessui/react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ShieldAlert } from 'lucide-react';
+import ActionStatusToast from '@/components/action-status-toast';
 import Heading from '@/components/heading';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -89,6 +89,10 @@ export default function Profile({
 
                         {mustVerifyEmail && auth.user.email_verified_at === null && (
                             <div>
+                                <ActionStatusToast
+                                    show={status === 'verification-link-sent'}
+                                    title="Verification email sent."
+                                />
                                 <p className="-mt-1 text-sm text-muted-foreground">
                                     Your email address is unverified.{' '}
                                     <Link
@@ -100,19 +104,6 @@ export default function Profile({
                                         email.
                                     </Link>
                                 </p>
-
-                                <Transition
-                                    show={status === 'verification-link-sent'}
-                                    enter="transition ease-in-out"
-                                    enterFrom="opacity-0"
-                                    leave="transition ease-in-out"
-                                    leaveTo="opacity-0"
-                                >
-                                    <div className="mt-2 text-sm font-medium text-green-600">
-                                        A new verification link has been sent to
-                                        your email address.
-                                    </div>
-                                </Transition>
                             </div>
                         )}
                     </div>

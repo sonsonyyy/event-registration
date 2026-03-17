@@ -50,7 +50,7 @@ class DistrictController extends Controller
     {
         District::query()->create($request->validated());
 
-        return to_route('admin.districts.index')->with('success', 'District created successfully.');
+        return to_route('admin.districts.index')->with('success', 'District created.');
     }
 
     /**
@@ -73,7 +73,7 @@ class DistrictController extends Controller
     {
         $district->update($request->validated());
 
-        return to_route('admin.districts.index')->with('success', 'District updated successfully.');
+        return to_route('admin.districts.index')->with('success', 'District updated.');
     }
 
     /**
@@ -85,7 +85,7 @@ class DistrictController extends Controller
 
         $district->delete();
 
-        return to_route('admin.districts.index')->with('success', 'District deleted successfully.');
+        return to_route('admin.districts.index')->with('success', 'District deleted.');
     }
 
     /**
