@@ -21,6 +21,9 @@ type EventRecord = {
     registration_open_at: string;
     registration_close_at: string;
     status: string;
+    scope_type: string;
+    section_id: number | null;
+    department_id: number | null;
     total_capacity: number;
     reserved_quantity: number;
     remaining_slots: number;
@@ -40,12 +43,27 @@ type EventRecord = {
 type Props = {
     event: EventRecord;
     statusOptions: SelectOption[];
+    scopeTypeOptions: SelectOption[];
+    sections: Array<{
+        id: number;
+        name: string;
+        district_name: string;
+        status: string;
+    }>;
+    departments: Array<{
+        id: number;
+        name: string;
+        status: string;
+    }>;
     feeCategoryStatusOptions: SelectOption[];
 };
 
 export default function EditEvent({
     event,
     statusOptions,
+    scopeTypeOptions,
+    sections,
+    departments,
     feeCategoryStatusOptions,
 }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
@@ -75,6 +93,9 @@ export default function EditEvent({
                 <EventForm
                     event={event}
                     statusOptions={statusOptions}
+                    scopeTypeOptions={scopeTypeOptions}
+                    sections={sections}
+                    departments={departments}
                     feeCategoryStatusOptions={feeCategoryStatusOptions}
                 />
             </div>

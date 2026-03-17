@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Department;
 use App\Models\District;
 use App\Models\Pastor;
 use App\Models\Role;
@@ -9,6 +10,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 test('admins can browse the user management pages', function () {
     $admin = User::factory()->admin()->create();
+    $department = Department::factory()->create();
     $district = District::factory()->create();
     $section = Section::factory()->for($district)->create();
     $pastor = Pastor::factory()->for($section)->create();
@@ -39,6 +41,7 @@ test('admins can browse the user management pages', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/users/create')
             ->has('roles', 4)
+            ->has('departments', 1)
             ->has('districts', 1)
             ->has('sections', 1)
             ->has('pastors', 1)
@@ -56,6 +59,7 @@ test('admins can browse the user management pages', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/users/edit')
             ->where('userRecord.email', $onlineRegistrant->email)
+            ->where('userRecord.department_id', null)
             ->where('userRecord.pastor_id', $pastor->id));
 });
 
@@ -168,6 +172,9 @@ test('non admins cannot access admin user management routes', function () {
 
 test('admins can create users with role and scope assignments', function () {
     $admin = User::factory()->admin()->create();
+    $department = Department::factory()->create([
+        'name' => 'Youth Ministries',
+    ]);
     $district = District::factory()->create();
     $section = Section::factory()->for($district)->create();
     $pastor = Pastor::factory()->for($section)->create();
@@ -186,8 +193,10 @@ test('admins can create users with role and scope assignments', function () {
             'password_confirmation' => 'password',
             'role_id' => $managerRole->id,
             'district_id' => $district->id,
+            'department_id' => $department->id,
             'section_id' => $section->id,
             'pastor_id' => null,
+            'position_title' => 'Section President',
             'status' => 'active',
         ])
         ->assertRedirect(route('admin.users.index'));
@@ -196,8 +205,10 @@ test('admins can create users with role and scope assignments', function () {
 
     expect($createdManager->roleName())->toBe(Role::MANAGER)
         ->and($createdManager->district_id)->toBe($district->id)
+        ->and($createdManager->department_id)->toBe($department->id)
         ->and($createdManager->section_id)->toBe($section->id)
         ->and($createdManager->pastor_id)->toBeNull()
+        ->and($createdManager->position_title)->toBe('Section President')
         ->and($createdManager->email_verified_at)->not->toBeNull();
 
     $this->actingAs($admin)
@@ -208,8 +219,10 @@ test('admins can create users with role and scope assignments', function () {
             'password_confirmation' => 'password',
             'role_id' => $onlineRegistrantRole->id,
             'district_id' => '',
+            'department_id' => '',
             'section_id' => '',
             'pastor_id' => $pastor->id,
+            'position_title' => 'Church Secretary',
             'status' => 'inactive',
         ])
         ->assertRedirect(route('admin.users.index'));
@@ -220,11 +233,13 @@ test('admins can create users with role and scope assignments', function () {
         ->and($createdRegistrant->district_id)->toBe($district->id)
         ->and($createdRegistrant->section_id)->toBe($section->id)
         ->and($createdRegistrant->pastor_id)->toBe($pastor->id)
+        ->and($createdRegistrant->position_title)->toBe('Church Secretary')
         ->and($createdRegistrant->status)->toBe('inactive');
 });
 
 test('admins must satisfy role and scope validation rules when creating users', function () {
     $admin = User::factory()->admin()->create();
+    $department = Department::factory()->create();
     $district = District::factory()->create();
     $otherDistrict = District::factory()->create();
     $section = Section::factory()->for($district)->create();
@@ -246,8 +261,10 @@ test('admins must satisfy role and scope validation rules when creating users', 
             'password_confirmation' => 'mismatch',
             'role_id' => $managerRole->id,
             'district_id' => $district->id,
+            'department_id' => 999999,
             'section_id' => '',
             'pastor_id' => $pastor->id,
+            'position_title' => str_repeat('A', 256),
             'status' => 'archived',
         ])
         ->assertRedirect(route('admin.users.create'))
@@ -255,8 +272,10 @@ test('admins must satisfy role and scope validation rules when creating users', 
             'name',
             'email',
             'password',
+            'department_id',
             'section_id',
             'pastor_id',
+            'position_title',
             'status',
         ]);
 
@@ -269,8 +288,10 @@ test('admins must satisfy role and scope validation rules when creating users', 
             'password_confirmation' => 'password',
             'role_id' => $onlineRegistrantRole->id,
             'district_id' => $district->id,
+            'department_id' => $department->id,
             'section_id' => $section->id,
             'pastor_id' => '',
+            'position_title' => 'Church President',
             'status' => 'active',
         ])
         ->assertRedirect(route('admin.users.create'))
@@ -279,6 +300,12 @@ test('admins must satisfy role and scope validation rules when creating users', 
 
 test('admins can update users and replace their scope assignment', function () {
     $admin = User::factory()->admin()->create();
+    $department = Department::factory()->create([
+        'name' => 'Youth Ministries',
+    ]);
+    $replacementDepartment = Department::factory()->create([
+        'name' => 'Music Commission',
+    ]);
     $district = District::factory()->create();
     $otherDistrict = District::factory()->create();
     $section = Section::factory()->for($district)->create();
@@ -287,7 +314,9 @@ test('admins can update users and replace their scope assignment', function () {
     $otherPastor = Pastor::factory()->for($otherSection)->create();
     $managedUser = User::factory()->manager()->create([
         'district_id' => $district->id,
+        'department_id' => $department->id,
         'section_id' => $section->id,
+        'position_title' => 'Section President',
     ]);
     $onlineRegistrantRole = Role::query()->firstOrCreate([
         'name' => Role::ONLINE_REGISTRANT,
@@ -301,8 +330,10 @@ test('admins can update users and replace their scope assignment', function () {
             'password_confirmation' => '',
             'role_id' => $onlineRegistrantRole->id,
             'district_id' => '',
+            'department_id' => $replacementDepartment->id,
             'section_id' => '',
             'pastor_id' => $otherPastor->id,
+            'position_title' => 'Church Secretary',
             'status' => 'inactive',
         ])
         ->assertRedirect(route('admin.users.index'));
@@ -313,8 +344,10 @@ test('admins can update users and replace their scope assignment', function () {
         ->and($managedUser->email)->toBe('updated.registrant@example.com')
         ->and($managedUser->roleName())->toBe(Role::ONLINE_REGISTRANT)
         ->and($managedUser->district_id)->toBe($otherDistrict->id)
+        ->and($managedUser->department_id)->toBe($replacementDepartment->id)
         ->and($managedUser->section_id)->toBe($otherSection->id)
         ->and($managedUser->pastor_id)->toBe($otherPastor->id)
+        ->and($managedUser->position_title)->toBe('Church Secretary')
         ->and($managedUser->status)->toBe('inactive');
 });
 

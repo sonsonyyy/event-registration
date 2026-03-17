@@ -1,17 +1,25 @@
 <?php
 
+use App\Models\Department;
+use App\Models\District;
 use App\Models\Event;
 use App\Models\EventFeeCategory;
 use App\Models\Pastor;
 use App\Models\Registration;
 use App\Models\RegistrationItem;
+use App\Models\Section;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('admins can browse the event management pages', function () {
     $admin = User::factory()->admin()->create();
+    $department = Department::factory()->create();
+    $section = Section::factory()->for(District::factory())->create();
     $event = Event::factory()->create([
         'status' => Event::STATUS_OPEN,
+        'department_id' => $department->id,
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
         'total_capacity' => 20,
         'registration_open_at' => now()->subDay(),
         'registration_close_at' => now()->addDays(3),
@@ -48,6 +56,9 @@ test('admins can browse the event management pages', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/events/create')
             ->has('statusOptions', 5)
+            ->has('scopeTypeOptions', 2)
+            ->has('sections')
+            ->has('departments')
             ->has('feeCategoryStatusOptions', 2));
 
     $this->actingAs($admin)
@@ -56,6 +67,9 @@ test('admins can browse the event management pages', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/events/edit')
             ->where('event.name', $event->name)
+            ->where('event.scope_type', Event::SCOPE_SECTION)
+            ->where('event.department_id', $department->id)
+            ->where('event.section_id', $section->id)
             ->where('event.remaining_slots', 13)
             ->where('event.fee_categories.0.reserved_quantity', 7));
 });
@@ -114,16 +128,20 @@ test('non admins cannot access admin event management routes', function () {
 
 test('admins can create events with multiple fee categories', function () {
     $admin = User::factory()->admin()->create();
+    $department = Department::factory()->create();
 
     $this->actingAs($admin)
         ->post(route('admin.events.store'), eventPayload([
             'name' => 'District Camp 2026',
+            'department_id' => $department->id,
         ]))
         ->assertRedirect(route('admin.events.index'));
 
     $event = Event::query()->where('name', 'District Camp 2026')->firstOrFail();
 
     expect($event->status)->toBe(Event::STATUS_OPEN)
+        ->and($event->department_id)->toBe($department->id)
+        ->and($event->scope_type)->toBe(Event::SCOPE_DISTRICT)
         ->and($event->feeCategories()->count())->toBe(2)
         ->and($event->feeCategories()->where('category_name', 'Regular (Online)')->exists())->toBeTrue()
         ->and($event->feeCategories()->where('category_name', 'Regular (Onsite)')->exists())->toBeTrue();
@@ -144,6 +162,9 @@ test('admins must pass the event validation rules', function () {
             'registration_close_at' => '2026-06-04T08:00',
             'total_capacity' => 10,
             'status' => Event::STATUS_OPEN,
+            'scope_type' => Event::SCOPE_SECTION,
+            'section_id' => '',
+            'department_id' => 999999,
             'fee_categories' => [
                 [
                     'category_name' => 'Regular',
@@ -165,14 +186,24 @@ test('admins must pass the event validation rules', function () {
             'venue',
             'date_to',
             'registration_close_at',
+            'section_id',
+            'department_id',
             'fee_categories',
         ]);
 });
 
 test('admins can update events and synchronize fee categories', function () {
     $admin = User::factory()->admin()->create();
+    $department = Department::factory()->create([
+        'name' => 'Youth Ministries',
+    ]);
+    $replacementDepartment = Department::factory()->create([
+        'name' => 'Sunday School',
+    ]);
+    $section = Section::factory()->for(District::factory())->create();
     $event = Event::factory()->create([
         'status' => Event::STATUS_DRAFT,
+        'department_id' => $department->id,
         'total_capacity' => 100,
         'registration_open_at' => now()->addDay(),
         'registration_close_at' => now()->addDays(10),
@@ -195,6 +226,9 @@ test('admins can update events and synchronize fee categories', function () {
             'registration_close_at' => '2026-06-30T18:00',
             'total_capacity' => 250,
             'status' => Event::STATUS_OPEN,
+            'scope_type' => Event::SCOPE_SECTION,
+            'section_id' => $section->id,
+            'department_id' => $replacementDepartment->id,
             'fee_categories' => [
                 [
                     'id' => $retainedFeeCategory->id,
@@ -216,6 +250,9 @@ test('admins can update events and synchronize fee categories', function () {
     expect($event->refresh()->name)->toBe('Updated District Camp')
         ->and($event->venue)->toBe('Updated Venue')
         ->and($event->status)->toBe(Event::STATUS_OPEN)
+        ->and($event->scope_type)->toBe(Event::SCOPE_SECTION)
+        ->and($event->section_id)->toBe($section->id)
+        ->and($event->department_id)->toBe($replacementDepartment->id)
         ->and($event->feeCategories()->count())->toBe(2)
         ->and($event->feeCategories()->where('category_name', 'Regular (Online) Updated')->exists())->toBeTrue()
         ->and($event->feeCategories()->where('category_name', 'Regular (Onsite)')->exists())->toBeTrue()
@@ -248,6 +285,9 @@ test('admins cannot reduce event capacity below reserved quantities or remove us
             'registration_close_at' => $event->registration_close_at->format('Y-m-d\TH:i'),
             'total_capacity' => 5,
             'status' => Event::STATUS_OPEN,
+            'scope_type' => $event->scope_type,
+            'section_id' => $event->section_id,
+            'department_id' => $event->department_id,
             'fee_categories' => [],
         ])
         ->assertRedirect(route('admin.events.edit', $event))
@@ -265,6 +305,9 @@ test('admins cannot reduce event capacity below reserved quantities or remove us
             'registration_close_at' => $event->registration_close_at->format('Y-m-d\TH:i'),
             'total_capacity' => 10,
             'status' => Event::STATUS_OPEN,
+            'scope_type' => $event->scope_type,
+            'section_id' => $event->section_id,
+            'department_id' => $event->department_id,
             'fee_categories' => [
                 [
                     'id' => $feeCategory->id,
@@ -380,6 +423,9 @@ function eventPayload(array $overrides = []): array
         'registration_close_at' => '2026-06-18T18:00',
         'total_capacity' => 500,
         'status' => Event::STATUS_OPEN,
+        'scope_type' => Event::SCOPE_DISTRICT,
+        'section_id' => null,
+        'department_id' => null,
         'fee_categories' => [
             [
                 'category_name' => 'Regular (Online)',

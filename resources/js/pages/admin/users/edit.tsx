@@ -12,8 +12,10 @@ type UserRecord = {
     email: string;
     role_id: number | null;
     district_id: number | null;
+    department_id: number | null;
     section_id: number | null;
     pastor_id: number | null;
+    position_title: string | null;
     status: string;
     scope_summary: string;
     email_verified_at: string | null;
@@ -25,6 +27,12 @@ type RoleOption = {
 };
 
 type DistrictOption = {
+    id: number;
+    name: string;
+    status: string;
+};
+
+type DepartmentOption = {
     id: number;
     name: string;
     status: string;
@@ -57,6 +65,7 @@ type StatusOption = {
 type Props = {
     userRecord: UserRecord;
     roles: RoleOption[];
+    departments: DepartmentOption[];
     districts: DistrictOption[];
     sections: SectionOption[];
     pastors: PastorOption[];
@@ -66,6 +75,7 @@ type Props = {
 export default function EditUser({
     userRecord,
     roles,
+    departments,
     districts,
     sections,
     pastors,
@@ -99,6 +109,7 @@ export default function EditUser({
                     userRecord={userRecord}
                     minimalLayout
                     roles={roles}
+                    departments={departments}
                     districts={districts}
                     sections={sections}
                     pastors={pastors}

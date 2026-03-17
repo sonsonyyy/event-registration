@@ -30,6 +30,7 @@ type EventRecord = {
     registration_open_at: string;
     registration_close_at: string;
     status: string;
+    scope_summary: string;
     status_reason: string | null;
     fee_categories_count: number;
     registrations_count: number;
@@ -242,6 +243,9 @@ export default function EventIndex({
                                             </div>
                                             <div className={elevatedIndexTableStyles.secondaryText}>
                                                 {event.venue}
+                                            </div>
+                                            <div className={elevatedIndexTableStyles.secondaryText}>
+                                                {event.scope_summary}
                                             </div>
                                             <div className={elevatedIndexTableStyles.detailText}>
                                                 {event.description ||

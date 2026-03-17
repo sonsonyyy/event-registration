@@ -17,6 +17,12 @@ type DistrictOption = {
     status: string;
 };
 
+type DepartmentOption = {
+    id: number;
+    name: string;
+    status: string;
+};
+
 type SectionOption = {
     id: number;
     name: string;
@@ -43,6 +49,7 @@ type StatusOption = {
 
 type Props = {
     roles: RoleOption[];
+    departments: DepartmentOption[];
     districts: DistrictOption[];
     sections: SectionOption[];
     pastors: PastorOption[];
@@ -66,6 +73,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function CreateUser({
     roles,
+    departments,
     districts,
     sections,
     pastors,
@@ -83,6 +91,7 @@ export default function CreateUser({
                 <UserForm
                     minimalLayout
                     roles={roles}
+                    departments={departments}
                     districts={districts}
                     sections={sections}
                     pastors={pastors}

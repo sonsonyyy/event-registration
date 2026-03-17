@@ -43,6 +43,12 @@ class UpdateUserRequest extends FormRequest
                 Rule::exists('districts', 'id')
                     ->where(fn ($query) => $query->whereNull('deleted_at')),
             ],
+            'department_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('departments', 'id')
+                    ->where(fn ($query) => $query->whereNull('deleted_at')),
+            ],
             'section_id' => [
                 'nullable',
                 'integer',
@@ -55,6 +61,7 @@ class UpdateUserRequest extends FormRequest
                 Rule::exists('pastors', 'id')
                     ->where(fn ($query) => $query->whereNull('deleted_at')),
             ],
+            'position_title' => ['nullable', 'string', 'max:255'],
             'status' => ['required', Rule::in(['active', 'inactive'])],
         ];
     }
@@ -139,8 +146,10 @@ class UpdateUserRequest extends FormRequest
             'role_id.required' => 'Choose a role.',
             'role_id.exists' => 'Choose a valid role.',
             'district_id.exists' => 'Choose a valid district.',
+            'department_id.exists' => 'Choose a valid department.',
             'section_id.exists' => 'Choose a valid section.',
             'pastor_id.exists' => 'Choose a valid pastor.',
+            'position_title.max' => 'Position titles must be 255 characters or fewer.',
             'status.required' => 'Choose a user status.',
             'status.in' => 'Choose a valid user status.',
         ];

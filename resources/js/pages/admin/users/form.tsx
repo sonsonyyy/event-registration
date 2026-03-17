@@ -7,14 +7,18 @@ import PasswordInput from '@/components/password-input';
 import SearchableFormSelect from '@/components/searchable-form-select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { createClearFormErrorHandlers } from '@/lib/form-errors';
-import {
-    mutedNoticeClassName,
-} from '@/lib/ui-styles';
+import { mutedNoticeClassName } from '@/lib/ui-styles';
 
 type UserRecord = {
     id: number;
@@ -22,8 +26,10 @@ type UserRecord = {
     email: string;
     role_id: number | null;
     district_id: number | null;
+    department_id: number | null;
     section_id: number | null;
     pastor_id: number | null;
+    position_title: string | null;
     status: string;
     scope_summary: string;
     email_verified_at: string | null;
@@ -32,6 +38,12 @@ type UserRecord = {
 type RoleOption = {
     id: number;
     name: string;
+};
+
+type DepartmentOption = {
+    id: number;
+    name: string;
+    status: string;
 };
 
 type DistrictOption = {
@@ -67,6 +79,7 @@ type StatusOption = {
 type Props = {
     userRecord?: UserRecord;
     roles: RoleOption[];
+    departments: DepartmentOption[];
     districts: DistrictOption[];
     sections: SectionOption[];
     pastors: PastorOption[];
@@ -81,18 +94,20 @@ type UserFormData = {
     password_confirmation: string;
     role_id: string;
     district_id: string;
+    department_id: string;
     section_id: string;
     pastor_id: string;
+    position_title: string;
     status: string;
 };
 
 const roleDescriptions: Record<string, string> = {
-    Admin: 'Full system access with no required scope.',
-    Manager: 'Must be assigned to a section and oversees registrations within that section.',
+    Admin: 'Administrative access. Department is optional and scope can remain general for now.',
+    Manager: 'Section oversight account. Assign a section and optionally attach a department.',
     'Registration Staff':
         'Can encode onsite registrations. Scope is optional for this MVP.',
     'Online Registrant':
-        'Must be assigned to one pastor or church account for online registration.',
+        'Must be assigned to one pastor or church account. Department stays optional.',
 };
 
 const formatSectionOptionLabel = (section: SectionOption): string =>
@@ -104,6 +119,7 @@ const formatPastorOptionLabel = (pastor: PastorOption): string =>
 export default function UserForm({
     userRecord,
     roles,
+    departments,
     districts,
     sections,
     pastors,
@@ -118,10 +134,13 @@ export default function UserForm({
         password_confirmation: '',
         role_id: userRecord?.role_id?.toString() ?? roles[0]?.id.toString() ?? '',
         district_id: userRecord?.district_id?.toString() ?? '',
+        department_id: userRecord?.department_id?.toString() ?? '',
         section_id: userRecord?.section_id?.toString() ?? '',
         pastor_id: userRecord?.pastor_id?.toString() ?? '',
+        position_title: userRecord?.position_title ?? '',
         status: userRecord?.status ?? 'active',
     });
+
     const selectedRole =
         roles.find((role) => role.id.toString() === form.data.role_id) ?? null;
     const filteredSections = form.data.district_id
@@ -140,6 +159,11 @@ export default function UserForm({
         districts.find(
             (district) => district.id.toString() === form.data.district_id,
         ) ?? null;
+    const selectedDepartment =
+        departments.find(
+            (department) =>
+                department.id.toString() === form.data.department_id,
+        ) ?? null;
     const selectedSection =
         sections.find(
             (section) => section.id.toString() === form.data.section_id,
@@ -155,8 +179,7 @@ export default function UserForm({
         form.setData((currentData) => ({
             ...currentData,
             role_id: value,
-            pastor_id:
-                roleName === 'Manager' ? '' : currentData.pastor_id,
+            pastor_id: roleName === 'Manager' ? '' : currentData.pastor_id,
         }));
     };
 
@@ -227,252 +250,295 @@ export default function UserForm({
     const clearFormErrorHandlers = createClearFormErrorHandlers(form.clearErrors);
 
     const formContent = (
-        <form className="space-y-6" onSubmit={submit} {...clearFormErrorHandlers}>
-                    <div className="grid gap-6 md:grid-cols-2">
-                        <div className="grid gap-2">
-                            <Label htmlFor="name">Full name</Label>
-                            <Input
-                                id="name"
-                                name="name"
-                                value={form.data.name}
-                                onChange={(event) =>
-                                    form.setData('name', event.target.value)
-                                }
-                                autoFocus
-                                placeholder="Pastor Jane Doe"
-                            />
-                            <InputError message={form.errors.name} />
-                        </div>
+        <form
+            className="space-y-6"
+            onSubmit={submit}
+            {...clearFormErrorHandlers}
+        >
+            <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-2">
+                    <Label htmlFor="name">Full name</Label>
+                    <Input
+                        id="name"
+                        name="name"
+                        value={form.data.name}
+                        onChange={(event) =>
+                            form.setData('name', event.target.value)
+                        }
+                        autoFocus
+                        placeholder="Pastor Jane Doe"
+                    />
+                    <InputError message={form.errors.name} />
+                </div>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="email">Email address</Label>
-                            <Input
-                                id="email"
-                                name="email"
-                                type="email"
-                                value={form.data.email}
-                                onChange={(event) =>
-                                    form.setData('email', event.target.value)
-                                }
-                                placeholder="user@example.com"
-                            />
-                            <InputError message={form.errors.email} />
-                        </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="email">Email address</Label>
+                    <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={form.data.email}
+                        onChange={(event) =>
+                            form.setData('email', event.target.value)
+                        }
+                        placeholder="user@example.com"
+                    />
+                    <InputError message={form.errors.email} />
+                </div>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px]">
+                <div className="grid gap-2">
+                    <Label htmlFor="role_id">Role</Label>
+                    <FormSelect
+                        id="role_id"
+                        name="role_id"
+                        value={form.data.role_id}
+                        onValueChange={changeRole}
+                        placeholder="Select a role"
+                        emptyLabel="Select a role"
+                        options={roles.map((role) => ({
+                            value: role.id.toString(),
+                            label: role.name,
+                        }))}
+                    />
+                    <InputError message={form.errors.role_id} />
+                </div>
+
+                <div className="grid gap-2">
+                    <Label htmlFor="status">Status</Label>
+                    <FormSelect
+                        id="status"
+                        name="status"
+                        value={form.data.status}
+                        onValueChange={(value) => form.setData('status', value)}
+                        placeholder="Select status"
+                        options={statusOptions.map((statusOption) => ({
+                            value: statusOption.value,
+                            label: statusOption.label,
+                        }))}
+                    />
+                    <InputError message={form.errors.status} />
+                </div>
+            </div>
+
+            {selectedRole && (
+                <div className={mutedNoticeClassName}>
+                    {roleDescriptions[selectedRole.name] ??
+                        'Assign the scope that matches this role.'}
+                </div>
+            )}
+
+            <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-2">
+                    <Label htmlFor="department_id">Department</Label>
+                    <FormSelect
+                        id="department_id"
+                        name="department_id"
+                        value={form.data.department_id}
+                        onValueChange={(value) =>
+                            form.setData('department_id', value)
+                        }
+                        placeholder="Select a department"
+                        emptyLabel="General / no department"
+                        options={departments.map((department) => ({
+                            value: department.id.toString(),
+                            label: `${department.name}${department.status === 'inactive' ? ' (Inactive)' : ''}`,
+                        }))}
+                    />
+                    <InputError message={form.errors.department_id} />
+                </div>
+
+                <div className="grid gap-2">
+                    <Label htmlFor="position_title">Position or title</Label>
+                    <Input
+                        id="position_title"
+                        name="position_title"
+                        value={form.data.position_title}
+                        onChange={(event) =>
+                            form.setData('position_title', event.target.value)
+                        }
+                        placeholder="President, Secretary, Director"
+                    />
+                    <InputError message={form.errors.position_title} />
+                </div>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-2">
+                    <Label htmlFor="password">
+                        {isEditing ? 'New password' : 'Password'}
+                    </Label>
+                    <PasswordInput
+                        id="password"
+                        name="password"
+                        value={form.data.password}
+                        onChange={(event) =>
+                            form.setData('password', event.target.value)
+                        }
+                        placeholder={
+                            isEditing
+                                ? 'Leave blank to keep the current password'
+                                : 'Temporary password'
+                        }
+                    />
+                    <InputError message={form.errors.password} />
+                </div>
+
+                <div className="grid gap-2">
+                    <Label htmlFor="password_confirmation">
+                        Confirm password
+                    </Label>
+                    <PasswordInput
+                        id="password_confirmation"
+                        name="password_confirmation"
+                        value={form.data.password_confirmation}
+                        onChange={(event) =>
+                            form.setData(
+                                'password_confirmation',
+                                event.target.value,
+                            )
+                        }
+                        placeholder="Confirm password"
+                    />
+                </div>
+            </div>
+
+            <div className="grid gap-6 xl:grid-cols-3">
+                <div className="grid gap-2">
+                    <Label htmlFor="district_id">Assigned district</Label>
+                    <FormSelect
+                        id="district_id"
+                        name="district_id"
+                        value={form.data.district_id}
+                        onValueChange={changeDistrict}
+                        placeholder="Select a district"
+                        emptyLabel="No district scope"
+                        options={districts.map((district) => ({
+                            value: district.id.toString(),
+                            label: `${district.name}${district.status === 'inactive' ? ' (Inactive)' : ''}`,
+                        }))}
+                    />
+                    <InputError message={form.errors.district_id} />
+                </div>
+
+                <div className="grid gap-2">
+                    <Label htmlFor="section_id">Assigned section</Label>
+                    <FormSelect
+                        id="section_id"
+                        name="section_id"
+                        value={form.data.section_id}
+                        onValueChange={changeSection}
+                        placeholder="Select a section"
+                        emptyLabel="No section scope"
+                        options={filteredSections.map((section) => ({
+                            value: section.id.toString(),
+                            label: formatSectionOptionLabel(section),
+                        }))}
+                    />
+                    <InputError message={form.errors.section_id} />
+                </div>
+
+                <div className="grid gap-2">
+                    <Label htmlFor="pastor_id">Assigned pastor</Label>
+                    <SearchableFormSelect
+                        id="pastor_id"
+                        name="pastor_id"
+                        value={form.data.pastor_id}
+                        onValueChange={changePastor}
+                        placeholder="Select a pastor"
+                        emptyLabel="No pastor scope"
+                        options={filteredPastors.map((pastor) => ({
+                            value: pastor.id.toString(),
+                            label: formatPastorOptionLabel(pastor),
+                            keywords: [
+                                pastor.pastor_name,
+                                pastor.church_name,
+                                pastor.section_name,
+                                pastor.district_name,
+                            ],
+                        }))}
+                        searchPlaceholder="Search pastor, church, or section"
+                        emptySearchMessage="No pastors match your search."
+                    />
+                    <InputError message={form.errors.pastor_id} />
+                </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                <div className="rounded-md border border-sidebar-border/70 p-4">
+                    <div className="text-sm text-muted-foreground">
+                        Current department
                     </div>
-
-                    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px]">
-                        <div className="grid gap-2">
-                            <Label htmlFor="role_id">Role</Label>
-                            <FormSelect
-                                id="role_id"
-                                name="role_id"
-                                value={form.data.role_id}
-                                onValueChange={changeRole}
-                                placeholder="Select a role"
-                                emptyLabel="Select a role"
-                                options={roles.map((role) => ({
-                                    value: role.id.toString(),
-                                    label: role.name,
-                                }))}
-                            />
-                            <InputError message={form.errors.role_id} />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="status">Status</Label>
-                            <FormSelect
-                                id="status"
-                                name="status"
-                                value={form.data.status}
-                                onValueChange={(value) =>
-                                    form.setData('status', value)
-                                }
-                                placeholder="Select status"
-                                options={statusOptions.map((statusOption) => ({
-                                    value: statusOption.value,
-                                    label: statusOption.label,
-                                }))}
-                            />
-                            <InputError message={form.errors.status} />
-                        </div>
+                    <div className="mt-2 font-medium">
+                        {selectedDepartment?.name ?? 'General / no department'}
                     </div>
+                </div>
 
-                    {selectedRole && (
-                        <div className={mutedNoticeClassName}>
-                            {roleDescriptions[selectedRole.name] ??
-                                'Assign the scope that matches this role.'}
-                        </div>
-                    )}
-
-                    <div className="grid gap-6 md:grid-cols-2">
-                        <div className="grid gap-2">
-                            <Label htmlFor="password">
-                                {isEditing
-                                    ? 'New password'
-                                    : 'Password'}
-                            </Label>
-                            <PasswordInput
-                                id="password"
-                                name="password"
-                                value={form.data.password}
-                                onChange={(event) =>
-                                    form.setData(
-                                        'password',
-                                        event.target.value,
-                                    )
-                                }
-                                placeholder={
-                                    isEditing
-                                        ? 'Leave blank to keep the current password'
-                                        : 'Temporary password'
-                                }
-                            />
-                            <InputError message={form.errors.password} />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="password_confirmation">
-                                Confirm password
-                            </Label>
-                            <PasswordInput
-                                id="password_confirmation"
-                                name="password_confirmation"
-                                value={form.data.password_confirmation}
-                                onChange={(event) =>
-                                    form.setData(
-                                        'password_confirmation',
-                                        event.target.value,
-                                    )
-                                }
-                                placeholder="Confirm password"
-                            />
-                        </div>
+                <div className="rounded-md border border-sidebar-border/70 p-4">
+                    <div className="text-sm text-muted-foreground">
+                        Current district
                     </div>
-
-                    <div className="grid gap-6 xl:grid-cols-3">
-                        <div className="grid gap-2">
-                            <Label htmlFor="district_id">
-                                Assigned district
-                            </Label>
-                            <FormSelect
-                                id="district_id"
-                                name="district_id"
-                                value={form.data.district_id}
-                                onValueChange={changeDistrict}
-                                placeholder="Select a district"
-                                emptyLabel="No district scope"
-                                options={districts.map((district) => ({
-                                    value: district.id.toString(),
-                                    label: `${district.name}${district.status === 'inactive' ? ' (Inactive)' : ''}`,
-                                }))}
-                            />
-                            <InputError message={form.errors.district_id} />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="section_id">
-                                Assigned section
-                            </Label>
-                            <FormSelect
-                                id="section_id"
-                                name="section_id"
-                                value={form.data.section_id}
-                                onValueChange={changeSection}
-                                placeholder="Select a section"
-                                emptyLabel="No section scope"
-                                options={filteredSections.map((section) => ({
-                                    value: section.id.toString(),
-                                    label: formatSectionOptionLabel(section),
-                                }))}
-                            />
-                            <InputError message={form.errors.section_id} />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="pastor_id">
-                                Assigned pastor
-                            </Label>
-                            <SearchableFormSelect
-                                id="pastor_id"
-                                name="pastor_id"
-                                value={form.data.pastor_id}
-                                onValueChange={changePastor}
-                                placeholder="Select a pastor"
-                                emptyLabel="No pastor scope"
-                                options={filteredPastors.map((pastor) => ({
-                                    value: pastor.id.toString(),
-                                    label: formatPastorOptionLabel(pastor),
-                                    keywords: [
-                                        pastor.pastor_name,
-                                        pastor.church_name,
-                                        pastor.section_name,
-                                        pastor.district_name,
-                                    ],
-                                }))}
-                                searchPlaceholder="Search pastor, church, or section"
-                                emptySearchMessage="No pastors match your search."
-                            />
-                            <InputError message={form.errors.pastor_id} />
-                        </div>
+                    <div className="mt-2 font-medium">
+                        {selectedDistrict?.name ?? 'No district assigned'}
                     </div>
+                </div>
 
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <div className="rounded-md border border-sidebar-border/70 p-4">
-                            <div className="text-sm text-muted-foreground">
-                                Current district
-                            </div>
-                            <div className="mt-2 font-medium">
-                                {selectedDistrict?.name ??
-                                    'No district assigned'}
-                            </div>
-                        </div>
-
-                        <div className="rounded-md border border-sidebar-border/70 p-4">
-                            <div className="text-sm text-muted-foreground">
-                                Current section
-                            </div>
-                            <div className="mt-2 font-medium">
-                                {selectedSection
-                                    ? `${selectedSection.name} · ${selectedSection.district_name}`
-                                    : 'No section assigned'}
-                            </div>
-                        </div>
-
-                        <div className="rounded-md border border-sidebar-border/70 p-4">
-                            <div className="flex items-center justify-between gap-2">
-                                <div className="text-sm text-muted-foreground">
-                                    Current pastor
-                                </div>
-                                {isEditing && userRecord?.email_verified_at && (
-                                    <Badge variant="outline">Verified</Badge>
-                                )}
-                            </div>
-                            <div className="mt-2 font-medium">
-                                {selectedPastor
-                                    ? `${selectedPastor.church_name} · ${selectedPastor.pastor_name}`
-                                    : 'No pastor assigned'}
-                            </div>
-                        </div>
+                <div className="rounded-md border border-sidebar-border/70 p-4">
+                    <div className="text-sm text-muted-foreground">
+                        Current section
                     </div>
-
-                    {isEditing && userRecord && (
-                        <div className={mutedNoticeClassName}>
-                            Current saved scope: {userRecord.scope_summary}
-                        </div>
-                    )}
-
-                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                        <Button variant="outline" asChild>
-                            <Link href={UserController.index()}>
-                                Cancel
-                            </Link>
-                        </Button>
-                        <Button type="submit" disabled={form.processing}>
-                            {form.processing && <Spinner />}
-                            {isEditing ? 'Save changes' : 'Create user'}
-                        </Button>
+                    <div className="mt-2 font-medium">
+                        {selectedSection
+                            ? `${selectedSection.name} · ${selectedSection.district_name}`
+                            : 'No section assigned'}
                     </div>
-                </form>
+                </div>
+
+                <div className="rounded-md border border-sidebar-border/70 p-4">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="text-sm text-muted-foreground">
+                            Current pastor
+                        </div>
+                        {isEditing && userRecord?.email_verified_at && (
+                            <Badge variant="outline">Verified</Badge>
+                        )}
+                    </div>
+                    <div className="mt-2 font-medium">
+                        {selectedPastor
+                            ? `${selectedPastor.church_name} · ${selectedPastor.pastor_name}`
+                            : 'No pastor assigned'}
+                    </div>
+                </div>
+
+                <div className="rounded-md border border-sidebar-border/70 p-4">
+                    <div className="text-sm text-muted-foreground">
+                        Position title
+                    </div>
+                    <div className="mt-2 font-medium">
+                        {form.data.position_title.trim() !== ''
+                            ? form.data.position_title
+                            : 'No title assigned'}
+                    </div>
+                </div>
+            </div>
+
+            {isEditing && userRecord && (
+                <div className={mutedNoticeClassName}>
+                    Current saved scope: {userRecord.scope_summary}
+                </div>
+            )}
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <Button variant="outline" asChild>
+                    <Link href={UserController.index()}>Cancel</Link>
+                </Button>
+                <Button type="submit" disabled={form.processing}>
+                    {form.processing && <Spinner />}
+                    {isEditing ? 'Save changes' : 'Create user'}
+                </Button>
+            </div>
+        </form>
     );
 
     if (minimalLayout) {
@@ -482,12 +548,10 @@ export default function UserForm({
     return (
         <Card className="border-sidebar-border/70">
             <CardHeader>
-                <CardTitle>
-                    {isEditing ? 'Edit user' : 'User details'}
-                </CardTitle>
+                <CardTitle>{isEditing ? 'Edit user' : 'User details'}</CardTitle>
                 <CardDescription>
-                    Assign the correct role, status, and hierarchy scope for
-                    this account.
+                    Assign the correct role, status, department, and hierarchy scope
+                    for this account.
                 </CardDescription>
             </CardHeader>
             <CardContent>{formContent}</CardContent>
