@@ -23,8 +23,14 @@ test('admins can browse the user management pages', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/users/index')
             ->has('users.data', 2)
+            ->where('filters.section_id', null)
+            ->where('filters.role_id', null)
+            ->where('filters.status', null)
             ->where('filters.search', '')
             ->where('filters.per_page', 10)
+            ->has('sections', 1)
+            ->has('roles', 4)
+            ->has('statusOptions', 2)
             ->has('perPageOptions', 3));
 
     $this->actingAs($admin)
@@ -79,11 +85,73 @@ test('admins can search and paginate users', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/users/index')
+            ->where('filters.section_id', null)
+            ->where('filters.role_id', null)
+            ->where('filters.status', null)
             ->where('filters.search', 'Manager')
             ->where('filters.per_page', 1)
             ->has('users.data', 1)
             ->where('users.meta.total', 2)
             ->where('users.meta.last_page', 2));
+});
+
+test('admins can filter users by section, role, and status', function () {
+    $admin = User::factory()->admin()->create();
+    $northDistrict = District::factory()->create([
+        'name' => 'North District',
+    ]);
+    $southDistrict = District::factory()->create([
+        'name' => 'South District',
+    ]);
+    $northSection = Section::factory()->for($northDistrict)->create([
+        'name' => 'Section 1',
+    ]);
+    $southSection = Section::factory()->for($southDistrict)->create([
+        'name' => 'Section 2',
+    ]);
+
+    $matchingUser = User::factory()->manager()->inactive()->create([
+        'name' => 'Filtered Manager',
+        'section_id' => $northSection->id,
+        'district_id' => $northDistrict->id,
+    ]);
+
+    User::factory()->manager()->create([
+        'name' => 'Active Manager',
+        'section_id' => $northSection->id,
+        'district_id' => $northDistrict->id,
+    ]);
+
+    User::factory()->manager()->inactive()->create([
+        'name' => 'Other Section Manager',
+        'section_id' => $southSection->id,
+        'district_id' => $southDistrict->id,
+    ]);
+
+    User::factory()->registrationStaff()->inactive()->create([
+        'name' => 'Inactive Staff',
+        'section_id' => $northSection->id,
+        'district_id' => $northDistrict->id,
+    ]);
+
+    $managerRole = Role::query()->where('name', Role::MANAGER)->firstOrFail();
+
+    $this->actingAs($admin)
+        ->get(route('admin.users.index', [
+            'section_id' => $northSection->id,
+            'role_id' => $managerRole->id,
+            'status' => User::STATUS_INACTIVE,
+        ]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/users/index')
+            ->where('filters.section_id', $northSection->id)
+            ->where('filters.role_id', $managerRole->id)
+            ->where('filters.status', User::STATUS_INACTIVE)
+            ->where('users.meta.total', 1)
+            ->has('users.data', 1)
+            ->where('users.data.0.id', $matchingUser->id)
+            ->where('users.data.0.name', 'Filtered Manager'));
 });
 
 test('non admins cannot access admin user management routes', function () {

@@ -470,18 +470,11 @@ export default function RegistrationVerificationIndex({
                                                         elevatedIndexTableStyles.primaryText
                                                     }
                                                 >
-                                                    #{registration.id}
-                                                </div>
-                                                <div
-                                                    className={
-                                                        elevatedIndexTableStyles.secondaryText
-                                                    }
-                                                >
                                                     {registration.event.name}
                                                 </div>
                                                 <div
                                                     className={
-                                                        elevatedIndexTableStyles.subMetaText
+                                                        elevatedIndexTableStyles.secondaryText
                                                     }
                                                 >
                                                     {formatDateTime(

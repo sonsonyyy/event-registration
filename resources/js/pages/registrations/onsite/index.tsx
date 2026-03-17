@@ -248,7 +248,6 @@ export default function OnsiteRegistrationIndex({
                                         >
                                             <td className={elevatedIndexTableStyles.firstCell}>
                                             <div className="font-medium text-foreground">
-                                                #{registration.id} ·{' '}
                                                 {registration.event.name}
                                             </div>
                                             <div className="mt-1 text-sm text-muted-foreground">

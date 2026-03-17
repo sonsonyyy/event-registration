@@ -11,6 +11,13 @@ import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
@@ -48,10 +55,35 @@ type UserRecord = {
 type Props = {
     users: PaginatedData<UserRecord>;
     filters: {
+        section_id: number | null;
+        role_id: number | null;
+        status: string | null;
         search: string;
         per_page: number;
     };
+    sections: {
+        id: number;
+        name: string;
+        district_name: string;
+    }[];
+    roles: {
+        id: number;
+        name: string;
+    }[];
+    statusOptions: {
+        value: string;
+        label: string;
+    }[];
     perPageOptions: number[];
+};
+
+type UserIndexQuery = {
+    section_id?: number;
+    role_id?: number;
+    status?: string;
+    search?: string;
+    per_page: number;
+    page?: number;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -68,15 +100,30 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function UserIndex({
     users,
     filters,
+    sections,
+    roles,
+    statusOptions,
     perPageOptions,
 }: Props) {
     const [search, setSearch] = useState(filters.search);
+    const [sectionId, setSectionId] = useState(
+        filters.section_id !== null ? String(filters.section_id) : 'all',
+    );
+    const [roleId, setRoleId] = useState(
+        filters.role_id !== null ? String(filters.role_id) : 'all',
+    );
+    const [status, setStatus] = useState(filters.status ?? 'all');
     const [userToDelete, setUserToDelete] = useState<UserRecord | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         setSearch(filters.search);
-    }, [filters.search]);
+        setSectionId(
+            filters.section_id !== null ? String(filters.section_id) : 'all',
+        );
+        setRoleId(filters.role_id !== null ? String(filters.role_id) : 'all');
+        setStatus(filters.status ?? 'all');
+    }, [filters.search, filters.role_id, filters.section_id, filters.status]);
 
     const destroyUser = (): void => {
         if (userToDelete === null) {
@@ -94,11 +141,36 @@ export default function UserIndex({
         });
     };
 
-    const visitIndex = (query: {
-        search?: string;
-        per_page: number;
+    const buildQuery = ({
+        searchValue,
+        sectionValue,
+        roleValue,
+        statusValue,
+        perPage,
+        page,
+    }: {
+        searchValue: string;
+        sectionValue: string;
+        roleValue: string;
+        statusValue: string;
+        perPage: number;
         page?: number;
-    }): void => {
+    }): UserIndexQuery => {
+        const normalizedSearch = searchValue.trim();
+
+        return {
+            ...(sectionValue !== 'all'
+                ? { section_id: Number(sectionValue) }
+                : {}),
+            ...(roleValue !== 'all' ? { role_id: Number(roleValue) } : {}),
+            ...(statusValue !== 'all' ? { status: statusValue } : {}),
+            ...(normalizedSearch !== '' ? { search: normalizedSearch } : {}),
+            per_page: perPage,
+            ...(page !== undefined && page > 1 ? { page } : {}),
+        };
+    };
+
+    const visitIndex = (query: UserIndexQuery): void => {
         router.get(UserController.index.url({ query }), {}, {
             preserveScroll: true,
             preserveState: true,
@@ -107,28 +179,55 @@ export default function UserIndex({
     };
 
     const submitSearch = (): void => {
-        const normalizedSearch = search.trim();
-
-        visitIndex({
-            ...(normalizedSearch !== '' ? { search: normalizedSearch } : {}),
-            per_page: filters.per_page,
-        });
+        visitIndex(
+            buildQuery({
+                searchValue: search,
+                sectionValue: sectionId,
+                roleValue: roleId,
+                statusValue: status,
+                perPage: filters.per_page,
+            }),
+        );
     };
 
     const updatePerPage = (value: number): void => {
-        visitIndex({
-            ...(filters.search !== '' ? { search: filters.search } : {}),
-            per_page: value,
-        });
+        visitIndex(
+            buildQuery({
+                searchValue: filters.search,
+                sectionValue:
+                    filters.section_id !== null
+                        ? String(filters.section_id)
+                        : 'all',
+                roleValue:
+                    filters.role_id !== null ? String(filters.role_id) : 'all',
+                statusValue: filters.status ?? 'all',
+                perPage: value,
+            }),
+        );
     };
 
     const changePage = (pageNumber: number): void => {
-        visitIndex({
-            ...(filters.search !== '' ? { search: filters.search } : {}),
-            per_page: filters.per_page,
-            ...(pageNumber > 1 ? { page: pageNumber } : {}),
-        });
+        visitIndex(
+            buildQuery({
+                searchValue: filters.search,
+                sectionValue:
+                    filters.section_id !== null
+                        ? String(filters.section_id)
+                        : 'all',
+                roleValue:
+                    filters.role_id !== null ? String(filters.role_id) : 'all',
+                statusValue: filters.status ?? 'all',
+                perPage: filters.per_page,
+                page: pageNumber,
+            }),
+        );
     };
+
+    const hasActiveFilters =
+        filters.search !== '' ||
+        filters.section_id !== null ||
+        filters.role_id !== null ||
+        filters.status !== null;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -155,16 +254,169 @@ export default function UserIndex({
                             inputClassName={elevatedIndexTableStyles.input}
                             actionClassName={elevatedIndexTableStyles.action}
                             action={(
-                                <Button
-                                    asChild
-                                    className={
-                                        elevatedIndexTableStyles.primaryButton
-                                    }
-                                >
-                                    <Link href={UserController.create()}>
-                                        New user
-                                    </Link>
-                                </Button>
+                                <div className="flex w-full flex-col gap-3 xl:flex-row xl:items-center xl:justify-end">
+                                    <Select
+                                        value={sectionId}
+                                        onValueChange={(value) => {
+                                            setSectionId(value);
+                                            visitIndex(
+                                                buildQuery({
+                                                    searchValue: search,
+                                                    sectionValue: value,
+                                                    roleValue: roleId,
+                                                    statusValue: status,
+                                                    perPage: filters.per_page,
+                                                }),
+                                            );
+                                        }}
+                                    >
+                                        <SelectTrigger
+                                            className={
+                                                elevatedIndexTableStyles.selectTrigger
+                                            }
+                                        >
+                                            <SelectValue placeholder="All sections" />
+                                        </SelectTrigger>
+                                        <SelectContent
+                                            align="end"
+                                            className={
+                                                elevatedIndexTableStyles.selectContent
+                                            }
+                                        >
+                                            <SelectItem
+                                                value="all"
+                                                className={
+                                                    elevatedIndexTableStyles.selectItem
+                                                }
+                                            >
+                                                All sections
+                                            </SelectItem>
+                                            {sections.map((section) => (
+                                                <SelectItem
+                                                    key={section.id}
+                                                    value={String(section.id)}
+                                                    className={
+                                                        elevatedIndexTableStyles.selectItem
+                                                    }
+                                                >
+                                                    {section.name} ·{' '}
+                                                    {section.district_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+
+                                    <Select
+                                        value={roleId}
+                                        onValueChange={(value) => {
+                                            setRoleId(value);
+                                            visitIndex(
+                                                buildQuery({
+                                                    searchValue: search,
+                                                    sectionValue: sectionId,
+                                                    roleValue: value,
+                                                    statusValue: status,
+                                                    perPage: filters.per_page,
+                                                }),
+                                            );
+                                        }}
+                                    >
+                                        <SelectTrigger
+                                            className={
+                                                elevatedIndexTableStyles.selectTrigger
+                                            }
+                                        >
+                                            <SelectValue placeholder="All roles" />
+                                        </SelectTrigger>
+                                        <SelectContent
+                                            align="end"
+                                            className={
+                                                elevatedIndexTableStyles.selectContent
+                                            }
+                                        >
+                                            <SelectItem
+                                                value="all"
+                                                className={
+                                                    elevatedIndexTableStyles.selectItem
+                                                }
+                                            >
+                                                All roles
+                                            </SelectItem>
+                                            {roles.map((role) => (
+                                                <SelectItem
+                                                    key={role.id}
+                                                    value={String(role.id)}
+                                                    className={
+                                                        elevatedIndexTableStyles.selectItem
+                                                    }
+                                                >
+                                                    {role.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+
+                                    <Select
+                                        value={status}
+                                        onValueChange={(value) => {
+                                            setStatus(value);
+                                            visitIndex(
+                                                buildQuery({
+                                                    searchValue: search,
+                                                    sectionValue: sectionId,
+                                                    roleValue: roleId,
+                                                    statusValue: value,
+                                                    perPage: filters.per_page,
+                                                }),
+                                            );
+                                        }}
+                                    >
+                                        <SelectTrigger
+                                            className={
+                                                elevatedIndexTableStyles.selectTrigger
+                                            }
+                                        >
+                                            <SelectValue placeholder="All statuses" />
+                                        </SelectTrigger>
+                                        <SelectContent
+                                            align="end"
+                                            className={
+                                                elevatedIndexTableStyles.selectContent
+                                            }
+                                        >
+                                            <SelectItem
+                                                value="all"
+                                                className={
+                                                    elevatedIndexTableStyles.selectItem
+                                                }
+                                            >
+                                                All statuses
+                                            </SelectItem>
+                                            {statusOptions.map((option) => (
+                                                <SelectItem
+                                                    key={option.value}
+                                                    value={option.value}
+                                                    className={
+                                                        elevatedIndexTableStyles.selectItem
+                                                    }
+                                                >
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+
+                                    <Button
+                                        asChild
+                                        className={
+                                            elevatedIndexTableStyles.primaryButton
+                                        }
+                                    >
+                                        <Link href={UserController.create()}>
+                                            New user
+                                        </Link>
+                                    </Button>
+                                </div>
                             )}
                         />
                     </div>
@@ -214,17 +466,18 @@ export default function UserIndex({
                                                     }
                                                 >
                                                     {filters.search === ''
+                                                        && !hasActiveFilters
                                                         ? 'No user accounts yet.'
-                                                        : `No users matched "${filters.search}".`}
+                                                        : 'No users matched the current filters.'}
                                                 </div>
                                                 <div
                                                     className={
                                                         elevatedIndexTableStyles.emptyDescription
                                                     }
                                                 >
-                                                    {filters.search === ''
+                                                    {!hasActiveFilters
                                                         ? 'Create the first user account to assign system access.'
-                                                        : 'Try another name, email, role, or scope term.'}
+                                                        : 'Try another name, email, role, section, or status.'}
                                                 </div>
                                             </div>
                                         </td>

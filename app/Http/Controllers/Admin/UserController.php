@@ -25,7 +25,12 @@ class UserController extends Controller
     public function index(IndexUserRequest $request): Response
     {
         $filters = $request->filters();
-        $users = $this->userIndexQuery($filters['search'])
+        $users = $this->userIndexQuery(
+            $filters['search'],
+            $filters['section_id'],
+            $filters['role_id'],
+            $filters['status'],
+        )
             ->paginate($filters['per_page'])
             ->withQueryString();
 
@@ -45,13 +50,29 @@ class UserController extends Controller
                 ],
             ],
             'filters' => $filters,
+            'sections' => $this->sectionOptions(),
+            'roles' => $this->roleOptions(),
+            'statusOptions' => $this->statusOptions(),
             'perPageOptions' => [10, 25, 50],
         ]);
     }
 
-    private function userIndexQuery(string $search): Builder
-    {
+    private function userIndexQuery(
+        string $search,
+        ?int $sectionId,
+        ?int $roleId,
+        ?string $status,
+    ): Builder {
         return User::query()
+            ->when($sectionId !== null, function (Builder $query) use ($sectionId): void {
+                $query->where('section_id', $sectionId);
+            })
+            ->when($roleId !== null, function (Builder $query) use ($roleId): void {
+                $query->where('role_id', $roleId);
+            })
+            ->when($status !== null, function (Builder $query) use ($status): void {
+                $query->where('status', $status);
+            })
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $query) use ($search): void {
                     $query

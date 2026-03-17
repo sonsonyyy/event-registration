@@ -28,6 +28,7 @@ type RegistrationItemRecord = {
 
 type RegistrationRecord = {
     id: number;
+    submitted_by_name: string | null;
     event: {
         id: number;
         name: string;
@@ -305,7 +306,9 @@ export default function OnlineRegistrationIndex({
                                         >
                                             <td className={elevatedIndexTableStyles.firstCell}>
                                                 <div className="font-medium text-slate-900 dark:text-slate-100">
-                                                    #{registration.id}
+                                                    {registration.submitted_by_name
+                                                        ? `By ${registration.submitted_by_name}`
+                                                        : 'Submitted online'}
                                                 </div>
                                                 <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                                                     {formatDate(

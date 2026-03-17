@@ -585,6 +585,7 @@ class OnlineRegistrationController extends Controller
         $query = Registration::query()
             ->where('registration_mode', Registration::MODE_ONLINE)
             ->with([
+                'encodedByUser',
                 'event',
                 'latestReview.reviewer',
                 'pastor.section.district',
@@ -646,6 +647,7 @@ class OnlineRegistrationController extends Controller
             'total_amount' => $registration->totalAmount(),
             'remarks' => $registration->remarks,
             'submitted_at' => $registration->submitted_at?->toIso8601String(),
+            'submitted_by_name' => $registration->encodedByUser?->name,
             'can_edit' => $viewer->can('updateOnline', $registration),
             'can_cancel' => $viewer->can('cancelOnline', $registration),
             'latest_review' => $this->reviewData($registration->latestReview),

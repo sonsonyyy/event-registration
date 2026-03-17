@@ -103,6 +103,7 @@ test('online registrants can submit registrations with receipt upload stored on 
             ->where('filters.search', 'receipt.pdf')
             ->where('filters.per_page', 10)
             ->has('registrations.data', 1)
+            ->where('registrations.data.0.submitted_by_name', $registrant->name)
             ->where('registrations.data.0.registration_status', Registration::STATUS_PENDING_VERIFICATION)
             ->where('registrations.data.0.total_quantity', 6)
             ->where('registrations.data.0.receipt.original_name', 'receipt.pdf'));
