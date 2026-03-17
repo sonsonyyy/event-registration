@@ -46,6 +46,6 @@ class RegistrationItem extends Model
 
     public function feeCategory(): BelongsTo
     {
-        return $this->belongsTo(EventFeeCategory::class, 'fee_category_id');
+        return $this->belongsTo(EventFeeCategory::class, 'fee_category_id')->withTrashed();
     }
 }

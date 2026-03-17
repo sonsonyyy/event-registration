@@ -37,15 +37,20 @@ trait ProfileValidationRules
      */
     protected function emailRules(?int $userId = null): array
     {
+        $uniqueEmailRule = Rule::unique(User::class, 'email')
+            ->where(fn ($query) => $query->whereNull('deleted_at'));
+
+        if ($userId !== null) {
+            $uniqueEmailRule->ignore($userId);
+        }
+
         return [
             'required',
             'string',
             'email',
             'regex:/^[^@\s]+@[^@\s]+\.[^@\s]+$/u',
             'max:255',
-            $userId === null
-                ? Rule::unique(User::class)
-                : Rule::unique(User::class)->ignore($userId),
+            $uniqueEmailRule,
         ];
     }
 }

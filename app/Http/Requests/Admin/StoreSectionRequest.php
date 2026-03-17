@@ -25,12 +25,20 @@ class StoreSectionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'district_id' => ['required', 'exists:districts,id'],
+            'district_id' => [
+                'required',
+                Rule::exists('districts', 'id')
+                    ->where(fn ($query) => $query->whereNull('deleted_at')),
+            ],
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('sections', 'name')->where(fn ($query) => $query->where('district_id', $this->input('district_id'))),
+                Rule::unique('sections', 'name')->where(
+                    fn ($query) => $query
+                        ->where('district_id', $this->input('district_id'))
+                        ->whereNull('deleted_at'),
+                ),
             ],
             'description' => ['nullable', 'string', 'max:1000'],
             'status' => ['required', Rule::in(['active', 'inactive'])],

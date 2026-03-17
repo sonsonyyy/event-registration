@@ -12,7 +12,6 @@ use App\Models\Role;
 use App\Models\Section;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -173,19 +172,12 @@ class UserController extends Controller
         Gate::authorize('delete', $user);
 
         if (auth()->id() === $user->getKey()) {
-            return to_route('admin.users.index')->with('error', "You can't delete your own account.");
+            return to_route('admin.users.index')->with('error', "You can't archive your own account.");
         }
 
-        try {
-            $user->delete();
-        } catch (QueryException) {
-            return to_route('admin.users.index')->with(
-                'error',
-                'This user cannot be deleted because it is referenced by existing records. Deactivate the account instead.',
-            );
-        }
+        $user->delete();
 
-        return to_route('admin.users.index')->with('success', 'User deleted.');
+        return to_route('admin.users.index')->with('success', 'User archived.');
     }
 
     /**

@@ -296,7 +296,7 @@ export default function PastorIndex({
                                                         )
                                                     }
                                                 >
-                                                    Delete
+                                                    Archive
                                                 </Button>
                                             </div>
                                             </td>
@@ -349,9 +349,9 @@ export default function PastorIndex({
                             setPastorToDelete(null);
                         }
                     }}
-                    title="Delete pastor record"
-                    description="This removes the church and pastor assignment from the registration directory."
-                    confirmLabel="Delete pastor record"
+                    title="Archive pastor record"
+                    description="This archives the church and pastor assignment while preserving registration history."
+                    confirmLabel="Archive pastor record"
                     confirmVariant="destructive"
                     processing={isDeleting}
                     details={

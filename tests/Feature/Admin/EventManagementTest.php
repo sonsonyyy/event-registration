@@ -282,18 +282,19 @@ test('admins cannot reduce event capacity below reserved quantities or remove us
 test('admins can delete events without registrations', function () {
     $admin = User::factory()->admin()->create();
     $event = Event::factory()->create();
-    EventFeeCategory::factory()->for($event)->create();
+    $feeCategory = EventFeeCategory::factory()->for($event)->create();
 
     $this->actingAs($admin)
         ->delete(route('admin.events.destroy', $event))
         ->assertRedirect(route('admin.events.index'))
-        ->assertInertiaFlash('toasts.0.title', 'Event deleted.')
-        ->assertSessionHas('success', 'Event deleted.');
+        ->assertInertiaFlash('toasts.0.title', 'Event archived.')
+        ->assertSessionHas('success', 'Event archived.');
 
-    expect(Event::query()->whereKey($event->id)->exists())->toBeFalse();
+    $this->assertSoftDeleted('events', ['id' => $event->id]);
+    $this->assertSoftDeleted('event_fee_categories', ['id' => $feeCategory->id]);
 });
 
-test('admins cannot delete events with recorded registrations', function () {
+test('admins can archive events with recorded registrations and keep historical relations', function () {
     $admin = User::factory()->admin()->create();
     $event = Event::factory()->create([
         'status' => Event::STATUS_OPEN,
@@ -307,12 +308,22 @@ test('admins cannot delete events with recorded registrations', function () {
     $this->actingAs($admin)
         ->delete(route('admin.events.destroy', $event))
         ->assertRedirect(route('admin.events.index'))
-        ->assertSessionHas(
-            'error',
-            'Event has registrations and cannot be deleted.',
-        );
+        ->assertInertiaFlash('toasts.0.title', 'Event archived.')
+        ->assertSessionHas('success', 'Event archived.');
 
-    expect($event->fresh())->not->toBeNull();
+    $this->assertSoftDeleted('events', ['id' => $event->id]);
+    $this->assertSoftDeleted('event_fee_categories', ['id' => $feeCategory->id]);
+
+    $registration = Registration::query()
+        ->with(['event', 'items.feeCategory'])
+        ->latest('id')
+        ->firstOrFail();
+
+    expect($registration->event)->not->toBeNull()
+        ->and($registration->event?->trashed())->toBeTrue()
+        ->and($registration->items)->toHaveCount(1)
+        ->and($registration->items->first()?->feeCategory)->not->toBeNull()
+        ->and($registration->items->first()?->feeCategory?->trashed())->toBeTrue();
 });
 
 test('full or expired open events are automatically surfaced as closed with no remaining slots', function () {

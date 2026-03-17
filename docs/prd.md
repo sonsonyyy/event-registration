@@ -45,7 +45,7 @@ Provide a centralized system for managing church event registrations across one 
 Full-access user for the entire application.
 
 ### Permissions
-- Create, edit, delete events
+- Create, edit, archive events
 - Manage event fee categories
 - Manage users
 - Manage districts
@@ -140,7 +140,7 @@ Admin manages events and their registration settings.
 ### Functional Requirements
 - Admin can create an event
 - Admin can edit an event
-- Admin can delete an event
+- Admin can archive an event
 - Admin can configure multiple fee categories per event
 - Admin can set event capacity
 - Admin can open and close registration
@@ -181,6 +181,7 @@ Each event can have multiple fee categories such as:
 - Registration must close when the closing date is reached
 - Closed or cancelled events cannot accept new registrations
 - Remaining slots must be shown in real time
+- Archived events and fee categories must remain available for historical registration lookups and future audit reporting
 
 ---
 
@@ -193,6 +194,7 @@ Admin manages system users and access scope.
 - Admin can create users
 - Admin can edit users
 - Admin can deactivate users
+- Admin can archive users
 - Admin can assign roles
 - Admin can assign district, section, or pastor scope when needed
 
@@ -220,7 +222,7 @@ Admin manages district records.
 ### Functional Requirements
 - Admin can create districts
 - Admin can edit districts
-- Admin can delete districts
+- Admin can archive districts
 
 ### District Fields
 - District name
@@ -237,7 +239,7 @@ Admin manages sections under a district.
 ### Functional Requirements
 - Admin can create sections
 - Admin can edit sections
-- Admin can delete sections
+- Admin can archive sections
 
 ### Section Fields
 - Parent district
@@ -247,6 +249,7 @@ Admin manages sections under a district.
 
 ### Business Rules
 - A section must belong to a district
+- Archive operations must preserve historical registrations, scoped users, and related master data references instead of hard-deleting them
 
 ---
 
@@ -258,7 +261,7 @@ Admin manages pastors/churches under a section.
 ### Functional Requirements
 - Admin can create pastors
 - Admin can edit pastors
-- Admin can delete pastors
+- Admin can archive pastors
 
 ### Pastor Fields
 - Parent section

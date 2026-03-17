@@ -165,7 +165,13 @@ class ReportsController extends Controller
     private function eventOptions(): Collection
     {
         return Event::query()
-            ->with('feeCategories')
+            ->withTrashed()
+            ->with([
+                'feeCategories' => fn ($query) => $query
+                    ->withTrashed()
+                    ->orderBy('id'),
+            ])
+            ->orderByRaw('deleted_at IS NOT NULL')
             ->orderByDesc('date_from')
             ->orderByDesc('id')
             ->get();

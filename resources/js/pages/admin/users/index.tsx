@@ -338,7 +338,7 @@ export default function UserIndex({
                                                             )
                                                         }
                                                     >
-                                                        Delete
+                                                        Archive
                                                     </Button>
                                                 ) : (
                                                     <Button
@@ -347,7 +347,7 @@ export default function UserIndex({
                                                         className="rounded-md"
                                                         disabled
                                                     >
-                                                        Protected
+                                                        Current account
                                                     </Button>
                                                 )}
                                             </div>
@@ -401,9 +401,9 @@ export default function UserIndex({
                             setUserToDelete(null);
                         }
                     }}
-                    title="Delete user account"
-                    description="Delete this account only if it no longer has operational history. Otherwise, set the account to inactive instead."
-                    confirmLabel="Delete user"
+                    title="Archive user account"
+                    description="This archives the account while preserving its historical activity and review trail."
+                    confirmLabel="Archive user"
                     confirmVariant="destructive"
                     processing={isDeleting}
                     details={

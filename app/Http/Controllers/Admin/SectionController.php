@@ -95,7 +95,7 @@ class SectionController extends Controller
 
         $section->delete();
 
-        return to_route('admin.sections.index')->with('success', 'Section deleted.');
+        return to_route('admin.sections.index')->with('success', 'Section archived.');
     }
 
     /**

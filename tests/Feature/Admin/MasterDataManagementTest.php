@@ -308,21 +308,92 @@ test('admins can update districts sections and pastors', function () {
 test('admins can delete districts sections and pastors', function () {
     $admin = User::factory()->admin()->create();
     $district = District::factory()->create();
+    $districtSection = Section::factory()->for($district)->create();
+    $districtPastor = Pastor::factory()->for($districtSection)->create();
     $section = Section::factory()->create();
+    $sectionPastor = Pastor::factory()->for($section)->create();
     $pastor = Pastor::factory()->create();
 
     $this->actingAs($admin)
         ->delete(route('admin.districts.destroy', $district))
         ->assertRedirect(route('admin.districts.index'));
-    $this->assertDatabaseMissing('districts', ['id' => $district->id]);
+    $this->assertSoftDeleted('districts', ['id' => $district->id]);
+    $this->assertSoftDeleted('sections', ['id' => $districtSection->id]);
+    $this->assertSoftDeleted('pastors', ['id' => $districtPastor->id]);
 
     $this->actingAs($admin)
         ->delete(route('admin.sections.destroy', $section))
         ->assertRedirect(route('admin.sections.index'));
-    $this->assertDatabaseMissing('sections', ['id' => $section->id]);
+    $this->assertSoftDeleted('sections', ['id' => $section->id]);
+    $this->assertSoftDeleted('pastors', ['id' => $sectionPastor->id]);
 
     $this->actingAs($admin)
         ->delete(route('admin.pastors.destroy', $pastor))
         ->assertRedirect(route('admin.pastors.index'));
-    $this->assertDatabaseMissing('pastors', ['id' => $pastor->id]);
+    $this->assertSoftDeleted('pastors', ['id' => $pastor->id]);
+});
+
+test('archived districts sections and pastors can be recreated with the same active names', function () {
+    $admin = User::factory()->admin()->create();
+    $district = District::factory()->create([
+        'name' => 'Historic District',
+    ]);
+    $section = Section::factory()->for($district)->create([
+        'name' => 'Historic Section',
+    ]);
+    $pastor = Pastor::factory()->for($section)->create([
+        'church_name' => 'Historic Church',
+    ]);
+
+    $district->delete();
+    $section->delete();
+    $pastor->delete();
+
+    $this->actingAs($admin)
+        ->post(route('admin.districts.store'), [
+            'name' => 'Historic District',
+            'description' => 'Replacement district',
+            'status' => 'active',
+        ])
+        ->assertRedirect(route('admin.districts.index'));
+
+    $replacementDistrict = District::query()->where('name', 'Historic District')->latest('id')->firstOrFail();
+
+    $this->actingAs($admin)
+        ->post(route('admin.sections.store'), [
+            'district_id' => $replacementDistrict->id,
+            'name' => 'Historic Section',
+            'description' => 'Replacement section',
+            'status' => 'active',
+        ])
+        ->assertRedirect(route('admin.sections.index'));
+
+    $replacementSection = Section::query()->where('name', 'Historic Section')->latest('id')->firstOrFail();
+
+    $this->actingAs($admin)
+        ->post(route('admin.pastors.store'), [
+            'section_id' => $replacementSection->id,
+            'pastor_name' => 'Pastor Replacement',
+            'church_name' => 'Historic Church',
+            'email' => 'historic-replacement@example.com',
+            'address' => 'Replacement address',
+            'status' => 'active',
+        ])
+        ->assertRedirect(route('admin.pastors.index'));
+
+    $this->assertDatabaseHas('districts', [
+        'id' => $replacementDistrict->id,
+        'name' => 'Historic District',
+        'deleted_at' => null,
+    ]);
+    $this->assertDatabaseHas('sections', [
+        'id' => $replacementSection->id,
+        'name' => 'Historic Section',
+        'deleted_at' => null,
+    ]);
+    $this->assertDatabaseHas('pastors', [
+        'church_name' => 'Historic Church',
+        'section_id' => $replacementSection->id,
+        'deleted_at' => null,
+    ]);
 });

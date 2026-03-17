@@ -9,11 +9,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Event extends Model
 {
     /** @use HasFactory<EventFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     public const STATUS_DRAFT = 'draft';
 
@@ -41,6 +42,26 @@ class Event extends Model
         'total_capacity',
         'status',
     ];
+
+    protected static function booted(): void
+    {
+        static::deleting(function (Event $event): void {
+            $event->feeCategories()
+                ->withTrashed()
+                ->get()
+                ->each(function (EventFeeCategory $feeCategory) use ($event): void {
+                    if ($event->isForceDeleting()) {
+                        $feeCategory->forceDelete();
+
+                        return;
+                    }
+
+                    if (! $feeCategory->trashed()) {
+                        $feeCategory->delete();
+                    }
+                });
+        });
+    }
 
     /**
      * Get the attributes that should be cast.

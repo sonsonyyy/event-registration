@@ -25,7 +25,13 @@ class StoreDistrictRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255', 'unique:districts,name'],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('districts', 'name')
+                    ->where(fn ($query) => $query->whereNull('deleted_at')),
+            ],
             'description' => ['nullable', 'string', 'max:1000'],
             'status' => ['required', Rule::in(['active', 'inactive'])],
         ];

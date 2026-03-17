@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\Registration;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class UpdateOnlineRegistrationRequest extends FormRequest
@@ -28,7 +29,12 @@ class UpdateOnlineRegistrationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'event_id' => ['required', 'integer', 'exists:events,id'],
+            'event_id' => [
+                'required',
+                'integer',
+                Rule::exists('events', 'id')
+                    ->where(fn ($query) => $query->whereNull('deleted_at')),
+            ],
             'payment_reference' => ['required', 'string', 'max:255'],
             'receipt' => [
                 'nullable',
@@ -38,7 +44,13 @@ class UpdateOnlineRegistrationRequest extends FormRequest
             ],
             'remarks' => ['nullable', 'string', 'max:1000'],
             'line_items' => ['required', 'array', 'min:1'],
-            'line_items.*.fee_category_id' => ['required', 'integer', 'distinct', 'exists:event_fee_categories,id'],
+            'line_items.*.fee_category_id' => [
+                'required',
+                'integer',
+                'distinct',
+                Rule::exists('event_fee_categories', 'id')
+                    ->where(fn ($query) => $query->whereNull('deleted_at')),
+            ],
             'line_items.*.quantity' => ['required', 'integer', 'min:1'],
         ];
     }

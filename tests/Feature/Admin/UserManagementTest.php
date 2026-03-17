@@ -258,7 +258,7 @@ test('admins can delete users but not their own account', function () {
         ->delete(route('admin.users.destroy', $managedUser))
         ->assertRedirect(route('admin.users.index'));
 
-    $this->assertDatabaseMissing('users', [
+    $this->assertSoftDeleted('users', [
         'id' => $managedUser->id,
     ]);
 
@@ -268,5 +268,37 @@ test('admins can delete users but not their own account', function () {
 
     $this->assertDatabaseHas('users', [
         'id' => $admin->id,
+    ]);
+});
+
+test('admins can create a replacement account with the email of an archived user', function () {
+    $admin = User::factory()->admin()->create();
+    $archivedUser = User::factory()->registrationStaff()->create([
+        'email' => 'archived-user@example.com',
+    ]);
+    $role = Role::query()->firstOrCreate([
+        'name' => Role::REGISTRATION_STAFF,
+    ]);
+
+    $archivedUser->delete();
+
+    $this->actingAs($admin)
+        ->post(route('admin.users.store'), [
+            'name' => 'Replacement Staff',
+            'email' => 'archived-user@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'role_id' => $role->id,
+            'district_id' => null,
+            'section_id' => null,
+            'pastor_id' => null,
+            'status' => 'active',
+        ])
+        ->assertRedirect(route('admin.users.index'));
+
+    $this->assertDatabaseHas('users', [
+        'email' => 'archived-user@example.com',
+        'name' => 'Replacement Staff',
+        'deleted_at' => null,
     ]);
 });

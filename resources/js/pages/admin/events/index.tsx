@@ -346,25 +346,14 @@ export default function EventIndex({
                                                     </Link>
                                                 </Button>
                                                 <Button
-                                                    variant={
-                                                        event.can_delete
-                                                            ? 'destructive'
-                                                            : 'outline'
-                                                    }
+                                                    variant="destructive"
                                                     size="sm"
                                                     className="rounded-md"
                                                     onClick={() =>
-                                                        event.can_delete
-                                                            ? setEventToDelete(
-                                                                  event,
-                                                              )
-                                                            : undefined
+                                                        setEventToDelete(event)
                                                     }
-                                                    disabled={!event.can_delete}
                                                 >
-                                                    {event.can_delete
-                                                        ? 'Delete'
-                                                        : 'Protected'}
+                                                    Archive
                                                 </Button>
                                             </div>
                                             </td>
@@ -564,9 +553,9 @@ export default function EventIndex({
                             setEventToDelete(null);
                         }
                     }}
-                    title="Delete event"
-                    description="Delete this event only if it has no recorded registrations. Events with transactions are retained for reporting integrity."
-                    confirmLabel="Delete event"
+                    title="Archive event"
+                    description="This archives the event and its fee categories while preserving historical registrations for reporting and audit use."
+                    confirmLabel="Archive event"
                     confirmVariant="destructive"
                     processing={isDeleting}
                     details={
@@ -581,7 +570,7 @@ export default function EventIndex({
                                 </div>
                                 <div>
                                     {eventToDelete.registrations_count} recorded
-                                    {' '}registrations
+                                    {' '}registrations will be retained
                                 </div>
                             </>
                         ) : undefined

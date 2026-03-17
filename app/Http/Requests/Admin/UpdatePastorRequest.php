@@ -24,9 +24,22 @@ class UpdatePastorRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'section_id' => ['required', 'exists:sections,id'],
+            'section_id' => [
+                'required',
+                Rule::exists('sections', 'id')
+                    ->where(fn ($query) => $query->whereNull('deleted_at')),
+            ],
             'pastor_name' => ['required', 'string', 'max:255'],
-            'church_name' => ['required', 'string', 'max:255'],
+            'church_name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('pastors', 'church_name')
+                    ->where(fn ($query) => $query
+                        ->where('section_id', $this->input('section_id'))
+                        ->whereNull('deleted_at'))
+                    ->ignore($this->route('pastor')),
+            ],
             'contact_number' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'regex:/^[^@\s]+@[^@\s]+\.[^@\s]+$/u', 'max:255'],
             'address' => ['nullable', 'string', 'max:1000'],
@@ -58,6 +71,7 @@ class UpdatePastorRequest extends FormRequest
             'section_id.exists' => 'Choose a valid section.',
             'pastor_name.required' => 'Enter the pastor name.',
             'church_name.required' => 'Enter the church name.',
+            'church_name.unique' => 'That church name already exists in the selected section.',
             'email.email' => 'Enter a valid email address.',
             'email.regex' => 'Enter a valid email address.',
             'status.required' => 'Choose a pastor status.',

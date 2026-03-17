@@ -142,16 +142,9 @@ class EventController extends Controller
     {
         Gate::authorize('delete', $event);
 
-        if ($event->registrations()->exists()) {
-            return to_route('admin.events.index')->with(
-                'error',
-                'Event has registrations and cannot be deleted.',
-            );
-        }
-
         $event->delete();
 
-        return to_route('admin.events.index')->with('success', 'Event deleted.');
+        return to_route('admin.events.index')->with('success', 'Event archived.');
     }
 
     /**
@@ -214,7 +207,7 @@ class EventController extends Controller
             'total_capacity' => $event->total_capacity,
             'remaining_slots' => $event->remainingSlots(),
             'accepting_registrations' => $event->canAcceptRegistrations(),
-            'can_delete' => (int) $event->registrations_count === 0,
+            'can_delete' => true,
         ];
     }
 

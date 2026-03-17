@@ -79,27 +79,27 @@ class Registration extends Model
 
     public function event(): BelongsTo
     {
-        return $this->belongsTo(Event::class);
+        return $this->belongsTo(Event::class)->withTrashed();
     }
 
     public function pastor(): BelongsTo
     {
-        return $this->belongsTo(Pastor::class);
+        return $this->belongsTo(Pastor::class)->withTrashed();
     }
 
     public function encodedByUser(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'encoded_by_user_id');
+        return $this->belongsTo(User::class, 'encoded_by_user_id')->withTrashed();
     }
 
     public function receiptUploadedByUser(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'receipt_uploaded_by_user_id');
+        return $this->belongsTo(User::class, 'receipt_uploaded_by_user_id')->withTrashed();
     }
 
     public function verifiedByUser(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'verified_by_user_id');
+        return $this->belongsTo(User::class, 'verified_by_user_id')->withTrashed();
     }
 
     public function items(): HasMany

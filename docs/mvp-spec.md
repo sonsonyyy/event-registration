@@ -65,7 +65,7 @@ Given access to register delegates for a specific church / pastor.
 ## 3. Main Modules
 
 ### A. Event Management
-Admin can create, edit, and delete events.
+Admin can create, edit, and archive events.
 
 #### Event Fields
 - Event name
@@ -96,6 +96,7 @@ Each event can have multiple fee categories, for example:
 - Registration closes when closing date is reached
 - Prevent registration if event is closed or cancelled
 - Show remaining slots in real time
+- Archived events and archived fee categories remain available for historical registration lookups and reports
 
 ---
 
@@ -115,11 +116,12 @@ Admin can create and manage users.
 - **Manager:** section-based access
 - **Registration Staff:** onsite registration only
 - **Online Registrant:** limited to assigned pastor record
+- Archived user accounts remain in the database for historical traceability but are removed from active authentication and management lists
 
 ---
 
 ### C. District Management
-Admin can add, edit, and delete districts.
+Admin can add, edit, and archive districts.
 
 #### District Fields
 - District name
@@ -137,6 +139,8 @@ Each section belongs to a district.
 - Description (optional)
 - Status
 
+Archived sections remain in the database for historical reporting and audit trails, but they are removed from active setup and registration flows.
+
 ---
 
 ### E. Pastor Management
@@ -152,6 +156,7 @@ Each pastor belongs to a section.
 - Status
 
 > Since the online registrant registers on behalf of a church/pastor, the pastor record may effectively represent the local church account owner.
+> Archived pastor/church records stay linked to historical registrations and users for future audit features.
 
 ---
 

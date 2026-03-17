@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -28,7 +29,7 @@ class User extends Authenticatable
     public const ACCOUNT_SOURCE_SELF_SERVICE = 'self_service';
 
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, Notifiable, SoftDeletes, TwoFactorAuthenticatable;
 
     /**
      * The attributes that are mass assignable.
@@ -84,22 +85,22 @@ class User extends Authenticatable
 
     public function district(): BelongsTo
     {
-        return $this->belongsTo(District::class);
+        return $this->belongsTo(District::class)->withTrashed();
     }
 
     public function section(): BelongsTo
     {
-        return $this->belongsTo(Section::class);
+        return $this->belongsTo(Section::class)->withTrashed();
     }
 
     public function pastor(): BelongsTo
     {
-        return $this->belongsTo(Pastor::class);
+        return $this->belongsTo(Pastor::class)->withTrashed();
     }
 
     public function approvalReviewer(): BelongsTo
     {
-        return $this->belongsTo(self::class, 'approval_reviewed_by_user_id');
+        return $this->belongsTo(self::class, 'approval_reviewed_by_user_id')->withTrashed();
     }
 
     public function encodedRegistrations(): HasMany
@@ -189,7 +190,8 @@ class User extends Authenticatable
     public function hasApprovedOnlineRegistrationAccess(): bool
     {
         return $this->isOnlineRegistrant()
-            && $this->pastor_id !== null
+            && $this->pastor !== null
+            && ! $this->pastor->trashed()
             && $this->isApprovalApproved();
     }
 

@@ -45,6 +45,6 @@ class RegistrationReview extends Model
 
     public function reviewer(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'reviewer_user_id');
+        return $this->belongsTo(User::class, 'reviewer_user_id')->withTrashed();
     }
 }

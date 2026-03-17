@@ -213,7 +213,7 @@ export default function SectionIndex({ sections }: Props) {
                                                         )
                                                     }
                                                 >
-                                                    Delete
+                                                    Archive
                                                 </Button>
                                             </div>
                                             </td>
@@ -232,14 +232,14 @@ export default function SectionIndex({ sections }: Props) {
                             setSectionToDelete(null);
                         }
                     }}
-                    title="Delete section"
-                    description="This removes the section and all of its pastor records. This action cannot be undone."
-                    confirmLabel="Delete section"
+                    title="Archive section"
+                    description="This archives the section and its pastor records while preserving historical registrations and assignments."
+                    confirmLabel="Archive section"
                     confirmVariant="destructive"
                     processing={isDeleting}
                     details={
                         sectionToDelete
-                            ? `"${sectionToDelete.name}" will be removed from ${sectionToDelete.district.name}.`
+                            ? `"${sectionToDelete.name}" will be archived under ${sectionToDelete.district.name}.`
                             : undefined
                     }
                     onConfirm={destroySection}

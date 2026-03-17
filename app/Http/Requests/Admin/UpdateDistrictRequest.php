@@ -28,7 +28,9 @@ class UpdateDistrictRequest extends FormRequest
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('districts', 'name')->ignore($this->route('district')),
+                Rule::unique('districts', 'name')
+                    ->where(fn ($query) => $query->whereNull('deleted_at'))
+                    ->ignore($this->route('district')),
             ],
             'description' => ['nullable', 'string', 'max:1000'],
             'status' => ['required', Rule::in(['active', 'inactive'])],

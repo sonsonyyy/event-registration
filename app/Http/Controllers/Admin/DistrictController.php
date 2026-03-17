@@ -85,7 +85,7 @@ class DistrictController extends Controller
 
         $district->delete();
 
-        return to_route('admin.districts.index')->with('success', 'District deleted.');
+        return to_route('admin.districts.index')->with('success', 'District archived.');
     }
 
     /**

@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Pastor extends Model
 {
     /** @use HasFactory<PastorFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -30,7 +31,7 @@ class Pastor extends Model
 
     public function section(): BelongsTo
     {
-        return $this->belongsTo(Section::class);
+        return $this->belongsTo(Section::class)->withTrashed();
     }
 
     public function assignedUsers(): HasMany

@@ -10,6 +10,7 @@ use App\Models\Section;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class StoreRegistrantAccessRequest extends FormRequest
@@ -34,8 +35,18 @@ class StoreRegistrantAccessRequest extends FormRequest
         return [
             ...$this->profileRules(),
             'password' => $this->passwordRules(),
-            'section_id' => ['required', 'integer', 'exists:sections,id'],
-            'pastor_id' => ['required', 'integer', 'exists:pastors,id'],
+            'section_id' => [
+                'required',
+                'integer',
+                Rule::exists('sections', 'id')
+                    ->where(fn ($query) => $query->whereNull('deleted_at')),
+            ],
+            'pastor_id' => [
+                'required',
+                'integer',
+                Rule::exists('pastors', 'id')
+                    ->where(fn ($query) => $query->whereNull('deleted_at')),
+            ],
         ];
     }
 

@@ -142,7 +142,7 @@ class PastorController extends Controller
 
         $pastor->delete();
 
-        return to_route('admin.pastors.index')->with('success', 'Pastor deleted.');
+        return to_route('admin.pastors.index')->with('success', 'Pastor archived.');
     }
 
     /**

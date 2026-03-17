@@ -37,9 +37,24 @@ class UpdateUserRequest extends FormRequest
             ...$this->profileRules($this->route('user')->getKey()),
             'password' => ['nullable', 'string', Password::default(), 'confirmed'],
             'role_id' => ['required', 'integer', 'exists:roles,id'],
-            'district_id' => ['nullable', 'integer', 'exists:districts,id'],
-            'section_id' => ['nullable', 'integer', 'exists:sections,id'],
-            'pastor_id' => ['nullable', 'integer', 'exists:pastors,id'],
+            'district_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('districts', 'id')
+                    ->where(fn ($query) => $query->whereNull('deleted_at')),
+            ],
+            'section_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('sections', 'id')
+                    ->where(fn ($query) => $query->whereNull('deleted_at')),
+            ],
+            'pastor_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('pastors', 'id')
+                    ->where(fn ($query) => $query->whereNull('deleted_at')),
+            ],
             'status' => ['required', Rule::in(['active', 'inactive'])],
         ];
     }

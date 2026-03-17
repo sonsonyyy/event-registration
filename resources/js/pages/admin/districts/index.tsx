@@ -201,7 +201,7 @@ export default function DistrictIndex({ districts }: Props) {
                                                         )
                                                     }
                                                 >
-                                                    Delete
+                                                    Archive
                                                 </Button>
                                             </div>
                                             </td>
@@ -220,14 +220,14 @@ export default function DistrictIndex({ districts }: Props) {
                             setDistrictToDelete(null);
                         }
                     }}
-                    title="Delete district"
-                    description="This removes the district and its related sections and pastors. This action cannot be undone."
-                    confirmLabel="Delete district"
+                    title="Archive district"
+                    description="This archives the district and its related sections and pastors while preserving historical records."
+                    confirmLabel="Archive district"
                     confirmVariant="destructive"
                     processing={isDeleting}
                     details={
                         districtToDelete
-                            ? `"${districtToDelete.name}" will be permanently removed from the directory.`
+                            ? `"${districtToDelete.name}" will be archived and removed from active directory lists.`
                             : undefined
                     }
                     onConfirm={destroyDistrict}
