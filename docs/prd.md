@@ -63,6 +63,7 @@ Supported departments for the current district are:
 - Sunday School
 - Home Missions
 - Music Commission
+- Information Technology Commission
 
 ### 3.3 General vs Departmental Access
 - `department_id = null` means the account or event is general / non-departmental.

@@ -45,6 +45,7 @@ Supported departments:
 - Sunday School
 - Home Missions
 - Music Commission
+- Information Technology Commission
 
 `department_id = null` means the account or event is general / non-departmental.
 
