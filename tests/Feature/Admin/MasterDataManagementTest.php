@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Department;
 use App\Models\District;
 use App\Models\Pastor;
 use App\Models\Section;
@@ -7,10 +8,32 @@ use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('admins can browse the master data pages', function () {
+    $department = Department::factory()->create();
     $district = District::factory()->create();
     $section = Section::factory()->for($district)->create();
     $pastor = Pastor::factory()->for($section)->create();
     $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->get(route('admin.departments.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/departments/index')
+            ->has('departments', 1));
+
+    $this->actingAs($admin)
+        ->get(route('admin.departments.create'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/departments/create')
+            ->has('statusOptions', 2));
+
+    $this->actingAs($admin)
+        ->get(route('admin.departments.edit', $department))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/departments/edit')
+            ->where('department.name', $department->name));
 
     $this->actingAs($admin)
         ->get(route('admin.districts.index'))
@@ -97,10 +120,23 @@ test('non admins cannot access admin master data routes', function () {
         ->assertForbidden();
 });
 
-test('admins can create districts sections and pastors', function () {
+test('admins can create departments districts sections and pastors', function () {
     $admin = User::factory()->admin()->create();
     $district = District::factory()->create();
     $section = Section::factory()->for($district)->create();
+
+    $this->actingAs($admin)
+        ->post(route('admin.departments.store'), [
+            'name' => 'Youth Ministries',
+            'description' => 'Department oversight record.',
+            'status' => 'active',
+        ])
+        ->assertRedirect(route('admin.departments.index'));
+
+    $this->assertDatabaseHas('departments', [
+        'name' => 'Youth Ministries',
+        'status' => 'active',
+    ]);
 
     $this->actingAs($admin)
         ->post(route('admin.districts.store'), [
@@ -275,6 +311,15 @@ test('admins must pass the form request validation rules', function () {
     $admin = User::factory()->admin()->create();
     $district = District::factory()->create();
     $section = Section::factory()->for($district)->create();
+
+    $this->actingAs($admin)
+        ->from(route('admin.departments.create'))
+        ->post(route('admin.departments.store'), [
+            'name' => '',
+            'status' => 'archived',
+        ])
+        ->assertRedirect(route('admin.departments.create'))
+        ->assertSessionHasErrors(['name', 'status']);
 
     $this->actingAs($admin)
         ->from(route('admin.districts.create'))

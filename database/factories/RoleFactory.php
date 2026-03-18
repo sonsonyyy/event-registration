@@ -29,6 +29,13 @@ class RoleFactory extends Factory
         ]);
     }
 
+    public function superAdmin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => Role::SUPER_ADMIN,
+        ]);
+    }
+
     public function manager(): static
     {
         return $this->state(fn (array $attributes) => [

@@ -13,6 +13,18 @@ type SelectOption = {
 
 type Props = {
     statusOptions: SelectOption[];
+    scopeTypeOptions: SelectOption[];
+    sections: Array<{
+        id: number;
+        name: string;
+        district_name: string;
+        status: string;
+    }>;
+    departments: Array<{
+        id: number;
+        name: string;
+        status: string;
+    }>;
     feeCategoryStatusOptions: SelectOption[];
 };
 
@@ -33,6 +45,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function CreateEvent({
     statusOptions,
+    scopeTypeOptions,
+    sections,
+    departments,
     feeCategoryStatusOptions,
 }: Props) {
     return (
@@ -46,6 +61,9 @@ export default function CreateEvent({
                 />
                 <EventForm
                     statusOptions={statusOptions}
+                    scopeTypeOptions={scopeTypeOptions}
+                    sections={sections}
+                    departments={departments}
                     feeCategoryStatusOptions={feeCategoryStatusOptions}
                 />
             </div>

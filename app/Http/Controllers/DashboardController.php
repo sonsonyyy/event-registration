@@ -8,6 +8,7 @@ use App\Models\Pastor;
 use App\Models\Registration;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\DepartmentScopeAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -31,7 +32,7 @@ class DashboardController extends Controller
             'pastor.section.district',
         ]);
 
-        $allOpenEvents = $this->openEvents();
+        $allOpenEvents = $this->openEvents($user);
         $registrationQuery = $this->registrationQuery($user);
 
         return Inertia::render('dashboard', [
@@ -57,15 +58,24 @@ class DashboardController extends Controller
     private function hero(User $user): array
     {
         return match (true) {
+            $user->isSuperAdmin() => [
+                'eyebrow' => 'Super admin overview',
+                'title' => 'Platform operations dashboard',
+                'description' => 'See cross-district activity, account access, and event operations with full administrative control.',
+            ],
             $user->isAdmin() => [
                 'eyebrow' => 'Admin overview',
                 'title' => 'District registration command center',
-                'description' => 'Monitor open events, active accounts, and cross-system registration activity from one workspace.',
+                'description' => $user->department_id === null
+                    ? 'Monitor district-wide events, active accounts, and registration activity across all departments.'
+                    : 'Monitor registration activity, active accounts, and events assigned to your department.',
             ],
             $user->isManager() => [
                 'eyebrow' => 'Section overview',
                 'title' => 'Section registration dashboard',
-                'description' => 'Track registrations, assigned churches, and current event availability within your section.',
+                'description' => $user->department_id === null
+                    ? 'Track registrations, assigned churches, and current event availability within your section.'
+                    : 'Track registrations and current event availability for your assigned section and department.',
             ],
             $user->isRegistrationStaff() => [
                 'eyebrow' => 'Onsite overview',
@@ -87,7 +97,7 @@ class DashboardController extends Controller
      */
     private function actions(User $user): array
     {
-        if ($user->isAdmin()) {
+        if ($user->hasAdminAccess()) {
             return [
                 [
                     'label' => 'Manage events',
@@ -150,7 +160,7 @@ class DashboardController extends Controller
      */
     private function links(User $user): array
     {
-        if ($user->isAdmin()) {
+        if ($user->hasAdminAccess()) {
             return [
                 'open_events' => [
                     'label' => 'View all events',
@@ -239,15 +249,35 @@ class DashboardController extends Controller
      */
     private function scope(User $user): array
     {
-        if ($user->isAdmin()) {
+        if ($user->isSuperAdmin()) {
             return [
                 'title' => 'Access scope',
-                'summary' => 'All districts, sections, and church records',
-                'description' => 'You can manage users, events, and registration activity across the full workspace.',
+                'summary' => 'All districts, sections, departments, and church records',
+                'description' => 'You can oversee every event lane, approval queue, and registration workflow across the deployment.',
+                'items' => [
+                    ['label' => 'Role', 'value' => Role::SUPER_ADMIN],
+                    ['label' => 'Coverage', 'value' => 'Full platform access'],
+                    ['label' => 'Department scope', 'value' => 'All departments'],
+                ],
+            ];
+        }
+
+        if ($user->isAdmin()) {
+            $departmentLabel = $user->department?->name ?? 'All departments';
+
+            return [
+                'title' => 'Access scope',
+                'summary' => $user->department_id === null
+                    ? 'District-wide events and registration activity'
+                    : $departmentLabel.' district events',
+                'description' => $user->department_id === null
+                    ? 'You can manage users, events, and registration activity across the full district workspace.'
+                    : 'You can manage district events and registration activity assigned to your department while still handling district administration tasks.',
                 'items' => [
                     ['label' => 'Role', 'value' => Role::ADMIN],
-                    ['label' => 'Coverage', 'value' => 'System-wide'],
-                    ['label' => 'Registrations', 'value' => 'All types of transactions'],
+                    ['label' => 'Coverage', 'value' => 'District scope'],
+                    ['label' => 'Department scope', 'value' => $departmentLabel],
+                    ['label' => 'Registrations', 'value' => 'District-owned event activity'],
                 ],
             ];
         }
@@ -255,15 +285,19 @@ class DashboardController extends Controller
         if ($user->isManager()) {
             $sectionName = $user->section?->name ?? 'No section assigned';
             $districtName = $user->section?->district?->name ?? $user->district?->name ?? 'No district assigned';
+            $departmentLabel = $user->department?->name ?? 'All departments';
 
             return [
                 'title' => 'Access scope',
                 'summary' => sprintf('%s, %s', $sectionName, $districtName),
-                'description' => 'Your dashboard is limited to registrations and churches within your assigned section.',
+                'description' => $user->department_id === null
+                    ? 'Your dashboard is limited to registrations and churches within your assigned section.'
+                    : 'Your dashboard is limited to your assigned section and department lane.',
                 'items' => [
                     ['label' => 'Role', 'value' => Role::MANAGER],
                     ['label' => 'District', 'value' => $districtName],
                     ['label' => 'Section', 'value' => $sectionName],
+                    ['label' => 'Department scope', 'value' => $departmentLabel],
                 ],
             ];
         }
@@ -310,6 +344,31 @@ class DashboardController extends Controller
         $pendingVerificationCount = (clone $registrationQuery)
             ->where('registration_status', Registration::STATUS_PENDING_VERIFICATION)
             ->count();
+
+        if ($user->isSuperAdmin()) {
+            return [
+                [
+                    'label' => 'Open events',
+                    'value' => $openEventsCount,
+                    'description' => 'Events currently accepting registrations',
+                ],
+                [
+                    'label' => 'Pending verification',
+                    'value' => $pendingVerificationCount,
+                    'description' => 'Registrations waiting for review',
+                ],
+                [
+                    'label' => 'Active users',
+                    'value' => User::query()->where('status', 'active')->count(),
+                    'description' => 'Accounts with active workspace access',
+                ],
+                [
+                    'label' => 'Active churches',
+                    'value' => Pastor::query()->where('status', 'active')->count(),
+                    'description' => 'Church records ready for registration use',
+                ],
+            ];
+        }
 
         if ($user->isAdmin()) {
             return [
@@ -437,9 +496,9 @@ class DashboardController extends Controller
      *     registration_close_at: string
      * }>
      */
-    private function openEvents(): array
+    private function openEvents(User $user): array
     {
-        return Event::query()
+        $query = Event::query()
             ->where('status', Event::STATUS_OPEN)
             ->whereHas('feeCategories', function (Builder $query): void {
                 $query->where('status', 'active');
@@ -450,7 +509,11 @@ class DashboardController extends Controller
                     ->where('status', 'active')
                     ->withSum('reservedRegistrationItems as reserved_quantity', 'quantity'),
             ])
-            ->orderBy('date_from')
+            ->orderBy('date_from');
+
+        DepartmentScopeAccess::scopeAccessibleEvents($query, $user);
+
+        return $query
             ->get()
             ->each(fn (Event $event): bool => $event->syncOperationalStatus())
             ->filter(function (Event $event): bool {
@@ -524,8 +587,10 @@ class DashboardController extends Controller
     {
         $query = Registration::query();
 
-        if ($user->isAdmin()) {
-            return $query;
+        if ($user->hasAdminAccess()) {
+            return $query->whereHas('event', function (Builder $eventQuery) use ($user): void {
+                DepartmentScopeAccess::scopeAccessibleEvents($eventQuery, $user);
+            });
         }
 
         if ($user->isManager()) {
@@ -533,8 +598,8 @@ class DashboardController extends Controller
                 return $query->whereRaw('1 = 0');
             }
 
-            return $query->whereHas('pastor', function (Builder $builder) use ($user): void {
-                $builder->where('section_id', $user->section_id);
+            return $query->whereHas('event', function (Builder $eventQuery) use ($user): void {
+                DepartmentScopeAccess::scopeAccessibleEvents($eventQuery, $user);
             });
         }
 

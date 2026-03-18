@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\EventFeeCategory;
 use App\Models\Pastor;
 use App\Models\Registration;
+use App\Support\DepartmentScopeAccess;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -96,6 +97,15 @@ class StoreOnlineRegistrationRequest extends FormRequest
 
                 $event->loadSum('reservedRegistrationItems as reserved_quantity', 'quantity');
                 $event->syncOperationalStatus();
+
+                if (! DepartmentScopeAccess::canAccessEvent($this->user(), $event)) {
+                    $validator->errors()->add(
+                        'event_id',
+                        'The selected event is not available to your account.',
+                    );
+
+                    return;
+                }
 
                 if (! $event->canAcceptRegistrations()) {
                     $validator->errors()->add('event_id', 'The selected event is not open for online registration.');

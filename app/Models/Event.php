@@ -7,6 +7,7 @@ use Database\Factories\EventFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -26,6 +27,10 @@ class Event extends Model
 
     public const STATUS_CANCELLED = 'cancelled';
 
+    public const SCOPE_DISTRICT = 'district';
+
+    public const SCOPE_SECTION = 'section';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -41,6 +46,9 @@ class Event extends Model
         'registration_close_at',
         'total_capacity',
         'status',
+        'scope_type',
+        'section_id',
+        'department_id',
     ];
 
     protected static function booted(): void
@@ -82,6 +90,16 @@ class Event extends Model
     public function feeCategories(): HasMany
     {
         return $this->hasMany(EventFeeCategory::class);
+    }
+
+    public function section(): BelongsTo
+    {
+        return $this->belongsTo(Section::class)->withTrashed();
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class)->withTrashed();
     }
 
     public function registrations(): HasMany
@@ -129,6 +147,39 @@ class Event extends Model
             self::STATUS_COMPLETED,
             self::STATUS_CANCELLED,
         ];
+    }
+
+    /**
+     * Get the supported event scope types.
+     *
+     * @return array<int, string>
+     */
+    public static function scopeTypes(): array
+    {
+        return [
+            self::SCOPE_DISTRICT,
+            self::SCOPE_SECTION,
+        ];
+    }
+
+    public function isDistrictScoped(): bool
+    {
+        return $this->scope_type === self::SCOPE_DISTRICT;
+    }
+
+    public function isSectionScoped(): bool
+    {
+        return $this->scope_type === self::SCOPE_SECTION;
+    }
+
+    public function isDepartmental(): bool
+    {
+        return $this->department_id !== null;
+    }
+
+    public function isGeneral(): bool
+    {
+        return $this->department_id === null;
     }
 
     public function reservedQuantity(): int

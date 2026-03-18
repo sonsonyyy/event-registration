@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Department;
 use App\Models\District;
 use App\Models\Event;
 use App\Models\EventFeeCategory;
@@ -54,14 +55,21 @@ test('manager dashboard is limited to the assigned section scope', function () {
         'district_id' => $district->id,
         'section_id' => $section->id,
     ]);
-    $event = createDashboardEvent();
+    $event = createDashboardEvent([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+    ]);
     $scopedRegistration = Registration::factory()->create([
         'event_id' => $event->id,
         'pastor_id' => $scopedPastor->id,
         'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
     ]);
+    $otherEvent = createDashboardEvent([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $otherSection->id,
+    ]);
     Registration::factory()->create([
-        'event_id' => $event->id,
+        'event_id' => $otherEvent->id,
         'pastor_id' => $otherPastor->id,
         'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
     ]);
@@ -82,6 +90,60 @@ test('manager dashboard is limited to the assigned section scope', function () {
         ->has('dashboard.recent_registrations', 1)
         ->where('dashboard.recent_registrations.0.id', $scopedRegistration->id)
         ->where('dashboard.open_events.0.id', $event->id));
+});
+
+test('department-scoped admins only see district events and registrations for their department', function () {
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $section = Section::factory()->create([
+        'district_id' => $district->id,
+        'name' => 'Section 1',
+    ]);
+    $pastor = Pastor::factory()->create([
+        'section_id' => $section->id,
+        'church_name' => 'Grace Community Church',
+    ]);
+    $youthDepartment = Department::factory()->create([
+        'name' => 'Youth Ministries',
+    ]);
+    $ladiesDepartment = Department::factory()->create([
+        'name' => 'Ladies Ministries',
+    ]);
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+        'department_id' => $youthDepartment->id,
+    ]);
+    $youthEvent = createDashboardEvent([
+        'department_id' => $youthDepartment->id,
+    ]);
+    $ladiesEvent = createDashboardEvent([
+        'department_id' => $ladiesDepartment->id,
+    ]);
+    $youthRegistration = Registration::factory()->create([
+        'event_id' => $youthEvent->id,
+        'pastor_id' => $pastor->id,
+        'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
+    ]);
+    Registration::factory()->create([
+        'event_id' => $ladiesEvent->id,
+        'pastor_id' => $pastor->id,
+        'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->where('dashboard.scope.summary', 'Youth Ministries district events')
+            ->where('dashboard.scope.items.2.value', 'Youth Ministries')
+            ->where('dashboard.scope.items.3.value', 'District-owned event activity')
+            ->where('dashboard.metrics.0.value', 1)
+            ->where('dashboard.metrics.1.value', 1)
+            ->has('dashboard.open_events', 1)
+            ->where('dashboard.open_events.0.id', $youthEvent->id)
+            ->has('dashboard.recent_registrations', 1)
+            ->where('dashboard.recent_registrations.0.id', $youthRegistration->id));
 });
 
 test('online registrant dashboard is limited to the assigned church scope', function () {
@@ -169,7 +231,7 @@ test('pending online registrants see an approval notice and no online registrati
             ->where('dashboard.links.recent_activity.href', route('dashboard', absolute: false)));
 });
 
-function createDashboardEvent(): Event
+function createDashboardEvent(array $attributes = []): Event
 {
     $event = Event::factory()->create([
         'name' => 'CLD Youth Conference 2026',
@@ -179,6 +241,7 @@ function createDashboardEvent(): Event
         'registration_open_at' => now()->subDay(),
         'registration_close_at' => now()->addDays(10),
         'total_capacity' => 500,
+        ...$attributes,
     ]);
 
     EventFeeCategory::factory()->create([

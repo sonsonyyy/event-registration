@@ -2,10 +2,12 @@
 
 namespace App\Policies;
 
+use App\Models\Event;
 use App\Models\Pastor;
 use App\Models\Registration;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\DepartmentScopeAccess;
 
 class RegistrationPolicy
 {
@@ -31,7 +33,7 @@ class RegistrationPolicy
 
     public function viewAnyVerification(User $user): bool
     {
-        return $user->isManager() && $user->section_id !== null;
+        return $user->canViewVerificationQueue();
     }
 
     public function view(User $user, Registration $registration): bool
@@ -96,8 +98,12 @@ class RegistrationPolicy
         return $user->isManager() && $user->canAccessRegistration($registration);
     }
 
-    public function createOnsite(User $user, ?Pastor $pastor = null): bool
+    public function createOnsite(User $user, ?Pastor $pastor = null, ?Event $event = null): bool
     {
+        if ($event !== null && ! DepartmentScopeAccess::canAccessEvent($user, $event)) {
+            return false;
+        }
+
         if ($user->isRegistrationStaff()) {
             return true;
         }
@@ -113,10 +119,11 @@ class RegistrationPolicy
         return false;
     }
 
-    public function createOnline(User $user, Pastor $pastor): bool
+    public function createOnline(User $user, Pastor $pastor, ?Event $event = null): bool
     {
         return $user->hasApprovedOnlineRegistrationAccess()
-            && $user->belongsToPastor($pastor->getKey());
+            && $user->belongsToPastor($pastor->getKey())
+            && ($event === null || DepartmentScopeAccess::canAccessEvent($user, $event));
     }
 
     public function uploadReceipt(User $user, Registration $registration): bool
@@ -127,9 +134,11 @@ class RegistrationPolicy
 
     public function verifyReceipt(User $user, Registration $registration): bool
     {
-        return $user->isManager()
-            && $registration->registration_mode === Registration::MODE_ONLINE
-            && $registration->canBeReviewed()
-            && $user->canAccessRegistration($registration);
+        return $user->canReviewRegistration($registration);
+    }
+
+    public function viewVerificationReceipt(User $user, Registration $registration): bool
+    {
+        return $user->canAccessVerificationRegistration($registration);
     }
 }

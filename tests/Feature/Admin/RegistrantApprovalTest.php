@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Department;
 use App\Models\District;
 use App\Models\Pastor;
 use App\Models\Section;
@@ -7,9 +8,15 @@ use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('admins can review self-service registrant account requests', function () {
-    $admin = User::factory()->admin()->create();
     $district = District::factory()->create([
         'name' => 'Central Luzon',
+    ]);
+    $department = Department::factory()->create([
+        'name' => 'Youth Ministries',
+    ]);
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+        'department_id' => $department->id,
     ]);
     $section = Section::factory()->for($district)->create([
         'name' => 'Section 1',
@@ -50,7 +57,7 @@ test('admins can review self-service registrant account requests', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('account-requests/index')
-            ->where('scopeSummary', 'all sections')
+            ->where('scopeSummary', 'Central Luzon • all sections')
             ->where('filters.status', User::APPROVAL_PENDING)
             ->where('summary.pending', 1)
             ->where('summary.approved', 0)
@@ -96,6 +103,9 @@ test('managers can only review self-service registrant requests within their ass
     $manager = User::factory()->manager()->create([
         'district_id' => $district->id,
         'section_id' => $section->id,
+        'department_id' => Department::factory()->create([
+            'name' => "Apostolic Men's",
+        ])->id,
     ]);
     $scopedRequest = User::factory()
         ->onlineRegistrant()

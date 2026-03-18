@@ -44,6 +44,9 @@ type EventRecord = {
     registration_open_at: string;
     registration_close_at: string;
     status: string;
+    scope_type: string;
+    section_id: number | null;
+    department_id: number | null;
     total_capacity: number;
     reserved_quantity: number;
     remaining_slots: number;
@@ -57,9 +60,25 @@ type SelectOption = {
     label: string;
 };
 
+type SectionOption = {
+    id: number;
+    name: string;
+    district_name: string;
+    status: string;
+};
+
+type DepartmentOption = {
+    id: number;
+    name: string;
+    status: string;
+};
+
 type Props = {
     event?: EventRecord;
     statusOptions: SelectOption[];
+    scopeTypeOptions: SelectOption[];
+    sections: SectionOption[];
+    departments: DepartmentOption[];
     feeCategoryStatusOptions: SelectOption[];
 };
 
@@ -72,6 +91,9 @@ type EventFormData = {
     registration_open_at: string;
     registration_close_at: string;
     status: string;
+    scope_type: string;
+    section_id: string;
+    department_id: string;
     total_capacity: string;
     fee_categories: FeeCategoryFormValue[];
 };
@@ -90,6 +112,9 @@ function emptyFeeCategory(): FeeCategoryFormValue {
 export default function EventForm({
     event,
     statusOptions,
+    scopeTypeOptions,
+    sections,
+    departments,
     feeCategoryStatusOptions,
 }: Props) {
     const isEditing = event !== undefined;
@@ -102,6 +127,9 @@ export default function EventForm({
         registration_open_at: event?.registration_open_at ?? '',
         registration_close_at: event?.registration_close_at ?? '',
         status: event?.status ?? 'draft',
+        scope_type: event?.scope_type ?? 'district',
+        section_id: event?.section_id?.toString() ?? '',
+        department_id: event?.department_id?.toString() ?? '',
         total_capacity: event ? event.total_capacity.toString() : '',
         fee_categories:
             event?.fee_categories.map((feeCategory) => ({
@@ -109,9 +137,30 @@ export default function EventForm({
                 slot_limit: feeCategory.slot_limit?.toString() ?? '',
             })) ?? [emptyFeeCategory()],
     });
+
     const reservedQuantity = event?.reserved_quantity ?? 0;
     const totalCapacity = Number.parseInt(form.data.total_capacity || '0', 10);
     const remainingSlots = Math.max(totalCapacity - reservedQuantity, 0);
+    const selectedSection =
+        sections.find((section) => section.id.toString() === form.data.section_id) ??
+        null;
+    const selectedDepartment =
+        departments.find(
+            (department) =>
+                department.id.toString() === form.data.department_id,
+        ) ?? null;
+    const scopeSummary =
+        form.data.scope_type === 'section'
+            ? `${selectedSection ? `${selectedSection.name} · ${selectedSection.district_name}` : 'Choose a section'} · ${selectedDepartment?.name ?? 'General'}`
+            : `District-wide · ${selectedDepartment?.name ?? 'General'}`;
+
+    const changeScopeType = (value: string): void => {
+        form.setData((currentData) => ({
+            ...currentData,
+            scope_type: value,
+            section_id: value === 'section' ? currentData.section_id : '',
+        }));
+    };
 
     const updateFeeCategory = (
         index: number,
@@ -163,7 +212,11 @@ export default function EventForm({
     const clearFormErrorHandlers = createClearFormErrorHandlers(form.clearErrors);
 
     return (
-        <form className="space-y-8" onSubmit={submit} {...clearFormErrorHandlers}>
+        <form
+            className="space-y-8"
+            onSubmit={submit}
+            {...clearFormErrorHandlers}
+        >
             <div className="space-y-6">
                 <div className="grid gap-6 lg:grid-cols-2">
                     <div className="grid gap-2">
@@ -176,7 +229,7 @@ export default function EventForm({
                                 form.setData('name', inputEvent.target.value)
                             }
                             autoFocus
-                            placeholder="District Youth Camp"
+                            placeholder="District Leadership Summit"
                         />
                         <InputError message={form.errors.name} />
                     </div>
@@ -212,6 +265,70 @@ export default function EventForm({
                         className={formTextareaClassName}
                     />
                     <InputError message={form.errors.description} />
+                </div>
+
+                <div className="grid gap-6 xl:grid-cols-[220px_minmax(0,1fr)_minmax(0,1fr)]">
+                    <div className="grid gap-2">
+                        <Label htmlFor="scope_type">Scope</Label>
+                        <FormSelect
+                            id="scope_type"
+                            name="scope_type"
+                            value={form.data.scope_type}
+                            onValueChange={changeScopeType}
+                            placeholder="Select scope"
+                            options={scopeTypeOptions.map((option) => ({
+                                value: option.value,
+                                label: option.label,
+                            }))}
+                        />
+                        <InputError message={form.errors.scope_type} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="section_id">Section</Label>
+                        <FormSelect
+                            id="section_id"
+                            name="section_id"
+                            value={form.data.section_id}
+                            onValueChange={(value) =>
+                                form.setData('section_id', value)
+                            }
+                            placeholder="Select a section"
+                            emptyLabel="No section scope"
+                            disabled={
+                                form.data.scope_type !== 'section' ||
+                                sections.length === 0
+                            }
+                            options={sections.map((section) => ({
+                                value: section.id.toString(),
+                                label: `${section.name} · ${section.district_name}${section.status === 'inactive' ? ' (Inactive)' : ''}`,
+                            }))}
+                        />
+                        <InputError message={form.errors.section_id} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="department_id">Department</Label>
+                        <FormSelect
+                            id="department_id"
+                            name="department_id"
+                            value={form.data.department_id}
+                            onValueChange={(value) =>
+                                form.setData('department_id', value)
+                            }
+                            placeholder="Select a department"
+                            emptyLabel="General / no department"
+                            options={departments.map((department) => ({
+                                value: department.id.toString(),
+                                label: `${department.name}${department.status === 'inactive' ? ' (Inactive)' : ''}`,
+                            }))}
+                        />
+                        <InputError message={form.errors.department_id} />
+                    </div>
+                </div>
+
+                <div className={mutedNoticeClassName}>
+                    This event is currently configured as <strong>{scopeSummary}</strong>.
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
@@ -265,9 +382,7 @@ export default function EventForm({
                                 )
                             }
                         />
-                        <InputError
-                            message={form.errors.registration_open_at}
-                        />
+                        <InputError message={form.errors.registration_open_at} />
                     </div>
 
                     <div className="grid gap-2">
@@ -286,9 +401,7 @@ export default function EventForm({
                                 )
                             }
                         />
-                        <InputError
-                            message={form.errors.registration_close_at}
-                        />
+                        <InputError message={form.errors.registration_close_at} />
                     </div>
                 </div>
 
@@ -396,204 +509,197 @@ export default function EventForm({
                 )}
 
                 {form.data.fee_categories.map((feeCategory, index) => {
-                        const categoryRemainingSlots =
-                            feeCategory.slot_limit === ''
-                                ? null
-                                : Math.max(
-                                      Number.parseInt(
-                                          feeCategory.slot_limit,
-                                          10,
-                                      ) - feeCategory.reserved_quantity,
-                                      0,
-                                  );
-                        const canRemove =
-                            feeCategory.reserved_quantity === 0 &&
-                            form.data.fee_categories.length > 1;
+                    const categoryRemainingSlots =
+                        feeCategory.slot_limit === ''
+                            ? null
+                            : Math.max(
+                                  Number.parseInt(
+                                      feeCategory.slot_limit,
+                                      10,
+                                  ) - feeCategory.reserved_quantity,
+                                  0,
+                              );
+                    const canRemove =
+                        feeCategory.reserved_quantity === 0 &&
+                        form.data.fee_categories.length > 1;
 
-                        return (
-                            <div
-                                key={`${feeCategory.id ?? 'new'}-${index}`}
-                                className="rounded-md border border-sidebar-border/70 bg-background p-4"
-                            >
-                                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                                    <div className="space-y-1">
-                                        <h3 className="font-medium">
-                                            Fee category {index + 1}
-                                        </h3>
-                                        <p className="text-sm text-muted-foreground">
-                                            Optional slot limits let you reserve
-                                            part of the event capacity for a
-                                            specific fee type.
-                                        </p>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <Badge variant="default">
-                                            Reserved {feeCategory.reserved_quantity}
-                                        </Badge>
-                                        {categoryRemainingSlots !== null && (
-                                            <Badge
-                                                variant={
-                                                    categoryRemainingSlots > 0
-                                                        ? 'secondary'
-                                                        : 'destructive'
-                                                }
-                                            >
-                                                Remaining {categoryRemainingSlots}
-                                            </Badge>
-                                        )}
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            disabled={!canRemove}
-                                            onClick={() =>
-                                                removeFeeCategory(index)
-                                            }
-                                        >
-                                            Remove
-                                        </Button>
-                                    </div>
+                    return (
+                        <div
+                            key={`${feeCategory.id ?? 'new'}-${index}`}
+                            className="rounded-md border border-sidebar-border/70 bg-background p-4"
+                        >
+                            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                                <div className="space-y-1">
+                                    <h3 className="font-medium">
+                                        Fee category {index + 1}
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Optional slot limits let you reserve part of
+                                        the event capacity for a specific fee type.
+                                    </p>
                                 </div>
-
-                                <div className="mt-4 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-                                    {feeCategory.id !== undefined && (
-                                        <input
-                                            type="hidden"
-                                            value={feeCategory.id}
-                                            name={`fee_categories.${index}.id`}
-                                        />
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Badge variant="default">
+                                        Reserved {feeCategory.reserved_quantity}
+                                    </Badge>
+                                    {categoryRemainingSlots !== null && (
+                                        <Badge
+                                            variant={
+                                                categoryRemainingSlots > 0
+                                                    ? 'secondary'
+                                                    : 'destructive'
+                                            }
+                                        >
+                                            Remaining {categoryRemainingSlots}
+                                        </Badge>
                                     )}
-
-                                    <div className="grid gap-2">
-                                        <Label
-                                            htmlFor={`fee_categories.${index}.category_name`}
-                                        >
-                                            Category name
-                                        </Label>
-                                        <Input
-                                            id={`fee_categories.${index}.category_name`}
-                                            value={feeCategory.category_name}
-                                            onChange={(inputEvent) =>
-                                                updateFeeCategory(
-                                                    index,
-                                                    'category_name',
-                                                    inputEvent.target.value,
-                                                )
-                                            }
-                                            placeholder="Regular (Online)"
-                                        />
-                                        <InputError
-                                            message={
-                                                form.errors[
-                                                    `fee_categories.${index}.category_name`
-                                                ]
-                                            }
-                                        />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label
-                                            htmlFor={`fee_categories.${index}.amount`}
-                                        >
-                                            Amount
-                                        </Label>
-                                        <Input
-                                            id={`fee_categories.${index}.amount`}
-                                            type="number"
-                                            step="0.01"
-                                            min="0.01"
-                                            value={feeCategory.amount}
-                                            onChange={(inputEvent) =>
-                                                updateFeeCategory(
-                                                    index,
-                                                    'amount',
-                                                    inputEvent.target.value,
-                                                )
-                                            }
-                                            placeholder="500.00"
-                                        />
-                                        <InputError
-                                            message={
-                                                form.errors[
-                                                    `fee_categories.${index}.amount`
-                                                ]
-                                            }
-                                        />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label
-                                            htmlFor={`fee_categories.${index}.slot_limit`}
-                                        >
-                                            Slot limit
-                                        </Label>
-                                        <Input
-                                            id={`fee_categories.${index}.slot_limit`}
-                                            type="number"
-                                            min={feeCategory.reserved_quantity || 1}
-                                            value={feeCategory.slot_limit}
-                                            onChange={(inputEvent) =>
-                                                updateFeeCategory(
-                                                    index,
-                                                    'slot_limit',
-                                                    inputEvent.target.value,
-                                                )
-                                            }
-                                            placeholder="Optional"
-                                        />
-                                        <InputError
-                                            message={
-                                                form.errors[
-                                                    `fee_categories.${index}.slot_limit`
-                                                ]
-                                            }
-                                        />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label
-                                            htmlFor={`fee_categories.${index}.status`}
-                                        >
-                                            Status
-                                        </Label>
-                                        <FormSelect
-                                            id={`fee_categories.${index}.status`}
-                                            name={`fee_categories.${index}.status`}
-                                            value={feeCategory.status}
-                                            onValueChange={(value) =>
-                                                updateFeeCategory(
-                                                    index,
-                                                    'status',
-                                                    value,
-                                                )
-                                            }
-                                            placeholder="Select status"
-                                            options={feeCategoryStatusOptions.map(
-                                                (option) => ({
-                                                    value: option.value,
-                                                    label: option.label,
-                                                }),
-                                            )}
-                                        />
-                                        <InputError
-                                            message={
-                                                form.errors[
-                                                    `fee_categories.${index}.status`
-                                                ]
-                                            }
-                                        />
-                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        disabled={!canRemove}
+                                        onClick={() => removeFeeCategory(index)}
+                                    >
+                                        Remove
+                                    </Button>
                                 </div>
                             </div>
-                        );
+
+                            <div className="mt-4 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+                                {feeCategory.id !== undefined && (
+                                    <input
+                                        type="hidden"
+                                        value={feeCategory.id}
+                                        name={`fee_categories.${index}.id`}
+                                    />
+                                )}
+
+                                <div className="grid gap-2">
+                                    <Label
+                                        htmlFor={`fee_categories.${index}.category_name`}
+                                    >
+                                        Category name
+                                    </Label>
+                                    <Input
+                                        id={`fee_categories.${index}.category_name`}
+                                        value={feeCategory.category_name}
+                                        onChange={(inputEvent) =>
+                                            updateFeeCategory(
+                                                index,
+                                                'category_name',
+                                                inputEvent.target.value,
+                                            )
+                                        }
+                                        placeholder="Regular (Online)"
+                                    />
+                                    <InputError
+                                        message={
+                                            form.errors[
+                                                `fee_categories.${index}.category_name`
+                                            ]
+                                        }
+                                    />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label
+                                        htmlFor={`fee_categories.${index}.amount`}
+                                    >
+                                        Amount
+                                    </Label>
+                                    <Input
+                                        id={`fee_categories.${index}.amount`}
+                                        type="number"
+                                        step="0.01"
+                                        min="0.01"
+                                        value={feeCategory.amount}
+                                        onChange={(inputEvent) =>
+                                            updateFeeCategory(
+                                                index,
+                                                'amount',
+                                                inputEvent.target.value,
+                                            )
+                                        }
+                                        placeholder="500.00"
+                                    />
+                                    <InputError
+                                        message={
+                                            form.errors[
+                                                `fee_categories.${index}.amount`
+                                            ]
+                                        }
+                                    />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label
+                                        htmlFor={`fee_categories.${index}.slot_limit`}
+                                    >
+                                        Slot limit
+                                    </Label>
+                                    <Input
+                                        id={`fee_categories.${index}.slot_limit`}
+                                        type="number"
+                                        min={feeCategory.reserved_quantity || 1}
+                                        value={feeCategory.slot_limit}
+                                        onChange={(inputEvent) =>
+                                            updateFeeCategory(
+                                                index,
+                                                'slot_limit',
+                                                inputEvent.target.value,
+                                            )
+                                        }
+                                        placeholder="Optional"
+                                    />
+                                    <InputError
+                                        message={
+                                            form.errors[
+                                                `fee_categories.${index}.slot_limit`
+                                            ]
+                                        }
+                                    />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor={`fee_categories.${index}.status`}>
+                                        Status
+                                    </Label>
+                                    <FormSelect
+                                        id={`fee_categories.${index}.status`}
+                                        name={`fee_categories.${index}.status`}
+                                        value={feeCategory.status}
+                                        onValueChange={(value) =>
+                                            updateFeeCategory(
+                                                index,
+                                                'status',
+                                                value,
+                                            )
+                                        }
+                                        placeholder="Select status"
+                                        options={feeCategoryStatusOptions.map(
+                                            (option) => ({
+                                                value: option.value,
+                                                label: option.label,
+                                            }),
+                                        )}
+                                    />
+                                    <InputError
+                                        message={
+                                            form.errors[
+                                                `fee_categories.${index}.status`
+                                            ]
+                                        }
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    );
                 })}
             </section>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                 <Button variant="outline" asChild>
-                    <Link href={EventController.index()}>
-                        Cancel
-                    </Link>
+                    <Link href={EventController.index()}>Cancel</Link>
                 </Button>
                 <Button type="submit" disabled={form.processing}>
                     {form.processing && <Spinner />}

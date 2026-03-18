@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Department;
 use App\Models\District;
 use App\Models\Event;
 use App\Models\EventFeeCategory;
@@ -88,7 +89,7 @@ test('admins can view event total registration and churches without registration
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('reports/index')
-            ->where('scopeSummary', 'All sections and churches')
+            ->where('scopeSummary', 'District events • all sections • all departments')
             ->where('filters.event_id', $event->id)
             ->where('filters.section_id', null)
             ->where('filters.search', '')
@@ -198,7 +199,10 @@ test('managers only see report data inside their assigned section', function () 
         'section_id' => $sectionOne->id,
     ]);
     $encoder = User::factory()->registrationStaff()->create();
-    $event = reportEvent();
+    $event = reportEvent([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $sectionOne->id,
+    ]);
     $regular = EventFeeCategory::factory()->for($event)->create([
         'category_name' => 'Regular (Online)',
         'amount' => '800.00',
@@ -228,11 +232,21 @@ test('managers only see report data inside their assigned section', function () 
         2,
     );
 
+    $outsideEvent = reportEvent([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $sectionTwo->id,
+    ]);
+
+    $outsideRegular = EventFeeCategory::factory()->for($outsideEvent)->create([
+        'category_name' => 'Outside Section',
+        'amount' => '500.00',
+    ]);
+
     createReportedRegistration(
-        $event,
+        $outsideEvent,
         $pastorThree,
         $encoder,
-        $regular,
+        $outsideRegular,
         Registration::MODE_ONSITE,
         Registration::STATUS_COMPLETED,
         5,
@@ -246,7 +260,7 @@ test('managers only see report data inside their assigned section', function () 
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('reports/index')
-            ->where('scopeSummary', 'Central Luzon • Section 1')
+            ->where('scopeSummary', 'Central Luzon • Section 1 • all departments')
             ->where('canFilterBySection', false)
             ->where('filters.section_id', $sectionOne->id)
             ->where('selectedSection.name', 'Section 1')
@@ -261,6 +275,68 @@ test('managers only see report data inside their assigned section', function () 
             ->where('churchesWithoutRegistration.data.0.church_name', 'Faith Harvest Church'));
 
     expect($pastorTwo->church_name)->not->toBe($pastorThree->church_name);
+});
+
+test('department-scoped admins only see district report events for their department', function () {
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $section = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $pastor = Pastor::factory()->for($section)->create([
+        'church_name' => 'Grace Community Church',
+    ]);
+    $adminDepartment = Department::factory()->create([
+        'name' => 'Youth Ministries',
+    ]);
+    $otherDepartment = Department::factory()->create([
+        'name' => 'Ladies Ministries',
+    ]);
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+        'department_id' => $adminDepartment->id,
+    ]);
+    $encoder = User::factory()->registrationStaff()->create();
+    $accessibleEvent = reportEvent([
+        'department_id' => $adminDepartment->id,
+    ]);
+    $inaccessibleEvent = reportEvent([
+        'department_id' => $otherDepartment->id,
+    ]);
+    $accessibleFeeCategory = EventFeeCategory::factory()->for($accessibleEvent)->create([
+        'category_name' => 'Regular',
+        'amount' => '800.00',
+    ]);
+    EventFeeCategory::factory()->for($inaccessibleEvent)->create([
+        'category_name' => 'Regular',
+        'amount' => '800.00',
+    ]);
+
+    createReportedRegistration(
+        $accessibleEvent,
+        $pastor,
+        $encoder,
+        $accessibleFeeCategory,
+        Registration::MODE_ONLINE,
+        Registration::STATUS_PENDING_VERIFICATION,
+        4,
+    );
+
+    $this->actingAs($admin)
+        ->get(route('reports.index', [
+            'event_id' => $inaccessibleEvent->id,
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('reports/index')
+            ->where('scopeSummary', 'District events • Youth Ministries')
+            ->has('events', 1)
+            ->where('filters.event_id', $accessibleEvent->id)
+            ->where('selectedEvent.name', $accessibleEvent->name)
+            ->where('eventTotalRegistration.total_registered_quantity', 4)
+            ->where('eventTotalRegistration.registration_count', 1)
+            ->where('eventTotalRegistration.pending_online_quantity', 4));
 });
 
 test('admins can export churches without registration based on report scope', function () {

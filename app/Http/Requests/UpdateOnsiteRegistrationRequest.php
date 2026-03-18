@@ -2,10 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Event;
+use App\Models\Pastor;
 use App\Models\Registration;
+use App\Support\DepartmentScopeAccess;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdateOnsiteRegistrationRequest extends FormRequest
 {
@@ -55,6 +59,36 @@ class UpdateOnsiteRegistrationRequest extends FormRequest
     }
 
     /**
+     * Configure the validator instance.
+     *
+     * @return array<int, \Closure(Validator): void>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                $event = $this->selectedEvent();
+
+                if ($event !== null && ! DepartmentScopeAccess::canAccessEvent($this->user(), $event)) {
+                    $validator->errors()->add(
+                        'event_id',
+                        'The selected event is not available to your account.',
+                    );
+                }
+
+                $pastor = $this->selectedPastor();
+
+                if ($pastor !== null && $pastor->status !== 'active') {
+                    $validator->errors()->add(
+                        'pastor_id',
+                        'The selected pastor must be active.',
+                    );
+                }
+            },
+        ];
+    }
+
+    /**
      * Get custom validation messages.
      *
      * @return array<string, string>
@@ -77,5 +111,27 @@ class UpdateOnsiteRegistrationRequest extends FormRequest
             'line_items.*.quantity.required' => 'Enter a quantity.',
             'line_items.*.quantity.min' => 'Quantities must be at least 1.',
         ];
+    }
+
+    private function selectedEvent(): ?Event
+    {
+        $eventId = $this->input('event_id');
+
+        if (! filled($eventId)) {
+            return null;
+        }
+
+        return Event::query()->find($eventId);
+    }
+
+    private function selectedPastor(): ?Pastor
+    {
+        $pastorId = $this->input('pastor_id');
+
+        if (! filled($pastorId)) {
+            return null;
+        }
+
+        return Pastor::query()->find($pastorId);
     }
 }

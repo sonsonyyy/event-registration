@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Department;
 use App\Models\District;
 use App\Models\Event;
 use App\Models\EventFeeCategory;
@@ -107,6 +108,94 @@ test('online registrants can submit registrations with receipt upload stored on 
             ->where('registrations.data.0.registration_status', Registration::STATUS_PENDING_VERIFICATION)
             ->where('registrations.data.0.total_quantity', 6)
             ->where('registrations.data.0.receipt.original_name', 'receipt.pdf'));
+});
+
+test('online registrants only see accessible events and cannot submit registrations for other sections', function () {
+    Storage::fake('local');
+    config()->set('registration.receipts_disk', 'local');
+
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $sectionOne = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $sectionTwo = Section::factory()->for($district)->create([
+        'name' => 'Section 2',
+    ]);
+    $youthDepartment = Department::factory()->create([
+        'name' => 'Youth Ministries',
+    ]);
+    $ladiesDepartment = Department::factory()->create([
+        'name' => 'Ladies Ministries',
+    ]);
+    $pastor = Pastor::factory()->for($sectionOne)->create();
+    $registrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $district->id,
+        'section_id' => $sectionOne->id,
+        'pastor_id' => $pastor->id,
+    ]);
+
+    $districtEvent = onlineRegistrationEvent([
+        'name' => 'District General Event',
+    ]);
+    $districtDepartmentEvent = onlineRegistrationEvent([
+        'name' => 'District Youth Event',
+        'department_id' => $youthDepartment->id,
+    ]);
+    $sameSectionEvent = onlineRegistrationEvent([
+        'name' => 'Section 1 Ladies Event',
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $sectionOne->id,
+        'department_id' => $ladiesDepartment->id,
+    ]);
+    $otherSectionEvent = onlineRegistrationEvent([
+        'name' => 'Section 2 Event',
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $sectionTwo->id,
+    ]);
+
+    foreach ([$districtEvent, $districtDepartmentEvent, $sameSectionEvent, $otherSectionEvent] as $event) {
+        EventFeeCategory::factory()->for($event)->create([
+            'category_name' => 'Regular',
+            'amount' => '750.00',
+        ]);
+    }
+
+    $this->actingAs($registrant)
+        ->get(route('registrations.online.create'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/online/create')
+            ->has('events', 3)
+            ->where('events', fn ($events): bool => collect($events)
+                ->pluck('id')
+                ->sort()
+                ->values()
+                ->all() === collect([
+                    $districtEvent->id,
+                    $districtDepartmentEvent->id,
+                    $sameSectionEvent->id,
+                ])->sort()->values()->all()));
+
+    $this->actingAs($registrant)
+        ->from(route('registrations.online.create'))
+        ->post(route('registrations.online.store'), [
+            'event_id' => $otherSectionEvent->id,
+            'payment_reference' => 'DEP-2026-2001',
+            'receipt' => UploadedFile::fake()->create('receipt.pdf', 256, 'application/pdf'),
+            'remarks' => '',
+            'line_items' => [
+                [
+                    'fee_category_id' => $otherSectionEvent->feeCategories()->value('id'),
+                    'quantity' => 1,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('registrations.online.create'))
+        ->assertSessionHasErrors(['event_id']);
+
+    expect(Registration::query()->count())->toBe(0);
 });
 
 test('online registrations can store receipts on s3 when the configured disk uses s3', function () {

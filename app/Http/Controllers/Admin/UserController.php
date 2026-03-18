@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\IndexUserRequest;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
+use App\Models\Department;
 use App\Models\District;
 use App\Models\Pastor;
 use App\Models\Role;
@@ -84,6 +85,9 @@ class UserController extends Controller
                         ->orWhereHas('district', function (Builder $query) use ($search): void {
                             $query->where('name', 'like', "%{$search}%");
                         })
+                        ->orWhereHas('department', function (Builder $query) use ($search): void {
+                            $query->where('name', 'like', "%{$search}%");
+                        })
                         ->orWhereHas('section', function (Builder $query) use ($search): void {
                             $query->where('name', 'like', "%{$search}%");
                         })
@@ -97,6 +101,7 @@ class UserController extends Controller
             ->with([
                 'role:id,name',
                 'district:id,name',
+                'department:id,name',
                 'section:id,name,district_id',
                 'section.district:id,name',
                 'pastor:id,pastor_name,church_name,section_id',
@@ -116,6 +121,7 @@ class UserController extends Controller
 
         return Inertia::render('admin/users/create', [
             'roles' => $this->roleOptions(),
+            'departments' => $this->departmentOptions(),
             'districts' => $this->districtOptions(),
             'sections' => $this->sectionOptions(),
             'pastors' => $this->pastorOptions(),
@@ -148,6 +154,7 @@ class UserController extends Controller
         $user->load([
             'role:id,name',
             'district:id,name',
+            'department:id,name',
             'section:id,name,district_id',
             'section.district:id,name',
             'pastor:id,pastor_name,church_name,section_id',
@@ -158,6 +165,7 @@ class UserController extends Controller
         return Inertia::render('admin/users/edit', [
             'userRecord' => $this->userFormData($user),
             'roles' => $this->roleOptions(),
+            'departments' => $this->departmentOptions(),
             'districts' => $this->districtOptions(),
             'sections' => $this->sectionOptions(),
             'pastors' => $this->pastorOptions(),
@@ -253,8 +261,10 @@ class UserController extends Controller
             'email' => $user->email,
             'role_id' => $user->role_id,
             'district_id' => $user->district_id,
+            'department_id' => $user->department_id,
             'section_id' => $user->section_id,
             'pastor_id' => $user->pastor_id,
+            'position_title' => $user->position_title,
             'status' => $user->status,
             'scope_summary' => $this->scopeSummary($user),
             'email_verified_at' => $user->email_verified_at?->toIso8601String(),
@@ -282,6 +292,7 @@ class UserController extends Controller
         });
 
         return Role::query()
+            ->where('name', '!=', Role::SUPER_ADMIN)
             ->get()
             ->sortBy(function (Role $role) use ($sortOrder): int {
                 $position = array_search($role->name, $sortOrder, true);
@@ -291,6 +302,25 @@ class UserController extends Controller
             ->map(fn (Role $role): array => [
                 'id' => $role->getKey(),
                 'name' => $role->name,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Build department options for the user form.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function departmentOptions(): array
+    {
+        return Department::query()
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Department $department): array => [
+                'id' => $department->getKey(),
+                'name' => $department->name,
+                'status' => $department->status,
             ])
             ->values()
             ->all();
@@ -377,26 +407,32 @@ class UserController extends Controller
 
     private function scopeSummary(User $user): string
     {
+        $scopeParts = [];
+
         if ($user->pastor !== null) {
-            return sprintf(
-                '%s · %s',
-                $user->pastor->church_name,
-                $user->pastor->section?->name ?? 'No section',
-            );
+            $scopeParts[] = $user->pastor->church_name;
+            $scopeParts[] = $user->pastor->section?->name ?? 'No section';
         }
 
-        if ($user->section !== null) {
-            return sprintf(
-                '%s · %s',
-                $user->section->name,
-                $user->section->district?->name ?? 'No district',
-            );
+        if ($user->pastor === null && $user->section !== null) {
+            $scopeParts[] = $user->section->name;
+            $scopeParts[] = $user->section->district?->name ?? 'No district';
         }
 
-        if ($user->district !== null) {
-            return $user->district->name;
+        if ($user->pastor === null && $user->section === null && $user->district !== null) {
+            $scopeParts[] = $user->district->name;
         }
 
-        return $user->isAdmin() ? 'Global access' : 'No scope assigned';
+        if ($user->department !== null) {
+            $scopeParts[] = $user->department->name;
+        }
+
+        $scopeParts = array_values(array_unique(array_filter($scopeParts)));
+
+        if ($scopeParts !== []) {
+            return implode(' · ', $scopeParts);
+        }
+
+        return $user->hasAdminAccess() ? 'Global access' : 'No scope assigned';
     }
 }

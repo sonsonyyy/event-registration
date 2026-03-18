@@ -9,7 +9,7 @@ class SectionPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin() || ($user->isManager() && $user->section_id !== null);
+        return $user->hasAdminAccess() || ($user->isManager() && $user->section_id !== null);
     }
 
     public function view(User $user, Section $section): bool
@@ -19,16 +19,16 @@ class SectionPolicy
 
     public function create(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->hasAdminAccess();
     }
 
     public function update(User $user, Section $section): bool
     {
-        return $user->isAdmin();
+        return $user->hasAdminAccess();
     }
 
     public function delete(User $user, Section $section): bool
     {
-        return $user->isAdmin();
+        return $user->hasAdminAccess();
     }
 }

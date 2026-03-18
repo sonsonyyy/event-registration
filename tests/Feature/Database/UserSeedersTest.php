@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Department;
 use App\Models\District;
 use App\Models\Pastor;
 use App\Models\Role;
@@ -10,11 +11,14 @@ use Database\Seeders\DatabaseSeeder;
 test('database seeder creates demo users for each role', function () {
     $this->seed(DatabaseSeeder::class);
 
-    $adminUsers = User::query()
+    $superAdmin = User::query()
+        ->where('email', 'salangsangerickson@gmail.com')
+        ->first();
+
+    $generalAdminUsers = User::query()
         ->whereIn('email', [
             'wcpeligrino6@gmail.com',
             'jeromeoliveros65@gmail.com',
-            'salangsangerickson@gmail.com',
         ])
         ->orderBy('email')
         ->get();
@@ -29,16 +33,25 @@ test('database seeder creates demo users for each role', function () {
         ->orderBy('email')
         ->get();
 
-    expect($adminUsers)->toHaveCount(3)
+    expect($superAdmin)->not->toBeNull()
+        ->and($generalAdminUsers)->toHaveCount(2)
         ->and($managerUsers)->toHaveCount(4)
         ->and(User::query()->count())->toBe(7);
 
-    $adminUsers->each(function (User $admin): void {
+    expect($superAdmin)
+        ->and($superAdmin?->roleName())->toBe(Role::SUPER_ADMIN)
+        ->and($superAdmin?->isActive())->toBeTrue()
+        ->and($superAdmin?->district_id)->toBeNull()
+        ->and($superAdmin?->section_id)->toBeNull()
+        ->and($superAdmin?->department_id)->toBeNull();
+
+    $generalAdminUsers->each(function (User $admin): void {
         expect($admin)
             ->and($admin->roleName())->toBe(Role::ADMIN)
             ->and($admin->isActive())->toBeTrue()
             ->and($admin->district?->name)->toBe('Central Luzon')
-            ->and($admin->section?->name)->toBe('Section 3')
+            ->and($admin->section_id)->toBeNull()
+            ->and($admin->department_id)->toBeNull()
             ->and($admin->pastor_id)->toBeNull();
     });
 
@@ -55,6 +68,7 @@ test('database seeder creates demo users for each role', function () {
             ->and($manager->roleName())->toBe(Role::MANAGER)
             ->and($manager->isActive())->toBeTrue()
             ->and($manager->district?->name)->toBe('Central Luzon')
+            ->and($manager->department_id)->toBeNull()
             ->and($manager->pastor_id)->toBeNull();
     });
 
@@ -63,11 +77,27 @@ test('database seeder creates demo users for each role', function () {
         'manager@example.com',
         'staff@example.com',
         'registrant@example.com',
+        'youth.admin@example.com',
+        'ladies.admin@example.com',
+        'youth.section1.manager@example.com',
+        'ladies.section2.manager@example.com',
     ])->exists())->toBeFalse();
 
     expect(District::query()->count())->toBe(1)
+        ->and(Department::query()->count())->toBe(7)
         ->and(Section::query()->count())->toBe(3)
         ->and(Pastor::query()->count())->toBe(221);
+
+    expect(Department::query()->orderBy('name')->pluck('name')->all())
+        ->toEqualCanonicalizing([
+            'Youth Ministries',
+            'Ladies Ministries',
+            "Apostolic Men's",
+            'Sunday School',
+            'Home Missions',
+            'Music Commission',
+            'Information Technology Commission',
+        ]);
 
     expect(District::query()->orderBy('name')->pluck('name')->all())
         ->toBe([
@@ -80,6 +110,7 @@ test('database seeder creates demo users for each role', function () {
         ->get()
         ->each(function (District $district): void {
             expect($district->sections_count)->toBe(3);
+            expect($district->description)->toBeNull();
             expect($district->sections->pluck('name')->all())->toBe([
                 'Section 1',
                 'Section 2',
@@ -101,8 +132,11 @@ test('database seeder creates demo users for each role', function () {
         ->firstOrFail();
 
     expect($sectionOne->pastors_count)->toBe(63)
+        ->and($sectionOne->description)->toBeNull()
         ->and($sectionTwo->pastors_count)->toBe(64)
+        ->and($sectionTwo->description)->toBeNull()
         ->and($sectionThree->pastors_count)->toBe(94);
+    expect($sectionThree->description)->toBeNull();
 
     expect(Pastor::query()
         ->where('section_id', $sectionOne->id)

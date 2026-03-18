@@ -6,7 +6,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
-class RegistrationStaffUserSeeder extends Seeder
+class SuperAdminUserSeeder extends Seeder
 {
     /**
      * Run the database seeds.
@@ -15,19 +15,21 @@ class RegistrationStaffUserSeeder extends Seeder
     {
         $this->call(RoleSeeder::class);
 
-        $registrationStaffRole = Role::query()->firstOrCreate([
-            'name' => Role::REGISTRATION_STAFF,
+        $superAdminRole = Role::query()->firstOrCreate([
+            'name' => Role::SUPER_ADMIN,
         ]);
 
         User::query()->updateOrCreate(
-            ['email' => 'staff@example.com'],
+            ['email' => 'salangsangerickson@gmail.com'],
             [
-                'name' => 'Registration Staff',
+                'name' => 'Erickson Salangsang',
                 'password' => 'password',
-                'role_id' => $registrationStaffRole->id,
+                'role_id' => $superAdminRole->id,
                 'district_id' => null,
                 'section_id' => null,
+                'department_id' => null,
                 'pastor_id' => null,
+                'position_title' => null,
                 'status' => 'active',
                 'email_verified_at' => now(),
             ],

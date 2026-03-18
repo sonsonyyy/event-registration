@@ -10,11 +10,12 @@ class EventFeeCategoryPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(
-            Role::MANAGER,
-            Role::REGISTRATION_STAFF,
-            Role::ONLINE_REGISTRANT,
-        );
+        return $user->hasAdminAccess()
+            || $user->hasAnyRole(
+                Role::MANAGER,
+                Role::REGISTRATION_STAFF,
+                Role::ONLINE_REGISTRANT,
+            );
     }
 
     public function view(User $user, EventFeeCategory $eventFeeCategory): bool

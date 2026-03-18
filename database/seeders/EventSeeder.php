@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Department;
 use App\Models\Event;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -13,6 +14,12 @@ class EventSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call(DepartmentSeeder::class);
+
+        $youthDepartmentId = Department::query()
+            ->where('name', 'Youth Ministries')
+            ->value('id');
+
         $event = Event::query()->updateOrCreate(
             ['name' => 'CLD Youth Conference 2026'],
             [
@@ -24,6 +31,9 @@ class EventSeeder extends Seeder
                 'registration_close_at' => Carbon::parse('2026-04-12')->endOfDay(),
                 'total_capacity' => 1200,
                 'status' => Event::STATUS_OPEN,
+                'scope_type' => Event::SCOPE_DISTRICT,
+                'section_id' => null,
+                'department_id' => $youthDepartmentId,
             ],
         );
 

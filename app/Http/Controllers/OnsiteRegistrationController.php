@@ -11,6 +11,7 @@ use App\Models\Pastor;
 use App\Models\Registration;
 use App\Models\RegistrationItem;
 use App\Models\User;
+use App\Support\DepartmentScopeAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -64,7 +65,7 @@ class OnsiteRegistrationController extends Controller
         Gate::authorize('createOnsite', [Registration::class, null]);
 
         return Inertia::render('registrations/onsite/create', [
-            'events' => $this->eventOptions(),
+            'events' => $this->eventOptions($request->user()),
             'pastors' => $this->pastorOptions($request->user()),
         ]);
     }
@@ -81,7 +82,7 @@ class OnsiteRegistrationController extends Controller
             ->findOrFail($registration->getKey());
 
         return Inertia::render('registrations/onsite/edit', [
-            'events' => $this->eventOptions($registration),
+            'events' => $this->eventOptions($request->user(), $registration),
             'pastors' => $this->pastorOptions($request->user()),
             'registration' => $this->editableRegistrationData($registration),
         ]);
@@ -108,11 +109,17 @@ class OnsiteRegistrationController extends Controller
             }
 
             $pastor = Pastor::query()->findOrFail($validated['pastor_id']);
-            Gate::authorize('createOnsite', [Registration::class, $pastor]);
+            Gate::authorize('createOnsite', [Registration::class, $pastor, $event]);
 
             if ($pastor->status !== 'active') {
                 throw ValidationException::withMessages([
                     'pastor_id' => 'The selected pastor must be active.',
+                ]);
+            }
+
+            if (! DepartmentScopeAccess::canAccessEvent($request->user(), $event)) {
+                throw ValidationException::withMessages([
+                    'event_id' => 'The selected event is not available to your account.',
                 ]);
             }
 
@@ -187,6 +194,8 @@ class OnsiteRegistrationController extends Controller
                 ]);
             }
 
+            Gate::authorize('createOnsite', [Registration::class, $pastor, $event]);
+
             $lineItems = collect($validated['line_items']);
             $feeCategories = EventFeeCategory::query()
                 ->where('event_id', $event->getKey())
@@ -219,7 +228,7 @@ class OnsiteRegistrationController extends Controller
      *
      * @return array<int, array<string, mixed>>
      */
-    private function eventOptions(?Registration $registration = null): array
+    private function eventOptions(?User $user, ?Registration $registration = null): array
     {
         $currentEventId = $registration?->event_id;
         $currentRegistrationQuantity = $registration?->totalQuantity() ?? 0;
@@ -230,6 +239,11 @@ class OnsiteRegistrationController extends Controller
         $currentFeeCategoryIds = $currentFeeItemQuantities->keys()->all();
 
         return Event::query()
+            ->when(
+                $user !== null,
+                fn (Builder $query) => DepartmentScopeAccess::scopeAccessibleEvents($query, $user),
+                fn (Builder $query) => $query->whereRaw('1 = 0'),
+            )
             ->when(
                 $currentEventId !== null,
                 fn (Builder $query) => $query->where(function (Builder $builder) use ($currentEventId): void {
@@ -590,6 +604,10 @@ class OnsiteRegistrationController extends Controller
         if ($user?->isManager()) {
             $registrations->whereHas('pastor', function (Builder $query) use ($user): void {
                 $query->where('section_id', $user->section_id);
+            });
+
+            $registrations->whereHas('event', function (Builder $query) use ($user): void {
+                DepartmentScopeAccess::scopeAccessibleEvents($query, $user);
             });
         }
 

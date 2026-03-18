@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Department;
 use App\Models\District;
 use App\Models\Event;
 use App\Models\EventFeeCategory;
@@ -25,8 +26,20 @@ test('managers can view a verification queue scoped to their assigned section', 
         'district_id' => $district->id,
         'section_id' => $assignedSection->id,
     ]);
-    $event = verificationEvent();
-    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+    $assignedEvent = verificationEvent([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $assignedSection->id,
+    ]);
+    $assignedFeeCategory = EventFeeCategory::factory()->for($assignedEvent)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+        'slot_limit' => 20,
+    ]);
+    $otherEvent = verificationEvent([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $otherSection->id,
+    ]);
+    $otherFeeCategory = EventFeeCategory::factory()->for($otherEvent)->create([
         'category_name' => 'Regular (Online)',
         'amount' => '800.00',
         'slot_limit' => 20,
@@ -51,20 +64,20 @@ test('managers can view a verification queue scoped to their assigned section', 
     ]);
 
     createOnlineRegistrationForVerification(
-        $event,
+        $assignedEvent,
         $assignedPastor,
         $assignedRegistrant,
-        $feeCategory,
+        $assignedFeeCategory,
         [
             'payment_reference' => 'DEP-CLD-1001',
         ],
     );
 
     createOnlineRegistrationForVerification(
-        $event,
+        $assignedEvent,
         $assignedPastor,
         $assignedRegistrant,
-        $feeCategory,
+        $assignedFeeCategory,
         [
             'registration_status' => Registration::STATUS_VERIFIED,
             'verified_at' => now()->subHour(),
@@ -74,10 +87,10 @@ test('managers can view a verification queue scoped to their assigned section', 
     );
 
     createOnlineRegistrationForVerification(
-        $event,
+        $otherEvent,
         $otherPastor,
         $otherRegistrant,
-        $feeCategory,
+        $otherFeeCategory,
         [
             'payment_reference' => 'DEP-CLD-2001',
         ],
@@ -92,7 +105,7 @@ test('managers can view a verification queue scoped to their assigned section', 
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('registrations/verification/index')
-            ->where('scopeSummary', 'Central Luzon • Section 1')
+            ->where('scopeSummary', 'Central Luzon • Section 1 • all departments')
             ->where('filters.status', 'all')
             ->where('filters.search', 'Grace Community')
             ->where('summary.pending_verification', 1)
@@ -155,6 +168,168 @@ test('admins can open uploaded receipts and verify online registrations', functi
         ->and($registration->verified_at)->not->toBeNull();
 });
 
+test('department-scoped reviewers are limited to matching departments and event scope', function () {
+    Storage::fake('local');
+    config()->set('registration.receipts_disk', 'local');
+
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $section = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $youthDepartment = Department::factory()->create([
+        'name' => 'Youth Ministries',
+    ]);
+    $ladiesDepartment = Department::factory()->create([
+        'name' => 'Ladies Ministries',
+    ]);
+    $departmentAdmin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+        'department_id' => $youthDepartment->id,
+    ]);
+    $departmentManager = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'department_id' => $youthDepartment->id,
+    ]);
+    $pastor = Pastor::factory()->for($section)->create();
+    $registrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'pastor_id' => $pastor->id,
+    ]);
+    $youthDistrictEvent = verificationEvent([
+        'scope_type' => Event::SCOPE_DISTRICT,
+        'department_id' => $youthDepartment->id,
+    ]);
+    $ladiesDistrictEvent = verificationEvent([
+        'scope_type' => Event::SCOPE_DISTRICT,
+        'department_id' => $ladiesDepartment->id,
+    ]);
+    $youthSectionEvent = verificationEvent([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+        'department_id' => $youthDepartment->id,
+    ]);
+    $ladiesSectionEvent = verificationEvent([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+        'department_id' => $ladiesDepartment->id,
+    ]);
+    $youthDistrictFeeCategory = EventFeeCategory::factory()
+        ->for($youthDistrictEvent)
+        ->create();
+    $ladiesDistrictFeeCategory = EventFeeCategory::factory()
+        ->for($ladiesDistrictEvent)
+        ->create();
+    $youthSectionFeeCategory = EventFeeCategory::factory()
+        ->for($youthSectionEvent)
+        ->create();
+    $ladiesSectionFeeCategory = EventFeeCategory::factory()
+        ->for($ladiesSectionEvent)
+        ->create();
+
+    $youthDistrictRegistration = createOnlineRegistrationForVerification(
+        $youthDistrictEvent,
+        $pastor,
+        $registrant,
+        $youthDistrictFeeCategory,
+        [
+            'receipt_file_path' => 'registration-receipts/2026/03/youth-district.pdf',
+            'receipt_original_name' => 'youth-district.pdf',
+        ],
+    );
+    $ladiesDistrictRegistration = createOnlineRegistrationForVerification(
+        $ladiesDistrictEvent,
+        $pastor,
+        $registrant,
+        $ladiesDistrictFeeCategory,
+        [
+            'receipt_file_path' => 'registration-receipts/2026/03/ladies-district.pdf',
+            'receipt_original_name' => 'ladies-district.pdf',
+        ],
+    );
+    $youthSectionRegistration = createOnlineRegistrationForVerification(
+        $youthSectionEvent,
+        $pastor,
+        $registrant,
+        $youthSectionFeeCategory,
+        [
+            'receipt_file_path' => 'registration-receipts/2026/03/youth-section.pdf',
+            'receipt_original_name' => 'youth-section.pdf',
+        ],
+    );
+    $ladiesSectionRegistration = createOnlineRegistrationForVerification(
+        $ladiesSectionEvent,
+        $pastor,
+        $registrant,
+        $ladiesSectionFeeCategory,
+        [
+            'receipt_file_path' => 'registration-receipts/2026/03/ladies-section.pdf',
+            'receipt_original_name' => 'ladies-section.pdf',
+        ],
+    );
+
+    Storage::disk('local')->put('registration-receipts/2026/03/youth-district.pdf', 'youth-district');
+    Storage::disk('local')->put('registration-receipts/2026/03/ladies-district.pdf', 'ladies-district');
+    Storage::disk('local')->put('registration-receipts/2026/03/youth-section.pdf', 'youth-section');
+    Storage::disk('local')->put('registration-receipts/2026/03/ladies-section.pdf', 'ladies-section');
+
+    $this->actingAs($departmentAdmin)
+        ->get(route('registrations.verification.index', [
+            'status' => 'all',
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('scopeSummary', 'district events • Youth Ministries')
+            ->where('summary.pending_verification', 1)
+            ->where('summary.needs_correction', 0)
+            ->where('summary.verified', 0)
+            ->where('summary.rejected', 0)
+            ->has('registrations.data', 1)
+            ->where('registrations.data.0.event.name', $youthDistrictEvent->name));
+
+    $this->actingAs($departmentAdmin)
+        ->get(route('registrations.verification.receipt', $youthDistrictRegistration))
+        ->assertSuccessful();
+
+    $this->actingAs($departmentAdmin)
+        ->get(route('registrations.verification.receipt', $ladiesDistrictRegistration))
+        ->assertForbidden();
+
+    $this->actingAs($departmentAdmin)
+        ->patch(route('registrations.verification.update', $ladiesDistrictRegistration), [
+            'decision' => Registration::STATUS_VERIFIED,
+        ])
+        ->assertForbidden();
+
+    $this->actingAs($departmentManager)
+        ->get(route('registrations.verification.index', [
+            'status' => 'all',
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('scopeSummary', 'Central Luzon • Section 1 • Youth Ministries')
+            ->where('summary.pending_verification', 1)
+            ->has('registrations.data', 1)
+            ->where('registrations.data.0.event.name', $youthSectionEvent->name));
+
+    $this->actingAs($departmentManager)
+        ->get(route('registrations.verification.receipt', $youthSectionRegistration))
+        ->assertSuccessful();
+
+    $this->actingAs($departmentManager)
+        ->get(route('registrations.verification.receipt', $ladiesSectionRegistration))
+        ->assertForbidden();
+
+    $this->actingAs($departmentManager)
+        ->patch(route('registrations.verification.update', $ladiesSectionRegistration), [
+            'decision' => Registration::STATUS_VERIFIED,
+        ])
+        ->assertForbidden();
+});
+
 test('reviewers can return registrations for correction with a reason and reviewer notes', function () {
     Storage::fake('local');
     config()->set('registration.receipts_disk', 'local');
@@ -165,7 +340,10 @@ test('reviewers can return registrations for correction with a reason and review
         'district_id' => $district->id,
         'section_id' => $section->id,
     ]);
-    $event = verificationEvent();
+    $event = verificationEvent([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+    ]);
     $feeCategory = EventFeeCategory::factory()->for($event)->create([
         'category_name' => 'Regular (Online)',
         'amount' => '800.00',
@@ -224,7 +402,10 @@ test('reviewers must provide a reason when returning registrations for correctio
         'district_id' => $district->id,
         'section_id' => $section->id,
     ]);
-    $event = verificationEvent();
+    $event = verificationEvent([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+    ]);
     $feeCategory = EventFeeCategory::factory()->for($event)->create();
     $pastor = Pastor::factory()->for($section)->create();
     $registrant = User::factory()->onlineRegistrant()->create([
@@ -274,7 +455,10 @@ test('managers cannot review registrations outside their assigned section', func
         'district_id' => $district->id,
         'section_id' => $assignedSection->id,
     ]);
-    $event = verificationEvent();
+    $event = verificationEvent([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $otherSection->id,
+    ]);
     $feeCategory = EventFeeCategory::factory()->for($event)->create([
         'category_name' => 'Regular (Online)',
         'amount' => '800.00',

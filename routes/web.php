@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\DistrictController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\PastorController;
@@ -82,6 +83,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->group(function (): void {
             Route::resource('events', EventController::class)->except('show');
             Route::resource('users', UserController::class)->except('show');
+            Route::resource('departments', DepartmentController::class)->except('show');
             Route::resource('districts', DistrictController::class)->except('show');
             Route::resource('sections', SectionController::class)->except('show');
             Route::resource('pastors', PastorController::class)->except('show');

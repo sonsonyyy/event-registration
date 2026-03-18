@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BarChart3, Building2, CalendarRange, Layers3, LayoutGrid, Map, Menu, ReceiptText, Search, ShieldCheck, UserRoundCheck, Users } from 'lucide-react';
+import { BarChart3, Building2, CalendarRange, Landmark, Layers3, LayoutGrid, Map, Menu, ReceiptText, Search, ShieldCheck, UserRoundCheck, Users } from 'lucide-react';
+import DepartmentController from '@/actions/App/Http/Controllers/Admin/DepartmentController';
 import DistrictController from '@/actions/App/Http/Controllers/Admin/DistrictController';
 import EventController from '@/actions/App/Http/Controllers/Admin/EventController';
 import PastorController from '@/actions/App/Http/Controllers/Admin/PastorController';
@@ -123,6 +124,11 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
             : []),
         ...(auth.can.manageMasterData
             ? [
+                  {
+                      title: 'Departments',
+                      href: DepartmentController.index(),
+                      icon: Landmark,
+                  },
                   {
                       title: 'Districts',
                       href: DistrictController.index(),

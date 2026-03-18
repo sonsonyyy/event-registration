@@ -12,6 +12,7 @@ use App\Models\Registration;
 use App\Models\RegistrationItem;
 use App\Models\RegistrationReview;
 use App\Models\User;
+use App\Support\DepartmentScopeAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -64,7 +65,7 @@ class OnlineRegistrationController extends Controller
 
         return Inertia::render('registrations/online/create', [
             'assignedPastor' => $this->assignedPastorData($request->user()),
-            'events' => $this->eventOptions(),
+            'events' => $this->eventOptions($request->user()),
         ]);
     }
 
@@ -81,7 +82,7 @@ class OnlineRegistrationController extends Controller
 
         return Inertia::render('registrations/online/edit', [
             'assignedPastor' => $this->assignedPastorData($request->user()),
-            'events' => $this->eventOptions($registration),
+            'events' => $this->eventOptions($request->user(), $registration),
             'registration' => $this->editableRegistrationData($registration),
         ]);
     }
@@ -116,11 +117,17 @@ class OnlineRegistrationController extends Controller
                 }
 
                 $pastor = $request->user()->pastor()->firstOrFail();
-                Gate::authorize('createOnline', [Registration::class, $pastor]);
+                Gate::authorize('createOnline', [Registration::class, $pastor, $event]);
 
                 if ($pastor->status !== 'active') {
                     throw ValidationException::withMessages([
                         'event_id' => 'Your assigned church account must be active before it can register online.',
+                    ]);
+                }
+
+                if (! DepartmentScopeAccess::canAccessEvent($request->user(), $event)) {
+                    throw ValidationException::withMessages([
+                        'event_id' => 'The selected event is not available to your account.',
                     ]);
                 }
 
@@ -218,6 +225,8 @@ class OnlineRegistrationController extends Controller
                     ]);
                 }
 
+                Gate::authorize('createOnline', [Registration::class, $pastor, $event]);
+
                 $lineItems = collect($validated['line_items']);
                 $feeCategories = EventFeeCategory::query()
                     ->where('event_id', $event->getKey())
@@ -305,7 +314,7 @@ class OnlineRegistrationController extends Controller
      *
      * @return array<int, array<string, mixed>>
      */
-    private function eventOptions(?Registration $registration = null): array
+    private function eventOptions(?User $user, ?Registration $registration = null): array
     {
         $currentEventId = $registration?->event_id;
         $currentRegistrationQuantity = $registration?->totalQuantity() ?? 0;
@@ -316,6 +325,11 @@ class OnlineRegistrationController extends Controller
         $currentFeeCategoryIds = $currentFeeItemQuantities->keys()->all();
 
         return Event::query()
+            ->when(
+                $user !== null,
+                fn (Builder $query) => DepartmentScopeAccess::scopeAccessibleEvents($query, $user),
+                fn (Builder $query) => $query->whereRaw('1 = 0'),
+            )
             ->when(
                 $currentEventId !== null,
                 fn (Builder $query) => $query->where(function (Builder $builder) use ($currentEventId): void {

@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\IndexEventRequest;
 use App\Http\Requests\Admin\StoreEventRequest;
 use App\Http\Requests\Admin\UpdateEventRequest;
+use App\Models\Department;
 use App\Models\Event;
 use App\Models\EventFeeCategory;
+use App\Models\Section;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
@@ -36,6 +38,10 @@ class EventController extends Controller
                         ->orWhere('description', 'like', "%{$search}%");
                 });
             })
+            ->with([
+                'section:id,name',
+                'department:id,name',
+            ])
             ->withCapacityMetrics()
             ->orderByDesc('date_from')
             ->orderByDesc('id')
@@ -72,6 +78,9 @@ class EventController extends Controller
     {
         return Inertia::render('admin/events/create', [
             'statusOptions' => $this->eventStatusOptions(),
+            'scopeTypeOptions' => $this->scopeTypeOptions(),
+            'sections' => $this->sectionOptions(),
+            'departments' => $this->departmentOptions(),
             'feeCategoryStatusOptions' => $this->feeCategoryStatusOptions(),
         ]);
     }
@@ -103,6 +112,8 @@ class EventController extends Controller
         Gate::authorize('update', $event);
 
         $event->load([
+            'section:id,name',
+            'department:id,name',
             'feeCategories' => fn ($query) => $query
                 ->withSum('reservedRegistrationItems as reserved_quantity', 'quantity')
                 ->orderBy('id'),
@@ -113,6 +124,9 @@ class EventController extends Controller
         return Inertia::render('admin/events/edit', [
             'event' => $this->eventFormData($event),
             'statusOptions' => $this->eventStatusOptions(),
+            'scopeTypeOptions' => $this->scopeTypeOptions(),
+            'sections' => $this->sectionOptions(),
+            'departments' => $this->departmentOptions(),
             'feeCategoryStatusOptions' => $this->feeCategoryStatusOptions(),
         ]);
     }
@@ -201,6 +215,7 @@ class EventController extends Controller
             'registration_open_at' => $event->registration_open_at->toIso8601String(),
             'registration_close_at' => $event->registration_close_at->toIso8601String(),
             'status' => $event->resolvedStatus(),
+            'scope_summary' => $this->eventScopeSummary($event),
             'status_reason' => $event->statusReason(),
             'fee_categories_count' => $event->fee_categories_count,
             'registrations_count' => $event->registrations_count,
@@ -229,6 +244,9 @@ class EventController extends Controller
             'registration_open_at' => $event->registration_open_at->format('Y-m-d\TH:i'),
             'registration_close_at' => $event->registration_close_at->format('Y-m-d\TH:i'),
             'status' => $event->status,
+            'scope_type' => $event->scope_type,
+            'section_id' => $event->section_id,
+            'department_id' => $event->department_id,
             'total_capacity' => $event->total_capacity,
             'reserved_quantity' => $event->reservedQuantity(),
             'remaining_slots' => $event->remainingSlots(),
@@ -262,6 +280,65 @@ class EventController extends Controller
             ['value' => Event::STATUS_COMPLETED, 'label' => 'Completed'],
             ['value' => Event::STATUS_CANCELLED, 'label' => 'Cancelled'],
         ];
+    }
+
+    /**
+     * @return array<int, array<string, string>>
+     */
+    private function scopeTypeOptions(): array
+    {
+        return [
+            ['value' => Event::SCOPE_DISTRICT, 'label' => 'District-wide'],
+            ['value' => Event::SCOPE_SECTION, 'label' => 'Sectional'],
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function sectionOptions(): array
+    {
+        return Section::query()
+            ->with('district:id,name')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Section $section): array => [
+                'id' => $section->id,
+                'name' => $section->name,
+                'district_name' => $section->district->name,
+                'status' => $section->status,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function departmentOptions(): array
+    {
+        return Department::query()
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Department $department): array => [
+                'id' => $department->id,
+                'name' => $department->name,
+                'status' => $department->status,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function eventScopeSummary(Event $event): string
+    {
+        $scopeParts = [
+            $event->scope_type === Event::SCOPE_SECTION
+                ? $event->section?->name ?? 'Sectional'
+                : 'District-wide',
+            $event->department?->name ?? 'General',
+        ];
+
+        return implode(' · ', $scopeParts);
     }
 
     /**

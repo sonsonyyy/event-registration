@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Support\DepartmentScopeAccess;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -50,7 +51,9 @@ class User extends Authenticatable
         'role_id',
         'district_id',
         'section_id',
+        'department_id',
         'pastor_id',
+        'position_title',
         'status',
         'approval_status',
         'account_source',
@@ -98,6 +101,11 @@ class User extends Authenticatable
     public function section(): BelongsTo
     {
         return $this->belongsTo(Section::class)->withTrashed();
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class)->withTrashed();
     }
 
     public function pastor(): BelongsTo
@@ -159,6 +167,16 @@ class User extends Authenticatable
         return $this->hasRole(Role::ADMIN);
     }
 
+    public function hasAdminAccess(): bool
+    {
+        return $this->isAdmin() || $this->isSuperAdmin();
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->hasRole(Role::SUPER_ADMIN);
+    }
+
     public function isManager(): bool
     {
         return $this->hasRole(Role::MANAGER);
@@ -194,6 +212,16 @@ class User extends Authenticatable
         return $this->account_source === self::ACCOUNT_SOURCE_SELF_SERVICE;
     }
 
+    public function isDepartmentScoped(): bool
+    {
+        return $this->department_id !== null;
+    }
+
+    public function hasGeneralDepartmentScope(): bool
+    {
+        return $this->department_id === null;
+    }
+
     public function hasApprovedOnlineRegistrationAccess(): bool
     {
         return $this->isOnlineRegistrant()
@@ -214,12 +242,12 @@ class User extends Authenticatable
 
     public function canAccessSection(Section $section): bool
     {
-        return $this->isAdmin() || $this->managesSection($section->getKey());
+        return $this->hasAdminAccess() || $this->managesSection($section->getKey());
     }
 
     public function canAccessPastor(Pastor $pastor): bool
     {
-        if ($this->isAdmin() || $this->isRegistrationStaff()) {
+        if ($this->hasAdminAccess() || $this->isRegistrationStaff()) {
             return true;
         }
 
@@ -232,19 +260,32 @@ class User extends Authenticatable
 
     public function canAccessRegistration(Registration $registration): bool
     {
-        if ($this->isAdmin()) {
-            return true;
-        }
+        return DepartmentScopeAccess::canAccessRegistrationRecord($this, $registration);
+    }
 
-        if ($this->isManager()) {
-            return $this->managesSection($registration->pastor->section_id);
-        }
+    public function canViewRegistrantApprovalQueue(): bool
+    {
+        return DepartmentScopeAccess::canViewApprovalQueue($this);
+    }
 
-        if ($this->isRegistrationStaff()) {
-            return $registration->encoded_by_user_id === $this->getKey();
-        }
+    public function canApproveRegistrantRequest(User $accountRequest): bool
+    {
+        return DepartmentScopeAccess::canApproveRegistrantRequest($this, $accountRequest);
+    }
 
-        return $this->belongsToPastor($registration->pastor_id);
+    public function canViewVerificationQueue(): bool
+    {
+        return DepartmentScopeAccess::canViewVerificationQueue($this);
+    }
+
+    public function canAccessVerificationRegistration(Registration $registration): bool
+    {
+        return DepartmentScopeAccess::canAccessVerificationRegistration($this, $registration);
+    }
+
+    public function canReviewRegistration(Registration $registration): bool
+    {
+        return DepartmentScopeAccess::canReviewRegistration($this, $registration);
     }
 
     /**

@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Role extends Model
 {
+    public const SUPER_ADMIN = 'Super Admin';
+
     /** @use HasFactory<RoleFactory> */
     use HasFactory;
 
