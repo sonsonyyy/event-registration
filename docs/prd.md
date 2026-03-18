@@ -31,7 +31,8 @@ The system is operated per district deployment, but the product structure should
 - Online registration
 - Receipt upload for online registration
 - Registration verification
-- Capacity tracking
+- In-app workflow notifications
+- Capacity tracking and reservation
 - Registration reports
 - Historical archiving through soft deletes
 
@@ -213,7 +214,11 @@ Each event can have multiple fee categories such as:
 - Registration closes automatically when capacity is reached
 - Registration closes when the closing date is reached
 - Closed or cancelled events cannot accept new registrations
-- Remaining slots must be shown in real time
+- `Pending Verification`, `Needs Correction`, and verified registrations reserve capacity
+- `Rejected` and cancelled registrations release capacity
+- Onsite registrations consume capacity immediately when saved
+- Remaining slots must refresh without a full page reload
+- Authenticated users receive real-time workflow notifications; public homepage availability may refresh through polling
 - Archived events and fee categories remain available for historical lookups and audit reporting
 
 ---
@@ -351,13 +356,44 @@ Used by authorized church registrants assigned to a pastor/church.
 #### Business Rules
 - Registrants can submit only under their assigned pastor/church
 - System must validate capacity before submission
+- System reserves event and fee-category capacity immediately after successful submission
 - Receipt or reference number is required
 - Proof of payment is required
 - One receipt can cover multiple fee-category quantities in one submission
 
 ---
 
-### 6.9 Reports
+### 6.9 Notifications
+#### Description
+In-app workflow notifications keep reviewers and registrants aware of approval and verification updates.
+
+#### Functional Requirements
+- Store notifications in the database
+- Show unread notification count in the authenticated header
+- Show recent notifications in a dropdown list
+- Mark one notification as read
+- Mark all notifications as read
+- Deliver notifications in real time to authenticated users
+
+#### Notification Triggers
+- Church access request submitted
+- Church access request approved
+- Church access request rejected
+- Online registration submitted for review
+- Registration returned for correction
+- Registration resubmitted after correction
+- Registration verified
+- Registration rejected
+
+#### Delivery Rules
+- Database notifications are the persisted source of truth
+- Real-time delivery is for authenticated users inside the app
+- The public homepage does not require strict instant updates; capacity may refresh through polling
+- External email and SMS notifications remain out of scope in this phase
+
+---
+
+### 6.10 Reports
 #### Required Reports
 - Event total registration
 - No registration report
@@ -415,7 +451,9 @@ If general non-departmental events exist at a scope, at least one general review
 ### 8.2 Church Access Workflow
 1. Church representative requests access for an assigned pastor/church
 2. Super Admin, Admin, or Manager reviews the request
-3. Approved account can sign in and submit registrations
+3. Reviewers receive in-app notifications for new requests
+4. Approved account can sign in and submit registrations
+5. Registrant receives approval or rejection notification
 
 ### 8.3 Online Registration Workflow
 1. Registrant logs in
@@ -423,15 +461,17 @@ If general non-departmental events exist at a scope, at least one general review
 3. Adds one or more fee-category line items
 4. Enters receipt/reference number
 5. Uploads proof of payment
-6. Submits registration
-7. Assigned reviewer verifies the registration
+6. Submits registration and reserves capacity immediately
+7. Assigned reviewers receive in-app notification for verification
+8. Assigned reviewer verifies or returns the registration
+9. Registrant receives the verification outcome notification
 
 ### 8.4 Onsite Registration Workflow
 1. Staff selects event
 2. Staff selects pastor/church
 3. Staff adds one or more registration line items
 4. Staff records the official receipt/reference
-5. Staff saves the paid transaction
+5. Staff saves the paid transaction and consumes capacity immediately
 
 ---
 
@@ -448,6 +488,7 @@ If general non-departmental events exist at a scope, at least one general review
 - event_fee_categories
 - registrations
 - registration_items
+- notifications
 
 ### Target Data Additions for the Department Model
 - `users.department_id` nullable

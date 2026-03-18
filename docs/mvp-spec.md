@@ -17,7 +17,8 @@ The MVP will support:
 - Onsite registration
 - Online registration per church / pastor
 - Receipt upload and verification
-- Capacity tracking and registration limits
+- In-app workflow notifications
+- Capacity tracking, reservation, and registration limits
 - Reports by event, section, and department
 - Historical archiving through soft deletes
 
@@ -167,7 +168,16 @@ The MVP must support:
 - Section assignment (nullable, required for sectional events)
 - Department assignment (nullable)
 
-### 4.4 Fee Categories
+### 4.4 Capacity Reservation Rules
+- `Pending Verification` registrations consume event and fee-category capacity
+- `Needs Correction` registrations continue to reserve capacity while awaiting resubmission
+- `Verified` registrations continue to consume capacity
+- `Rejected` registrations release capacity
+- Cancelled registrations release capacity
+- Onsite registrations consume capacity immediately when saved
+- Homepage availability uses the same reservation logic as registration forms and dashboards
+
+### 4.5 Fee Categories
 Each event can have multiple fee categories, for example:
 - `Regular (Online)`
 - `Regular (Onsite)`
@@ -300,6 +310,7 @@ The data model may retain `Unpaid` and `Partial` for future use, but the MVP rec
 ### Rules
 - Registrant is limited to assigned pastor/church
 - System validates event capacity before submission
+- System reserves capacity immediately on successful submission
 - Receipt / reference number is required
 - Proof of payment is required
 - One receipt may cover multiple fee-category quantities
@@ -332,7 +343,35 @@ If general non-departmental events exist at a scope, a non-departmental reviewer
 
 ---
 
-## 11. Reports
+## 11. Notification Module
+
+### Functions
+- Store workflow notifications in the database
+- Show unread notification count in the authenticated app header
+- Show recent notifications in a header dropdown
+- Mark one notification as read
+- Mark all notifications as read
+- Deliver notifications in real time to authenticated users
+
+### Notification Triggers
+- Church representative access request submitted
+- Church representative access request approved
+- Church representative access request rejected
+- Online registration submitted for review
+- Online registration resubmitted after correction
+- Registration returned for correction
+- Registration verified
+- Registration rejected
+
+### Delivery Rules
+- Database notifications are the persisted source of truth
+- Real-time delivery is used for authenticated users inside the app
+- Public homepage event capacity refresh uses polling, not strict instant broadcasting
+- External email or SMS delivery remains out of scope for the MVP
+
+---
+
+## 12. Reports
 
 ### Required Reports
 1. Event total registration
@@ -355,7 +394,7 @@ If general non-departmental events exist at a scope, a non-departmental reviewer
 
 ---
 
-## 12. Target Database Changes
+## 13. Target Database Changes
 
 ### New / Updated Entities
 
@@ -395,9 +434,13 @@ If general non-departmental events exist at a scope, a non-departmental reviewer
 
 Existing registration and fee-category tables remain, but must respect event scope and department ownership during authorization and reporting.
 
+#### `notifications`
+- Standard Laravel database notifications table
+- Used for in-app workflow notifications and unread counts
+
 ---
 
-## 13. MVP Validation Rules
+## 14. MVP Validation Rules
 - Prevent section creation without district
 - Prevent pastor creation without section
 - Prevent event creation without a valid scope configuration
@@ -406,12 +449,13 @@ Existing registration and fee-category tables remain, but must respect event sco
 - Prevent registrant access requests above the two-account church limit
 - Prevent online registration outside assigned pastor/church
 - Prevent registration when event is full or closed
+- Prevent registration updates from exceeding available reserved capacity
 - Validate receipt upload type and size
 - Preserve historical records through archive behavior instead of hard deletion
 
 ---
 
-## 14. Recommended MVP Screens
+## 15. Recommended MVP Screens
 1. Login
 2. Dashboard
 3. Event List / Event Form
@@ -426,10 +470,11 @@ Existing registration and fee-category tables remain, but must respect event sco
 12. Online Registration Page
 13. Registration Review / Verification Page
 14. Reports Page
+15. Header notification dropdown in authenticated layouts
 
 ---
 
-## 15. Finalized Direction Before Implementation
+## 16. Finalized Direction Before Implementation
 
 The implementation should follow this model:
 - role decides permission
@@ -439,5 +484,8 @@ The implementation should follow this model:
 - title is metadata only
 - registrants remain church-based
 - general events require general reviewers
+- database notifications persist workflow history
+- authenticated users receive realtime in-app notifications
+- homepage capacity refresh uses polling against reservation-aware event metrics
 
 This is the agreed target state for the next major update before application code changes begin.
