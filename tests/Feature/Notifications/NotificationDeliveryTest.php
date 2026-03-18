@@ -57,6 +57,15 @@ test('account request notifications are stored as database workflow payloads', f
     ];
 
     foreach ($cases as $case) {
+        $channels = $case['notification']->via($reviewer);
+        $broadcastMessage = $case['notification']->toBroadcast($reviewer);
+
+        expect($channels)->toContain('database', 'broadcast')
+            ->and($case['notification']->broadcastType())->toBe($case['type'])
+            ->and($broadcastMessage->data['type'])->toBe($case['type'])
+            ->and($broadcastMessage->data['action_url'])->toBe($case['action_url'])
+            ->and($broadcastMessage->connection)->toBe('deferred');
+
         $reviewer->notifications()->delete();
         $reviewer->notify($case['notification']);
 
@@ -145,6 +154,15 @@ test('registration workflow notifications are stored as database workflow payloa
     ];
 
     foreach ($cases as $case) {
+        $channels = $case['notification']->via($reviewer);
+        $broadcastMessage = $case['notification']->toBroadcast($reviewer);
+
+        expect($channels)->toContain('database', 'broadcast')
+            ->and($case['notification']->broadcastType())->toBe($case['type'])
+            ->and($broadcastMessage->data['type'])->toBe($case['type'])
+            ->and($broadcastMessage->data['action_url'])->toBe($case['action_url'])
+            ->and($broadcastMessage->connection)->toBe('deferred');
+
         $reviewer->notifications()->delete();
         $reviewer->notify($case['notification']);
 

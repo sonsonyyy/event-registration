@@ -3,6 +3,7 @@ import FlashToaster from '@/components/flash-toaster';
 import { AppShell } from '@/components/app-shell';
 import { AppSidebar } from '@/components/app-sidebar';
 import { AppSidebarHeader } from '@/components/app-sidebar-header';
+import { NotificationListener } from '@/components/notification-listener';
 import type { AppLayoutProps } from '@/types';
 
 export default function AppSidebarLayout({
@@ -13,6 +14,7 @@ export default function AppSidebarLayout({
         <AppShell variant="sidebar">
             <AppSidebar />
             <AppContent variant="sidebar" className="overflow-x-hidden">
+                <NotificationListener />
                 <AppSidebarHeader breadcrumbs={breadcrumbs} />
                 <FlashToaster />
                 {children}

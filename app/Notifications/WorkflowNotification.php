@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 
 abstract class WorkflowNotification extends Notification
@@ -14,7 +15,7 @@ abstract class WorkflowNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', 'broadcast'];
     }
 
     /**
@@ -49,6 +50,22 @@ abstract class WorkflowNotification extends Notification
     public function toDatabase(object $notifiable): array
     {
         return $this->payload();
+    }
+
+    public function toBroadcast(object $notifiable): BroadcastMessage
+    {
+        $broadcastMessage = new BroadcastMessage($this->payload());
+
+        if (config('queue.connections.deferred') !== null) {
+            $broadcastMessage->onConnection('deferred');
+        }
+
+        return $broadcastMessage;
+    }
+
+    public function broadcastType(): string
+    {
+        return $this->payload()['type'];
     }
 
     /**
