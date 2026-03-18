@@ -7,8 +7,10 @@ use App\Models\EventFeeCategory;
 use App\Models\Pastor;
 use App\Models\Registration;
 use App\Support\DepartmentScopeAccess;
+use App\Support\EventCapacity;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -121,66 +123,11 @@ class StoreOnsiteRegistrationRequest extends FormRequest
                     return;
                 }
 
-                $feeCategories = EventFeeCategory::query()
-                    ->where('event_id', $event->getKey())
-                    ->whereIn(
-                        'id',
-                        $lineItems
-                            ->pluck('fee_category_id')
-                            ->filter()
-                            ->map(fn (mixed $feeCategoryId): int => (int) $feeCategoryId)
-                            ->all(),
-                    )
-                    ->withSum('reservedRegistrationItems as reserved_quantity', 'quantity')
-                    ->get()
-                    ->keyBy('id');
+                $feeCategories = $this->selectedFeeCategories($event, $lineItems);
+                $capacityErrors = app(EventCapacity::class)->lineItemErrors($event, $feeCategories, $lineItems);
 
-                $totalQuantity = 0;
-
-                $lineItems->each(function (array $lineItem, int $index) use ($feeCategories, $validator, &$totalQuantity): void {
-                    $feeCategoryId = (int) ($lineItem['fee_category_id'] ?? 0);
-                    $quantity = (int) ($lineItem['quantity'] ?? 0);
-
-                    if ($feeCategoryId === 0 || $quantity === 0) {
-                        return;
-                    }
-
-                    /** @var EventFeeCategory|null $feeCategory */
-                    $feeCategory = $feeCategories->get($feeCategoryId);
-
-                    if ($feeCategory === null) {
-                        $validator->errors()->add(
-                            "line_items.{$index}.fee_category_id",
-                            'Select a valid fee category for the chosen event.',
-                        );
-
-                        return;
-                    }
-
-                    if ($feeCategory->status !== 'active') {
-                        $validator->errors()->add(
-                            "line_items.{$index}.fee_category_id",
-                            'The selected fee category is not active.',
-                        );
-                    }
-
-                    $remainingSlots = $feeCategory->remainingSlots();
-
-                    if ($remainingSlots !== null && $quantity > $remainingSlots) {
-                        $validator->errors()->add(
-                            "line_items.{$index}.quantity",
-                            'The selected fee category does not have enough remaining slots.',
-                        );
-                    }
-
-                    $totalQuantity += $quantity;
-                });
-
-                if ($totalQuantity > $event->remainingSlots()) {
-                    $validator->errors()->add(
-                        'line_items',
-                        'The requested quantity exceeds the remaining event capacity.',
-                    );
+                foreach ($capacityErrors as $field => $message) {
+                    $validator->errors()->add($field, $message);
                 }
             },
         ];
@@ -231,5 +178,26 @@ class StoreOnsiteRegistrationRequest extends FormRequest
         }
 
         return Pastor::query()->find($pastorId);
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $lineItems
+     * @return Collection<int, EventFeeCategory>
+     */
+    private function selectedFeeCategories(Event $event, Collection $lineItems): Collection
+    {
+        return EventFeeCategory::query()
+            ->where('event_id', $event->getKey())
+            ->whereIn(
+                'id',
+                $lineItems
+                    ->pluck('fee_category_id')
+                    ->filter()
+                    ->map(fn (mixed $feeCategoryId): int => (int) $feeCategoryId)
+                    ->all(),
+            )
+            ->withSum('reservedRegistrationItems as reserved_quantity', 'quantity')
+            ->get()
+            ->keyBy('id');
     }
 }

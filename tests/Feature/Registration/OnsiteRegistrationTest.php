@@ -486,6 +486,81 @@ test('staff can edit onsite registrations and replace grouped quantities', funct
         ->and($registration->items->first()->quantity)->toBe(5);
 });
 
+test('onsite registration update rejects capacity overflow while preserving current reserved quantity', function () {
+    $staff = User::factory()->registrationStaff()->create();
+    $pastor = Pastor::factory()->create();
+    $event = onsiteRegistrationEvent([
+        'total_capacity' => 5,
+    ]);
+    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Onsite)',
+        'amount' => '500.00',
+        'slot_limit' => 5,
+    ]);
+
+    $registration = Registration::factory()
+        ->for($event)
+        ->for($pastor)
+        ->for($staff, 'encodedByUser')
+        ->create([
+            'registration_mode' => Registration::MODE_ONSITE,
+            'payment_status' => Registration::PAYMENT_STATUS_PAID,
+            'registration_status' => Registration::STATUS_COMPLETED,
+            'payment_reference' => 'OR-2026-5101',
+        ]);
+
+    RegistrationItem::factory()
+        ->for($registration)
+        ->for($feeCategory, 'feeCategory')
+        ->create([
+            'quantity' => 2,
+            'unit_amount' => $feeCategory->amount,
+            'subtotal_amount' => '1000.00',
+        ]);
+
+    $otherRegistration = Registration::factory()
+        ->for($event)
+        ->for($pastor)
+        ->for($staff, 'encodedByUser')
+        ->create([
+            'registration_mode' => Registration::MODE_ONSITE,
+            'payment_status' => Registration::PAYMENT_STATUS_PAID,
+            'registration_status' => Registration::STATUS_COMPLETED,
+            'payment_reference' => 'OR-2026-5102',
+        ]);
+
+    RegistrationItem::factory()
+        ->for($otherRegistration)
+        ->for($feeCategory, 'feeCategory')
+        ->create([
+            'quantity' => 3,
+            'unit_amount' => $feeCategory->amount,
+            'subtotal_amount' => '1500.00',
+        ]);
+
+    $this->actingAs($staff)
+        ->from(route('registrations.onsite.edit', $registration))
+        ->patch(route('registrations.onsite.update', $registration), [
+            'event_id' => $event->id,
+            'pastor_id' => $pastor->id,
+            'payment_reference' => 'OR-2026-5103',
+            'remarks' => 'Trying to exceed remaining capacity.',
+            'line_items' => [
+                [
+                    'fee_category_id' => $feeCategory->id,
+                    'quantity' => 3,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('registrations.onsite.edit', $registration))
+        ->assertSessionHasErrors([
+            'line_items.0.quantity',
+            'line_items',
+        ]);
+
+    expect((int) $registration->fresh()->items()->sum('quantity'))->toBe(2);
+});
+
 function onsiteRegistrationEvent(array $attributes = []): Event
 {
     return Event::factory()->create([

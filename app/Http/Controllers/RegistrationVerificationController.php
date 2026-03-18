@@ -11,6 +11,7 @@ use App\Models\RegistrationItem;
 use App\Models\RegistrationReview;
 use App\Models\User;
 use App\Support\DepartmentScopeAccess;
+use App\Support\EventCapacity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +24,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RegistrationVerificationController extends Controller
 {
+    public function __construct(private readonly EventCapacity $eventCapacity) {}
+
     public function index(IndexRegistrationVerificationRequest $request): Response
     {
         Gate::authorize('viewAnyVerification', Registration::class);
@@ -343,7 +346,7 @@ class RegistrationVerificationController extends Controller
             ->withSum('reservedRegistrationItems as reserved_quantity', 'quantity')
             ->firstOrFail();
 
-        if ($registration->totalQuantity() > $event->remainingSlots()) {
+        if ($registration->totalQuantity() > $this->eventCapacity->remainingSlotsForEvent($event)) {
             throw ValidationException::withMessages([
                 'decision' => 'This registration can no longer be verified because the event capacity is already exhausted.',
             ]);
@@ -370,7 +373,7 @@ class RegistrationVerificationController extends Controller
                 ]);
             }
 
-            $remainingSlots = $feeCategory->remainingSlots();
+            $remainingSlots = $this->eventCapacity->remainingSlotsForFeeCategory($feeCategory);
 
             if ($remainingSlots !== null && $item->quantity > $remainingSlots) {
                 throw ValidationException::withMessages([

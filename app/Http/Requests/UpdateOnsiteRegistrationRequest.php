@@ -3,11 +3,14 @@
 namespace App\Http\Requests;
 
 use App\Models\Event;
+use App\Models\EventFeeCategory;
 use App\Models\Pastor;
 use App\Models\Registration;
 use App\Support\DepartmentScopeAccess;
+use App\Support\EventCapacity;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -67,6 +70,12 @@ class UpdateOnsiteRegistrationRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
+                $registration = $this->route('registration');
+
+                if (! $registration instanceof Registration) {
+                    return;
+                }
+
                 $event = $this->selectedEvent();
 
                 if ($event !== null && ! DepartmentScopeAccess::canAccessEvent($this->user(), $event)) {
@@ -74,6 +83,39 @@ class UpdateOnsiteRegistrationRequest extends FormRequest
                         'event_id',
                         'The selected event is not available to your account.',
                     );
+
+                    return;
+                }
+
+                if ($event !== null) {
+                    $event->loadSum('reservedRegistrationItems as reserved_quantity', 'quantity');
+                    $event->syncOperationalStatus();
+
+                    if (
+                        $registration->event_id !== $event->getKey()
+                        && ! $event->canAcceptRegistrations()
+                    ) {
+                        $validator->errors()->add(
+                            'event_id',
+                            'The selected event is not open for onsite registration.',
+                        );
+                    }
+
+                    $lineItems = collect($this->input('line_items', []))
+                        ->filter(fn (mixed $lineItem): bool => is_array($lineItem))
+                        ->values();
+
+                    if ($lineItems->isNotEmpty()) {
+                        $registration->loadMissing('items');
+
+                        $feeCategories = $this->selectedFeeCategories($event, $lineItems);
+                        $capacityErrors = app(EventCapacity::class)
+                            ->lineItemErrors($event, $feeCategories, $lineItems, $registration);
+
+                        foreach ($capacityErrors as $field => $message) {
+                            $validator->errors()->add($field, $message);
+                        }
+                    }
                 }
 
                 $pastor = $this->selectedPastor();
@@ -133,5 +175,26 @@ class UpdateOnsiteRegistrationRequest extends FormRequest
         }
 
         return Pastor::query()->find($pastorId);
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $lineItems
+     * @return Collection<int, EventFeeCategory>
+     */
+    private function selectedFeeCategories(Event $event, Collection $lineItems): Collection
+    {
+        return EventFeeCategory::query()
+            ->where('event_id', $event->getKey())
+            ->whereIn(
+                'id',
+                $lineItems
+                    ->pluck('fee_category_id')
+                    ->filter()
+                    ->map(fn (mixed $feeCategoryId): int => (int) $feeCategoryId)
+                    ->all(),
+            )
+            ->withSum('reservedRegistrationItems as reserved_quantity', 'quantity')
+            ->get()
+            ->keyBy('id');
     }
 }

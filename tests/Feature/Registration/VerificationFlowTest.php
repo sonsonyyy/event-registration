@@ -9,6 +9,7 @@ use App\Models\Registration;
 use App\Models\RegistrationItem;
 use App\Models\Section;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -390,6 +391,77 @@ test('reviewers can return registrations for correction with a reason and review
         ->and($registration->reviews->first()->reason)->toBe('The uploaded receipt is blurred.')
         ->and($registration->reviews->first()->notes)->toBe('Ask the church to upload a clearer file before the cutoff.')
         ->and($registration->reviews->first()->reviewer?->is($manager))->toBeTrue();
+});
+
+test('rejected registrations release capacity for a replacement online submission', function () {
+    Storage::fake('local');
+    config()->set('registration.receipts_disk', 'local');
+
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $manager = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+    ]);
+    $pastor = Pastor::factory()->for($section)->create();
+    $registrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'pastor_id' => $pastor->id,
+    ]);
+    $event = verificationEvent([
+        'total_capacity' => 1,
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+    ]);
+    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+        'slot_limit' => 1,
+    ]);
+
+    $registration = createOnlineRegistrationForVerification(
+        $event,
+        $pastor,
+        $registrant,
+        $feeCategory,
+        [
+            'receipt_file_path' => 'registration-receipts/2026/03/release-capacity.pdf',
+            'receipt_original_name' => 'release-capacity.pdf',
+        ],
+    );
+
+    Storage::disk('local')->put(
+        'registration-receipts/2026/03/release-capacity.pdf',
+        'release-capacity',
+    );
+
+    $this->actingAs($manager)
+        ->from(route('registrations.verification.index'))
+        ->patch(route('registrations.verification.update', $registration), [
+            'decision' => Registration::STATUS_REJECTED,
+            'review_reason' => 'The payment did not match the submitted amount.',
+            'review_notes' => 'Please submit a new receipt for a new transaction.',
+        ])
+        ->assertRedirect(route('registrations.verification.index'));
+
+    $this->actingAs($registrant)
+        ->post(route('registrations.online.store'), [
+            'event_id' => $event->id,
+            'payment_reference' => 'DEP-2026-3301',
+            'receipt' => UploadedFile::fake()->create('replacement.pdf', 256, 'application/pdf'),
+            'remarks' => '',
+            'line_items' => [
+                [
+                    'fee_category_id' => $feeCategory->id,
+                    'quantity' => 1,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('registrations.online.index'));
+
+    expect(Registration::query()->count())->toBe(2)
+        ->and($registration->fresh()->registration_status)->toBe(Registration::STATUS_REJECTED);
 });
 
 test('reviewers must provide a reason when returning registrations for correction or rejecting them', function () {

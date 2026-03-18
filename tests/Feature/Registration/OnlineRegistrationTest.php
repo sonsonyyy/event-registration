@@ -500,6 +500,97 @@ test('online registrants can edit registrations that are awaiting review or corr
     Storage::disk('local')->assertExists((string) $registration->receipt_file_path);
 });
 
+test('online registration update rejects capacity overflow while preserving current reserved quantity', function () {
+    Storage::fake('local');
+    config()->set('registration.receipts_disk', 'local');
+
+    $pastor = Pastor::factory()->create();
+    $registrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $pastor->section->district_id,
+        'section_id' => $pastor->section_id,
+        'pastor_id' => $pastor->id,
+    ]);
+    $event = onlineRegistrationEvent([
+        'total_capacity' => 5,
+    ]);
+    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+        'slot_limit' => 5,
+    ]);
+
+    $registration = Registration::factory()
+        ->for($event)
+        ->for($pastor)
+        ->for($registrant, 'encodedByUser')
+        ->for($registrant, 'receiptUploadedByUser')
+        ->create([
+            'registration_mode' => Registration::MODE_ONLINE,
+            'payment_status' => Registration::PAYMENT_STATUS_PAID,
+            'registration_status' => Registration::STATUS_NEEDS_CORRECTION,
+            'payment_reference' => 'DEP-2026-2101',
+            'receipt_file_path' => 'registration-receipts/2026/03/capacity-update.pdf',
+            'receipt_original_name' => 'capacity-update.pdf',
+            'receipt_uploaded_at' => now()->subHour(),
+            'submitted_at' => now()->subHour(),
+        ]);
+
+    RegistrationItem::factory()
+        ->for($registration)
+        ->for($feeCategory, 'feeCategory')
+        ->create([
+            'quantity' => 2,
+            'unit_amount' => $feeCategory->amount,
+            'subtotal_amount' => '1600.00',
+        ]);
+
+    $otherRegistration = Registration::factory()
+        ->for($event)
+        ->for($pastor)
+        ->for($registrant, 'encodedByUser')
+        ->for($registrant, 'receiptUploadedByUser')
+        ->create([
+            'registration_mode' => Registration::MODE_ONLINE,
+            'payment_status' => Registration::PAYMENT_STATUS_PAID,
+            'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
+            'payment_reference' => 'DEP-2026-2102',
+            'receipt_file_path' => 'registration-receipts/2026/03/capacity-other.pdf',
+            'receipt_original_name' => 'capacity-other.pdf',
+            'receipt_uploaded_at' => now()->subHour(),
+            'submitted_at' => now()->subHour(),
+        ]);
+
+    RegistrationItem::factory()
+        ->for($otherRegistration)
+        ->for($feeCategory, 'feeCategory')
+        ->create([
+            'quantity' => 3,
+            'unit_amount' => $feeCategory->amount,
+            'subtotal_amount' => '2400.00',
+        ]);
+
+    $this->actingAs($registrant)
+        ->from(route('registrations.online.edit', $registration))
+        ->patch(route('registrations.online.update', $registration), [
+            'event_id' => $event->id,
+            'payment_reference' => 'DEP-2026-2103',
+            'remarks' => 'Trying to exceed remaining capacity.',
+            'line_items' => [
+                [
+                    'fee_category_id' => $feeCategory->id,
+                    'quantity' => 3,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('registrations.online.edit', $registration))
+        ->assertSessionHasErrors([
+            'line_items.0.quantity',
+            'line_items',
+        ]);
+
+    expect((int) $registration->fresh()->items()->sum('quantity'))->toBe(2);
+});
+
 test('online registrants can cancel registrations before verification but cannot edit verified registrations', function () {
     Storage::fake('local');
     config()->set('registration.receipts_disk', 'local');
@@ -583,6 +674,73 @@ test('online registrants can cancel registrations before verification but cannot
     $this->actingAs($registrant)
         ->patch(route('registrations.online.cancel', $verifiedRegistration))
         ->assertForbidden();
+});
+
+test('cancelled online registrations release capacity for a new submission', function () {
+    Storage::fake('local');
+    config()->set('registration.receipts_disk', 'local');
+
+    $pastor = Pastor::factory()->create();
+    $registrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $pastor->section->district_id,
+        'section_id' => $pastor->section_id,
+        'pastor_id' => $pastor->id,
+    ]);
+    $event = onlineRegistrationEvent([
+        'total_capacity' => 2,
+    ]);
+    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+        'slot_limit' => 2,
+    ]);
+
+    $registration = Registration::factory()
+        ->for($event)
+        ->for($pastor)
+        ->for($registrant, 'encodedByUser')
+        ->for($registrant, 'receiptUploadedByUser')
+        ->create([
+            'registration_mode' => Registration::MODE_ONLINE,
+            'payment_status' => Registration::PAYMENT_STATUS_PAID,
+            'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
+            'payment_reference' => 'DEP-2026-2201',
+            'receipt_file_path' => 'registration-receipts/2026/03/cancel-release.pdf',
+            'receipt_original_name' => 'cancel-release.pdf',
+            'receipt_uploaded_at' => now()->subHour(),
+            'submitted_at' => now()->subHour(),
+        ]);
+
+    RegistrationItem::factory()
+        ->for($registration)
+        ->for($feeCategory, 'feeCategory')
+        ->create([
+            'quantity' => 2,
+            'unit_amount' => $feeCategory->amount,
+            'subtotal_amount' => '1600.00',
+        ]);
+
+    $this->actingAs($registrant)
+        ->patch(route('registrations.online.cancel', $registration))
+        ->assertRedirect(route('registrations.online.index'));
+
+    $this->actingAs($registrant)
+        ->post(route('registrations.online.store'), [
+            'event_id' => $event->id,
+            'payment_reference' => 'DEP-2026-2202',
+            'receipt' => UploadedFile::fake()->create('replacement.pdf', 256, 'application/pdf'),
+            'remarks' => '',
+            'line_items' => [
+                [
+                    'fee_category_id' => $feeCategory->id,
+                    'quantity' => 2,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('registrations.online.index'));
+
+    expect(Registration::query()->count())->toBe(2)
+        ->and($registration->fresh()->registration_status)->toBe(Registration::STATUS_CANCELLED);
 });
 
 function onlineRegistrationEvent(array $attributes = []): Event

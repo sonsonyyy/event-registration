@@ -13,6 +13,7 @@ use App\Models\RegistrationItem;
 use App\Models\RegistrationReview;
 use App\Models\User;
 use App\Support\DepartmentScopeAccess;
+use App\Support\EventCapacity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,6 +29,8 @@ use Throwable;
 
 class OnlineRegistrationController extends Controller
 {
+    public function __construct(private readonly EventCapacity $eventCapacity) {}
+
     public function index(IndexOnlineRegistrationRequest $request): Response
     {
         Gate::authorize('viewAnyOnline', Registration::class);
@@ -317,7 +320,6 @@ class OnlineRegistrationController extends Controller
     private function eventOptions(?User $user, ?Registration $registration = null): array
     {
         $currentEventId = $registration?->event_id;
-        $currentRegistrationQuantity = $registration?->totalQuantity() ?? 0;
         $currentFeeItemQuantities = $registration?->items
             ->mapWithKeys(fn (RegistrationItem $item): array => [
                 $item->fee_category_id => (int) $item->quantity,
@@ -370,21 +372,16 @@ class OnlineRegistrationController extends Controller
                     return false;
                 }
 
-                return $event->feeCategories->contains(function (EventFeeCategory $feeCategory): bool {
-                    $remainingSlots = $feeCategory->remainingSlots();
-
-                    return $feeCategory->status === 'active'
-                        && ($remainingSlots === null || $remainingSlots > 0);
-                });
+                return $this->eventCapacity->eventHasAvailableFeeCategories($event);
             })
             ->map(function (Event $event) use (
+                $registration,
                 $currentEventId,
-                $currentRegistrationQuantity,
                 $currentFeeItemQuantities,
             ): array {
-                $currentEventQuantity = $currentEventId !== null && $event->getKey() === $currentEventId
-                    ? $currentRegistrationQuantity
-                    : 0;
+                $currentRegistration = $currentEventId !== null && $event->getKey() === $currentEventId
+                    ? $registration
+                    : null;
 
                 return [
                     'id' => $event->getKey(),
@@ -394,7 +391,7 @@ class OnlineRegistrationController extends Controller
                     'date_from' => $event->date_from->toDateString(),
                     'date_to' => $event->date_to->toDateString(),
                     'registration_close_at' => $event->registration_close_at->toIso8601String(),
-                    'remaining_slots' => $event->remainingSlots() + $currentEventQuantity,
+                    'remaining_slots' => $this->eventCapacity->availableSlotsForEvent($event, $currentRegistration),
                     'fee_categories' => $event->feeCategories
                         ->filter(function (EventFeeCategory $feeCategory) use ($currentEventId, $event, $currentFeeItemQuantities): bool {
                             $currentQuantity = $currentEventId !== null && $event->getKey() === $currentEventId
@@ -405,7 +402,7 @@ class OnlineRegistrationController extends Controller
                                 return true;
                             }
 
-                            $remainingSlots = $this->availableFeeCategorySlots($feeCategory);
+                            $remainingSlots = $this->eventCapacity->availableSlotsForFeeCategory($feeCategory);
 
                             return $feeCategory->status === 'active'
                                 && ($remainingSlots === null || $remainingSlots > 0);
@@ -420,7 +417,7 @@ class OnlineRegistrationController extends Controller
                                 'category_name' => $feeCategory->category_name,
                                 'amount' => (string) $feeCategory->amount,
                                 'slot_limit' => $feeCategory->slot_limit,
-                                'remaining_slots' => $this->availableFeeCategorySlots($feeCategory, $currentQuantity),
+                                'remaining_slots' => $this->eventCapacity->availableSlotsForFeeCategory($feeCategory, $currentQuantity),
                                 'status' => $feeCategory->status,
                             ];
                         })
@@ -472,17 +469,6 @@ class OnlineRegistrationController extends Controller
         return $receipt->store($destination, $disk);
     }
 
-    private function availableFeeCategorySlots(EventFeeCategory $feeCategory, int $currentQuantity = 0): ?int
-    {
-        $remainingSlots = $feeCategory->remainingSlots();
-
-        if ($remainingSlots === null) {
-            return null;
-        }
-
-        return $remainingSlots + $currentQuantity;
-    }
-
     /**
      * Ensure the selected fee categories still satisfy event and category capacity.
      *
@@ -495,56 +481,10 @@ class OnlineRegistrationController extends Controller
         Collection $lineItems,
         ?Registration $existingRegistration = null,
     ): void {
-        $currentFeeItemQuantities = $existingRegistration?->items
-            ->mapWithKeys(fn (RegistrationItem $item): array => [
-                $item->fee_category_id => (int) $item->quantity,
-            ]) ?? collect();
-        $currentRegistrationQuantity = $existingRegistration?->totalQuantity() ?? 0;
-        $sameEvent = $existingRegistration !== null && $existingRegistration->event_id === $event->getKey();
-        $availableEventSlots = $event->remainingSlots() + ($sameEvent ? $currentRegistrationQuantity : 0);
-        $totalQuantity = 0;
+        $errors = $this->eventCapacity->lineItemErrors($event, $feeCategories, $lineItems, $existingRegistration);
 
-        $lineItems->each(function (array $lineItem, int $index) use (
-            $feeCategories,
-            $currentFeeItemQuantities,
-            $sameEvent,
-            &$totalQuantity,
-        ): void {
-            /** @var EventFeeCategory|null $feeCategory */
-            $feeCategory = $feeCategories->get((int) $lineItem['fee_category_id']);
-            $quantity = (int) $lineItem['quantity'];
-
-            if ($feeCategory === null) {
-                throw ValidationException::withMessages([
-                    "line_items.{$index}.fee_category_id" => 'Select a valid fee category for the chosen event.',
-                ]);
-            }
-
-            $currentQuantity = $sameEvent
-                ? (int) $currentFeeItemQuantities->get($feeCategory->getKey(), 0)
-                : 0;
-
-            if ($feeCategory->status !== 'active' && $currentQuantity === 0) {
-                throw ValidationException::withMessages([
-                    "line_items.{$index}.fee_category_id" => 'The selected fee category is not active.',
-                ]);
-            }
-
-            $remainingSlots = $this->availableFeeCategorySlots($feeCategory, $currentQuantity);
-
-            if ($remainingSlots !== null && $quantity > $remainingSlots) {
-                throw ValidationException::withMessages([
-                    "line_items.{$index}.quantity" => 'The selected fee category does not have enough remaining slots.',
-                ]);
-            }
-
-            $totalQuantity += $quantity;
-        });
-
-        if ($totalQuantity > $availableEventSlots) {
-            throw ValidationException::withMessages([
-                'line_items' => 'The requested quantity exceeds the remaining event capacity.',
-            ]);
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
         }
     }
 
