@@ -9,6 +9,7 @@ use App\Models\Registration;
 use App\Models\RegistrationItem;
 use App\Models\Section;
 use App\Models\User;
+use App\Support\DepartmentScopeAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -32,10 +33,10 @@ class ReportsController extends Controller
         abort_unless($user instanceof User, 403);
 
         $filters = $request->filters();
-        $events = $this->eventOptions();
+        $events = $this->eventOptions($user);
         $sections = $this->sectionOptions($user);
         $selectedEvent = $this->selectedEvent($events, $filters['event_id']);
-        $selectedSection = $this->selectedSection($user, $sections, $filters['section_id']);
+        $selectedSection = $this->selectedSection($user, $selectedEvent, $sections, $filters['section_id']);
         $churchesWithoutRegistration = $selectedEvent !== null
             ? $this->churchesWithoutRegistrationQuery(
                 $user,
@@ -52,7 +53,7 @@ class ReportsController extends Controller
 
         return Inertia::render('reports/index', [
             'scopeSummary' => $this->scopeSummary($user),
-            'canFilterBySection' => ! $user->isManager(),
+            'canFilterBySection' => $this->canFilterBySection($user, $selectedEvent),
             'events' => $events
                 ->map(fn (Event $event): array => [
                     'id' => $event->getKey(),
@@ -124,13 +125,13 @@ class ReportsController extends Controller
         abort_unless($user instanceof User, 403);
 
         $filters = $request->filters();
-        $events = $this->eventOptions();
+        $events = $this->eventOptions($user);
         $sections = $this->sectionOptions($user);
         $selectedEvent = $this->selectedEvent($events, $filters['event_id']);
 
         abort_if($selectedEvent === null, 404);
 
-        $selectedSection = $this->selectedSection($user, $sections, $filters['section_id']);
+        $selectedSection = $this->selectedSection($user, $selectedEvent, $sections, $filters['section_id']);
         $churches = $this->churchesWithoutRegistrationQuery(
             $user,
             $selectedEvent,
@@ -166,19 +167,24 @@ class ReportsController extends Controller
      *
      * @return Collection<int, Event>
      */
-    private function eventOptions(): Collection
+    private function eventOptions(User $user): Collection
     {
-        return Event::query()
+        $query = Event::query()
             ->withTrashed()
             ->with([
                 'feeCategories' => fn ($query) => $query
                     ->withTrashed()
                     ->orderBy('id'),
+                'section:id,name,district_id',
+                'department:id,name',
             ])
             ->orderByRaw('deleted_at IS NOT NULL')
             ->orderByDesc('date_from')
-            ->orderByDesc('id')
-            ->get();
+            ->orderByDesc('id');
+
+        DepartmentScopeAccess::scopeAccessibleEvents($query, $user);
+
+        return $query->get();
     }
 
     /**
@@ -214,10 +220,14 @@ class ReportsController extends Controller
         return $selectedEvent ?? $events->first();
     }
 
-    private function selectedSection(User $user, Collection $sections, ?int $sectionId): ?Section
+    private function selectedSection(User $user, ?Event $event, Collection $sections, ?int $sectionId): ?Section
     {
         if ($sections->isEmpty()) {
             return null;
+        }
+
+        if ($event?->isSectionScoped()) {
+            return $event->section;
         }
 
         if ($user->isManager()) {
@@ -307,9 +317,11 @@ class ReportsController extends Controller
             ->with('section.district')
             ->where('status', 'active');
 
-        $sectionId = $user->isManager()
-            ? $user->section_id
-            : $section?->getKey();
+        $sectionId = $event->isSectionScoped()
+            ? $event->section_id
+            : ($user->isManager()
+                ? $user->section_id
+                : $section?->getKey());
 
         if ($sectionId !== null) {
             $pastorsQuery->where('section_id', $sectionId);
@@ -485,8 +497,16 @@ HTML;
 
     private function scopeSummary(User $user): string
     {
+        if ($user->isSuperAdmin()) {
+            return 'All events, sections, and departments';
+        }
+
         if ($user->isAdmin()) {
-            return 'All sections and churches';
+            if ($user->department_id === null) {
+                return 'District events • all sections • all departments';
+            }
+
+            return 'District events • '.$this->departmentLabel($user);
         }
 
         $section = $user->section()
@@ -497,7 +517,11 @@ HTML;
             return 'Assigned report scope';
         }
 
-        return $section->district->name.' • '.$section->name;
+        return $section->district->name
+            .' • '
+            .$section->name
+            .' • '
+            .$this->departmentLabel($user);
     }
 
     private function quantityForStatus(Collection $registrations, string $mode, string $status): int
@@ -514,9 +538,11 @@ HTML;
             ->where('event_id', $event->getKey())
             ->whereIn('registration_status', Registration::capacityReservedStatuses());
 
-        $sectionId = $user->isManager()
-            ? $user->section_id
-            : $section?->getKey();
+        $sectionId = $event->isSectionScoped()
+            ? $event->section_id
+            : ($user->isManager()
+                ? $user->section_id
+                : $section?->getKey());
 
         if ($sectionId !== null) {
             $query->whereHas('pastor', function (Builder $pastorQuery) use ($sectionId): void {
@@ -525,5 +551,21 @@ HTML;
         }
 
         return $query;
+    }
+
+    private function canFilterBySection(User $user, ?Event $selectedEvent): bool
+    {
+        if ($user->isManager()) {
+            return false;
+        }
+
+        return ! $selectedEvent?->isSectionScoped();
+    }
+
+    private function departmentLabel(User $user): string
+    {
+        return $user->department?->name
+            ?? $user->department()->value('name')
+            ?? 'all departments';
     }
 }

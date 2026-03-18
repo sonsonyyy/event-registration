@@ -433,6 +433,6 @@ class UserController extends Controller
             return implode(' · ', $scopeParts);
         }
 
-        return $user->isAdmin() ? 'Global access' : 'No scope assigned';
+        return $user->hasAdminAccess() ? 'Global access' : 'No scope assigned';
     }
 }

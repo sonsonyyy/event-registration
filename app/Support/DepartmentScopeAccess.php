@@ -168,6 +168,63 @@ class DepartmentScopeAccess
         return $query->whereRaw('1 = 0');
     }
 
+    public static function scopeAccessibleEvents(Builder $query, User $user): Builder
+    {
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+
+        if ($user->isAdmin()) {
+            $query->where('scope_type', Event::SCOPE_DISTRICT);
+
+            if ($user->department_id !== null) {
+                $query->where('department_id', $user->department_id);
+            }
+
+            return $query;
+        }
+
+        if ($user->isManager()) {
+            if ($user->section_id === null) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            $query
+                ->where('scope_type', Event::SCOPE_SECTION)
+                ->where('section_id', $user->section_id);
+
+            if ($user->department_id !== null) {
+                $query->where('department_id', $user->department_id);
+            }
+
+            return $query;
+        }
+
+        if ($user->isRegistrationStaff()) {
+            return $query;
+        }
+
+        if ($user->isOnlineRegistrant()) {
+            $sectionId = $user->section_id ?? $user->pastor?->section_id;
+
+            if ($sectionId === null) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query->where(function (Builder $eventQuery) use ($sectionId): void {
+                $eventQuery
+                    ->where('scope_type', Event::SCOPE_DISTRICT)
+                    ->orWhere(function (Builder $sectionEventQuery) use ($sectionId): void {
+                        $sectionEventQuery
+                            ->where('scope_type', Event::SCOPE_SECTION)
+                            ->where('section_id', $sectionId);
+                    });
+            });
+        }
+
+        return $query->whereRaw('1 = 0');
+    }
+
     public static function verificationScopeSummary(User $reviewer): string
     {
         if ($reviewer->isSuperAdmin()) {
