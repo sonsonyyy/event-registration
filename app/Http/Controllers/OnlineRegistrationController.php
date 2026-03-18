@@ -12,8 +12,11 @@ use App\Models\Registration;
 use App\Models\RegistrationItem;
 use App\Models\RegistrationReview;
 use App\Models\User;
+use App\Notifications\RegistrationResubmitted;
+use App\Notifications\RegistrationSubmittedForReview;
 use App\Support\DepartmentScopeAccess;
 use App\Support\EventCapacity;
+use App\Support\NotificationRecipientResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,6 +24,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -29,7 +33,10 @@ use Throwable;
 
 class OnlineRegistrationController extends Controller
 {
-    public function __construct(private readonly EventCapacity $eventCapacity) {}
+    public function __construct(
+        private readonly EventCapacity $eventCapacity,
+        private readonly NotificationRecipientResolver $notificationRecipientResolver,
+    ) {}
 
     public function index(IndexOnlineRegistrationRequest $request): Response
     {
@@ -94,6 +101,7 @@ class OnlineRegistrationController extends Controller
     {
         $validated = $request->validated();
         $receipt = $request->file('receipt');
+        $storedRegistration = null;
 
         if (! $receipt instanceof UploadedFile) {
             throw ValidationException::withMessages([
@@ -106,7 +114,14 @@ class OnlineRegistrationController extends Controller
         $receiptUploadedAt = now();
 
         try {
-            DB::transaction(function () use ($request, $validated, $receipt, $receiptPath, $receiptUploadedAt): void {
+            DB::transaction(function () use (
+                $request,
+                $validated,
+                $receipt,
+                $receiptPath,
+                $receiptUploadedAt,
+                &$storedRegistration,
+            ): void {
                 $event = Event::query()
                     ->lockForUpdate()
                     ->findOrFail($validated['event_id']);
@@ -164,11 +179,16 @@ class OnlineRegistrationController extends Controller
                 ]);
 
                 $this->persistLineItems($registration, $lineItems, $feeCategories);
+                $storedRegistration = $registration->loadMissing('event', 'pastor.section.district', 'encodedByUser.role');
             });
         } catch (Throwable $throwable) {
             Storage::disk($receiptDisk)->delete($receiptPath);
 
             throw $throwable;
+        }
+
+        if ($storedRegistration instanceof Registration) {
+            $this->notifyReviewers($storedRegistration, false);
         }
 
         return to_route('registrations.online.index')
@@ -185,6 +205,8 @@ class OnlineRegistrationController extends Controller
             : null;
         $replacementUploadedAt = $receipt instanceof UploadedFile ? now() : null;
         $previousReceiptPath = null;
+        $updatedRegistration = null;
+        $wasCorrectionResubmission = false;
 
         try {
             DB::transaction(function () use (
@@ -195,6 +217,8 @@ class OnlineRegistrationController extends Controller
                 $replacementReceiptPath,
                 $replacementUploadedAt,
                 &$previousReceiptPath,
+                &$updatedRegistration,
+                &$wasCorrectionResubmission,
             ): void {
                 $registration = Registration::query()
                     ->with([
@@ -204,6 +228,7 @@ class OnlineRegistrationController extends Controller
                     ->findOrFail($registration->getKey());
 
                 Gate::authorize('updateOnline', $registration);
+                $wasCorrectionResubmission = $registration->registration_status === Registration::STATUS_NEEDS_CORRECTION;
 
                 $pastor = $request->user()->pastor()->firstOrFail();
 
@@ -268,6 +293,7 @@ class OnlineRegistrationController extends Controller
                 $registration->items()->delete();
                 $this->persistLineItems($registration, $lineItems, $feeCategories);
                 $this->syncEventStatuses([$originalEventId, $registration->event_id]);
+                $updatedRegistration = $registration->loadMissing('event', 'pastor.section.district', 'encodedByUser.role');
             });
         } catch (Throwable $throwable) {
             if ($replacementReceiptPath !== null) {
@@ -283,6 +309,10 @@ class OnlineRegistrationController extends Controller
             && $previousReceiptPath !== $replacementReceiptPath
         ) {
             Storage::disk($receiptDisk)->delete($previousReceiptPath);
+        }
+
+        if ($updatedRegistration instanceof Registration && $wasCorrectionResubmission) {
+            $this->notifyReviewers($updatedRegistration, true);
         }
 
         return to_route('registrations.online.index')
@@ -532,6 +562,22 @@ class OnlineRegistrationController extends Controller
                 $event->loadSum('reservedRegistrationItems as reserved_quantity', 'quantity');
                 $event->syncOperationalStatus();
             });
+    }
+
+    private function notifyReviewers(Registration $registration, bool $resubmitted): void
+    {
+        $reviewers = $this->notificationRecipientResolver->reviewersForRegistration($registration);
+
+        if ($reviewers->isEmpty()) {
+            return;
+        }
+
+        Notification::send(
+            $reviewers,
+            $resubmitted
+                ? new RegistrationResubmitted($registration)
+                : new RegistrationSubmittedForReview($registration),
+        );
     }
 
     private function onlineRegistrationIndexQuery(User $user, string $search): Builder

@@ -7,13 +7,18 @@ use App\Models\Pastor;
 use App\Models\Role;
 use App\Models\Section;
 use App\Models\User;
+use App\Notifications\RegistrantAccessRequested;
+use App\Support\NotificationRecipientResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class RegistrantAccessController extends Controller
 {
+    public function __construct(private readonly NotificationRecipientResolver $notificationRecipientResolver) {}
+
     public function create(): Response
     {
         return Inertia::render('auth/registrant-access', [
@@ -39,6 +44,8 @@ class RegistrantAccessController extends Controller
         $user->forceFill([
             'email_verified_at' => now(),
         ])->save();
+
+        $this->notifyReviewers($user);
 
         return to_route('login')->with(
             'status',
@@ -126,5 +133,17 @@ class RegistrantAccessController extends Controller
             ->whereHas('role', function (Builder $roleQuery): void {
                 $roleQuery->where('name', Role::ONLINE_REGISTRANT);
             });
+    }
+
+    private function notifyReviewers(User $accountRequest): void
+    {
+        $reviewers = $this->notificationRecipientResolver
+            ->reviewersForRegistrantAccessRequest($accountRequest);
+
+        if ($reviewers->isEmpty()) {
+            return;
+        }
+
+        Notification::send($reviewers, new RegistrantAccessRequested($accountRequest));
     }
 }

@@ -9,11 +9,16 @@ use App\Models\Registration;
 use App\Models\RegistrationItem;
 use App\Models\Section;
 use App\Models\User;
+use App\Notifications\RegistrationResubmitted;
+use App\Notifications\RegistrationSubmittedForReview;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('online registrants can submit registrations with receipt upload stored on the configured disk', function () {
+    Notification::fake();
+
     Storage::fake('local');
     config()->set('registration.receipts_disk', 'local');
 
@@ -31,6 +36,9 @@ test('online registrants can submit registrations with receipt upload stored on 
         'district_id' => $district->id,
         'section_id' => $section->id,
         'pastor_id' => $pastor->id,
+    ]);
+    $reviewer = User::factory()->admin()->create([
+        'district_id' => $district->id,
     ]);
     $event = onlineRegistrationEvent();
     $regular = EventFeeCategory::factory()->for($event)->create([
@@ -91,6 +99,7 @@ test('online registrants can submit registrations with receipt upload stored on 
         ->and($registration->items->firstWhere('fee_category_id', $oneDayPass->id)?->subtotal_amount)->toBe('1200.00');
 
     Storage::disk('local')->assertExists((string) $registration->receipt_file_path);
+    Notification::assertSentTo($reviewer, RegistrationSubmittedForReview::class);
 
     $this->actingAs($registrant)
         ->get(route('registrations.online.index', [
@@ -386,6 +395,8 @@ test('pending registrant accounts cannot access online registration routes', fun
 });
 
 test('online registrants can edit registrations that are awaiting review or correction', function () {
+    Notification::fake();
+
     Storage::fake('local');
     config()->set('registration.receipts_disk', 'local');
 
@@ -403,6 +414,9 @@ test('online registrants can edit registrations that are awaiting review or corr
         'district_id' => $district->id,
         'section_id' => $section->id,
         'pastor_id' => $pastor->id,
+    ]);
+    $reviewer = User::factory()->admin()->create([
+        'district_id' => $district->id,
     ]);
     $event = onlineRegistrationEvent();
     $regular = EventFeeCategory::factory()->for($event)->create([
@@ -498,6 +512,7 @@ test('online registrants can edit registrations that are awaiting review or corr
 
     Storage::disk('local')->assertMissing('registration-receipts/2026/03/original.pdf');
     Storage::disk('local')->assertExists((string) $registration->receipt_file_path);
+    Notification::assertSentTo($reviewer, RegistrationResubmitted::class);
 });
 
 test('online registration update rejects capacity overflow while preserving current reserved quantity', function () {

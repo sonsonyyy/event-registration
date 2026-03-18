@@ -10,12 +10,17 @@ use App\Models\Registration;
 use App\Models\RegistrationItem;
 use App\Models\RegistrationReview;
 use App\Models\User;
+use App\Notifications\RegistrationRejected;
+use App\Notifications\RegistrationReturnedForCorrection;
+use App\Notifications\RegistrationVerified;
 use App\Support\DepartmentScopeAccess;
 use App\Support\EventCapacity;
+use App\Support\NotificationRecipientResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -24,7 +29,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RegistrationVerificationController extends Controller
 {
-    public function __construct(private readonly EventCapacity $eventCapacity) {}
+    public function __construct(
+        private readonly EventCapacity $eventCapacity,
+        private readonly NotificationRecipientResolver $notificationRecipientResolver,
+    ) {}
 
     public function index(IndexRegistrationVerificationRequest $request): Response
     {
@@ -64,12 +72,21 @@ class RegistrationVerificationController extends Controller
         $decision = $request->decision();
         $reviewReason = $request->reviewReason();
         $reviewNotes = $request->reviewNotes();
+        $reviewedRegistration = null;
 
-        DB::transaction(function () use ($decision, $request, $registration, $reviewReason, $reviewNotes): void {
+        DB::transaction(function () use (
+            $decision,
+            $request,
+            $registration,
+            $reviewReason,
+            $reviewNotes,
+            &$reviewedRegistration,
+        ): void {
             $registration = Registration::query()
                 ->with([
                     'event',
                     'items.feeCategory',
+                    'encodedByUser.role',
                     'pastor.section.district',
                 ])
                 ->lockForUpdate()
@@ -109,7 +126,13 @@ class RegistrationVerificationController extends Controller
             $registration->event
                 ->loadSum('reservedRegistrationItems as reserved_quantity', 'quantity')
                 ->syncOperationalStatus();
+
+            $reviewedRegistration = $registration;
         });
+
+        if ($reviewedRegistration instanceof Registration) {
+            $this->notifyRegistrant($reviewedRegistration, $decision);
+        }
 
         return back()->with(
             'success',
@@ -381,6 +404,23 @@ class RegistrationVerificationController extends Controller
                 ]);
             }
         });
+    }
+
+    private function notifyRegistrant(Registration $registration, string $decision): void
+    {
+        $registrant = $this->notificationRecipientResolver->registrantForRegistration($registration);
+
+        if (! $registrant instanceof User) {
+            return;
+        }
+
+        $notification = match ($decision) {
+            Registration::STATUS_VERIFIED => new RegistrationVerified($registration),
+            Registration::STATUS_NEEDS_CORRECTION => new RegistrationReturnedForCorrection($registration),
+            default => new RegistrationRejected($registration),
+        };
+
+        Notification::send($registrant, $notification);
     }
 
     /**

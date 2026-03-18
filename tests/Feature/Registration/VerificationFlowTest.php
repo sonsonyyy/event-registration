@@ -9,7 +9,11 @@ use App\Models\Registration;
 use App\Models\RegistrationItem;
 use App\Models\Section;
 use App\Models\User;
+use App\Notifications\RegistrationRejected;
+use App\Notifications\RegistrationReturnedForCorrection;
+use App\Notifications\RegistrationVerified;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -120,6 +124,8 @@ test('managers can view a verification queue scoped to their assigned section', 
 });
 
 test('admins can open uploaded receipts and verify online registrations', function () {
+    Notification::fake();
+
     Storage::fake('local');
     config()->set('registration.receipts_disk', 'local');
 
@@ -167,6 +173,8 @@ test('admins can open uploaded receipts and verify online registrations', functi
     expect($registration->registration_status)->toBe(Registration::STATUS_VERIFIED)
         ->and($registration->verified_by_user_id)->toBe($admin->id)
         ->and($registration->verified_at)->not->toBeNull();
+
+    Notification::assertSentTo($registrant, RegistrationVerified::class);
 });
 
 test('department-scoped reviewers are limited to matching departments and event scope', function () {
@@ -332,6 +340,8 @@ test('department-scoped reviewers are limited to matching departments and event 
 });
 
 test('reviewers can return registrations for correction with a reason and reviewer notes', function () {
+    Notification::fake();
+
     Storage::fake('local');
     config()->set('registration.receipts_disk', 'local');
 
@@ -391,9 +401,13 @@ test('reviewers can return registrations for correction with a reason and review
         ->and($registration->reviews->first()->reason)->toBe('The uploaded receipt is blurred.')
         ->and($registration->reviews->first()->notes)->toBe('Ask the church to upload a clearer file before the cutoff.')
         ->and($registration->reviews->first()->reviewer?->is($manager))->toBeTrue();
+
+    Notification::assertSentTo($registrant, RegistrationReturnedForCorrection::class);
 });
 
 test('rejected registrations release capacity for a replacement online submission', function () {
+    Notification::fake();
+
     Storage::fake('local');
     config()->set('registration.receipts_disk', 'local');
 
@@ -462,6 +476,8 @@ test('rejected registrations release capacity for a replacement online submissio
 
     expect(Registration::query()->count())->toBe(2)
         ->and($registration->fresh()->registration_status)->toBe(Registration::STATUS_REJECTED);
+
+    Notification::assertSentTo($registrant, RegistrationRejected::class);
 });
 
 test('reviewers must provide a reason when returning registrations for correction or rejecting them', function () {

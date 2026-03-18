@@ -5,6 +5,8 @@ use App\Models\Pastor;
 use App\Models\Role;
 use App\Models\Section;
 use App\Models\User;
+use App\Notifications\RegistrantAccessRequested;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('guests can submit self-service registrant account requests', function () {
@@ -147,4 +149,38 @@ test('self-service requests require an email address with a top-level domain', f
         ])
         ->assertRedirect(route('registrant-access.create'))
         ->assertSessionHasErrors(['email']);
+});
+
+test('self-service requests notify eligible reviewers', function () {
+    Notification::fake();
+
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $pastor = Pastor::factory()->for($section)->create([
+        'church_name' => 'Grace Community Church',
+    ]);
+    $eligibleAdmin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $eligibleManager = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+    ]);
+    $outsideManager = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => Section::factory()->for($district)->create()->id,
+    ]);
+
+    $this->post(route('registrant-access.store'), [
+        'name' => 'Church Representative',
+        'email' => 'representative@example.com',
+        'section_id' => $section->id,
+        'pastor_id' => $pastor->id,
+        'password' => 'password',
+        'password_confirmation' => 'password',
+    ])->assertRedirect(route('login'));
+
+    Notification::assertSentTo($eligibleAdmin, RegistrantAccessRequested::class);
+    Notification::assertSentTo($eligibleManager, RegistrantAccessRequested::class);
+    Notification::assertNotSentTo($outsideManager, RegistrantAccessRequested::class);
 });

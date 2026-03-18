@@ -6,17 +6,23 @@ use App\Http\Requests\IndexRegistrantApprovalRequest;
 use App\Http\Requests\UpdateRegistrantApprovalRequest;
 use App\Models\Role;
 use App\Models\User;
+use App\Notifications\RegistrantAccessApproved;
+use App\Notifications\RegistrantAccessRejected;
 use App\Support\DepartmentScopeAccess;
+use App\Support\NotificationRecipientResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class RegistrantApprovalController extends Controller
 {
+    public function __construct(private readonly NotificationRecipientResolver $notificationRecipientResolver) {}
+
     public function index(IndexRegistrantApprovalRequest $request): Response
     {
         Gate::authorize('viewAnyApprovalQueue', User::class);
@@ -53,8 +59,9 @@ class RegistrantApprovalController extends Controller
     public function update(UpdateRegistrantApprovalRequest $request, User $user): RedirectResponse
     {
         $decision = $request->decision();
+        $accountRequest = null;
 
-        DB::transaction(function () use ($request, $user, $decision): void {
+        DB::transaction(function () use ($request, $user, $decision, &$accountRequest): void {
             $accountRequest = User::query()
                 ->with([
                     'role:id,name',
@@ -86,6 +93,10 @@ class RegistrantApprovalController extends Controller
                 'approval_reviewed_at' => now(),
             ])->save();
         });
+
+        if ($accountRequest instanceof User) {
+            $this->notifyRegistrant($accountRequest, $decision);
+        }
 
         return back()->with(
             'success',
@@ -251,5 +262,21 @@ class RegistrantApprovalController extends Controller
                 $roleQuery->where('name', Role::ONLINE_REGISTRANT);
             })
             ->count() >= User::MAX_REGISTRANT_ACCOUNTS_PER_PASTOR;
+    }
+
+    private function notifyRegistrant(User $accountRequest, string $decision): void
+    {
+        $registrant = $this->notificationRecipientResolver
+            ->registrantForRegistrantAccessRequest($accountRequest);
+
+        if (! $registrant instanceof User) {
+            return;
+        }
+
+        $notification = $decision === User::APPROVAL_APPROVED
+            ? new RegistrantAccessApproved($accountRequest)
+            : new RegistrantAccessRejected($accountRequest);
+
+        Notification::send($registrant, $notification);
     }
 }

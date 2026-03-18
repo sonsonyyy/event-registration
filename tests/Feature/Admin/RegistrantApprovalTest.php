@@ -5,9 +5,14 @@ use App\Models\District;
 use App\Models\Pastor;
 use App\Models\Section;
 use App\Models\User;
+use App\Notifications\RegistrantAccessApproved;
+use App\Notifications\RegistrantAccessRejected;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('admins can review self-service registrant account requests', function () {
+    Notification::fake();
+
     $district = District::factory()->create([
         'name' => 'Central Luzon',
     ]);
@@ -75,6 +80,8 @@ test('admins can review self-service registrant account requests', function () {
     expect($pendingRequest->approval_status)->toBe(User::APPROVAL_APPROVED)
         ->and($pendingRequest->approval_reviewed_by_user_id)->toBe($admin->id)
         ->and($pendingRequest->approval_reviewed_at)->not->toBeNull();
+
+    Notification::assertSentTo($pendingRequest, RegistrantAccessApproved::class);
 
     $this->actingAs($pendingRequest)
         ->get(route('dashboard'))
@@ -189,4 +196,30 @@ test('admins cannot approve a third registrant account for the same church', fun
         ->assertSessionHasErrors(['decision']);
 
     expect($pendingRequest->refresh()->approval_status)->toBe(User::APPROVAL_PENDING);
+});
+
+test('reviewers notify registrants when requests are rejected', function () {
+    Notification::fake();
+
+    $admin = User::factory()->admin()->create();
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $pastor = Pastor::factory()->for($section)->create();
+    $pendingRequest = User::factory()
+        ->onlineRegistrant()
+        ->selfServiceAccount()
+        ->pendingApproval()
+        ->create([
+            'district_id' => $district->id,
+            'section_id' => $section->id,
+            'pastor_id' => $pastor->id,
+        ]);
+
+    $this->actingAs($admin)
+        ->patch(route('account-requests.update', $pendingRequest), [
+            'decision' => User::APPROVAL_REJECTED,
+        ])
+        ->assertRedirect();
+
+    Notification::assertSentTo($pendingRequest, RegistrantAccessRejected::class);
 });
