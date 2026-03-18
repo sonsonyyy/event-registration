@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { NotificationMenu } from '@/components/notification-menu';
 import { UserMenuContent } from '@/components/user-menu-content';
 import {
     DropdownMenu,
@@ -23,7 +24,8 @@ export function AppSidebarHeader({
                 <SidebarTrigger className="-ml-1" />
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
             </div>
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-1">
+                <NotificationMenu />
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button

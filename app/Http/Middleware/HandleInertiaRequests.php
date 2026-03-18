@@ -8,6 +8,7 @@ use App\Models\Registration;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Middleware;
@@ -128,7 +129,83 @@ class HandleInertiaRequests extends Middleware
                     'reviewRegistrantAccounts' => $user?->can('viewAnyApprovalQueue', User::class) ?? false,
                 ],
             ],
+            'notifications' => $this->notificationData($user),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+        ];
+    }
+
+    /**
+     * @return array{
+     *     unread_count: int,
+     *     recent: array<int, array{
+     *         id: string,
+     *         type: string,
+     *         title: string,
+     *         message: string,
+     *         action_url: string,
+     *         action_label: string,
+     *         related_type: string|null,
+     *         related_id: int|null,
+     *         meta: array<string, mixed>,
+     *         read_at: string|null,
+     *         created_at: string|null
+     *     }>
+     * }
+     */
+    private function notificationData(?User $user): array
+    {
+        if (! $user instanceof User) {
+            return [
+                'unread_count' => 0,
+                'recent' => [],
+            ];
+        }
+
+        $recentNotifications = $user->notifications()
+            ->latest()
+            ->limit(8)
+            ->get()
+            ->map(fn (DatabaseNotification $notification): array => $this->transformNotification($notification))
+            ->all();
+
+        return [
+            'unread_count' => $user->unreadNotifications()->count(),
+            'recent' => $recentNotifications,
+        ];
+    }
+
+    /**
+     * @return array{
+     *     id: string,
+     *     type: string,
+     *     title: string,
+     *     message: string,
+     *     action_url: string,
+     *     action_label: string,
+     *     related_type: string|null,
+     *     related_id: int|null,
+     *     meta: array<string, mixed>,
+     *     read_at: string|null,
+     *     created_at: string|null
+     * }
+     */
+    private function transformNotification(DatabaseNotification $notification): array
+    {
+        /** @var array<string, mixed> $data */
+        $data = $notification->data;
+
+        return [
+            'id' => (string) $notification->getKey(),
+            'type' => (string) ($data['type'] ?? 'workflow'),
+            'title' => (string) ($data['title'] ?? 'Notification'),
+            'message' => (string) ($data['message'] ?? ''),
+            'action_url' => (string) ($data['action_url'] ?? route('dashboard', absolute: false)),
+            'action_label' => (string) ($data['action_label'] ?? 'Open'),
+            'related_type' => isset($data['related_type']) ? (string) $data['related_type'] : null,
+            'related_id' => isset($data['related_id']) ? (int) $data['related_id'] : null,
+            'meta' => is_array($data['meta'] ?? null) ? $data['meta'] : [],
+            'read_at' => $notification->read_at?->toIso8601String(),
+            'created_at' => $notification->created_at?->toIso8601String(),
         ];
     }
 

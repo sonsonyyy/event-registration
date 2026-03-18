@@ -9,6 +9,7 @@ use App\Models\Registration;
 use App\Models\RegistrationItem;
 use App\Models\Section;
 use App\Models\User;
+use App\Notifications\RegistrantAccessRequested;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('guests are redirected to the login page', function () {
@@ -29,6 +30,8 @@ test('authenticated users can visit the dashboard', function () {
             ->where('appVersion', config('app.version'))
             ->where('auth.user.name', $user->name)
             ->where('auth.user.email', $user->email)
+            ->where('notifications.unread_count', 0)
+            ->has('notifications.recent', 0)
             ->has('dashboard.hero')
             ->has('dashboard.links')
             ->has('dashboard.scope')
@@ -36,6 +39,37 @@ test('authenticated users can visit the dashboard', function () {
             ->has('dashboard.open_events')
             ->has('dashboard.recent_registrations')
             ->where('auth.can.viewSystemAdminMenu', false));
+});
+
+test('authenticated users receive recent notification data in shared props', function () {
+    $reviewer = User::factory()->admin()->create();
+    $pastor = Pastor::factory()->create([
+        'church_name' => 'Grace Community Church',
+    ]);
+    $requestUser = User::factory()
+        ->onlineRegistrant()
+        ->selfServiceAccount()
+        ->pendingApproval()
+        ->create([
+            'district_id' => $pastor->section->district_id,
+            'section_id' => $pastor->section_id,
+            'pastor_id' => $pastor->id,
+            'name' => 'Church Representative',
+        ]);
+
+    $reviewer->notify(new RegistrantAccessRequested($requestUser));
+
+    $this->actingAs($reviewer)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->where('notifications.unread_count', 1)
+            ->has('notifications.recent', 1)
+            ->where('notifications.recent.0.type', 'registrant_access_requested')
+            ->where('notifications.recent.0.title', 'New account request')
+            ->where('notifications.recent.0.action_label', 'Review request')
+            ->where('notifications.recent.0.meta.church_name', 'Grace Community Church'));
 });
 
 test('only super admins receive the system admin menu flag', function () {

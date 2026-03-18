@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\SectionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnlineRegistrationController;
 use App\Http\Controllers\OnsiteRegistrationController;
 use App\Http\Controllers\RegistrantAccessController;
@@ -75,6 +76,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->group(function (): void {
             Route::get('/', [RegistrantApprovalController::class, 'index'])->name('index');
             Route::patch('{user}', [RegistrantApprovalController::class, 'update'])->name('update');
+        });
+
+    Route::prefix('notifications')
+        ->name('notifications.')
+        ->group(function (): void {
+            Route::patch('{notification}/read', [NotificationController::class, 'markRead'])->name('read');
+            Route::post('read-all', [NotificationController::class, 'markAllRead'])->name('read-all');
         });
 
     Route::prefix('admin')

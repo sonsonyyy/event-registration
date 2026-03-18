@@ -28,6 +28,25 @@ export type Auth = {
     };
 };
 
+export type WorkflowNotification = {
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    action_url: string;
+    action_label: string;
+    related_type: string | null;
+    related_id: number | null;
+    meta: Record<string, unknown>;
+    read_at: string | null;
+    created_at: string | null;
+};
+
+export type NotificationCenter = {
+    unread_count: number;
+    recent: WorkflowNotification[];
+};
+
 export type TwoFactorSetupData = {
     svg: string;
     url: string;
