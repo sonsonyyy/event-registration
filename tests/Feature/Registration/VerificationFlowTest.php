@@ -180,6 +180,8 @@ test('admins can open uploaded receipts and verify online registrations', functi
 test('verification receipt route redirects to a temporary url when receipts are stored on s3', function () {
     Storage::fake('s3');
     config()->set('registration.receipts_disk', 's3');
+    config()->set('filesystems.disks.s3.bucket', 'event-registration-receipts');
+    config()->set('filesystems.disks.s3.region', 'ap-southeast-1');
 
     $admin = User::factory()->admin()->create();
     $event = verificationEvent();

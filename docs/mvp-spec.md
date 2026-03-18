@@ -388,6 +388,17 @@ If general non-departmental events exist at a scope, a non-departmental reviewer
 - Verification and registration history screens must access receipts through authorized temporary access, not public bucket exposure
 - Replaced receipts should delete the previous object after a successful update
 - Failed or rolled-back uploads must not leave orphaned objects when cleanup is possible
+- Production receipt storage must set `ONLINE_REGISTRATION_RECEIPTS_DISK=s3`, `AWS_DEFAULT_REGION`, and `AWS_BUCKET`
+- Production deployments may use static credentials or an IAM role / equivalent provider identity
+- `AWS_URL` and `AWS_ENDPOINT` stay empty for standard AWS S3 and are only populated for S3-compatible providers when required
+- `AWS_USE_PATH_STYLE_ENDPOINT` remains `false` unless the provider requires path-style access
+
+### Production Bucket Settings
+- Keep the bucket private and block all public access
+- Disable public website hosting on the receipt bucket
+- Restrict application access to object read, write, and delete operations only
+- Serve receipts through temporary authorized access instead of public bucket URLs
+- Keep bucket and region configuration aligned with the deployed environment
 
 ---
 

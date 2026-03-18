@@ -2,9 +2,11 @@
 
 namespace App\Support;
 
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -20,6 +22,8 @@ class RegistrationReceiptStorage
         $directory = trim((string) config('registration.receipt_directory'), '/');
         $destination = $directory.'/'.now()->format('Y/m');
 
+        $this->assertDiskConfiguration();
+
         return $receipt->store($destination, $this->diskName());
     }
 
@@ -29,17 +33,17 @@ class RegistrationReceiptStorage
             return;
         }
 
-        Storage::disk($this->diskName())->delete($path);
+        $this->disk()->delete($path);
     }
 
     public function exists(string $path): bool
     {
-        return Storage::disk($this->diskName())->exists($path);
+        return $this->disk()->exists($path);
     }
 
     public function receiptResponse(string $path, ?string $originalName): Response
     {
-        $disk = Storage::disk($this->diskName());
+        $disk = $this->disk();
         $downloadName = $originalName ?: basename($path);
 
         if ($this->usesTemporaryUrlRedirects() && $disk->providesTemporaryUrls()) {
@@ -52,6 +56,43 @@ class RegistrationReceiptStorage
     private function usesTemporaryUrlRedirects(): bool
     {
         return config('filesystems.disks.'.$this->diskName().'.driver') === 's3';
+    }
+
+    private function disk(): FilesystemAdapter
+    {
+        $this->assertDiskConfiguration();
+
+        return Storage::disk($this->diskName());
+    }
+
+    private function assertDiskConfiguration(): void
+    {
+        if (! $this->usesTemporaryUrlRedirects()) {
+            return;
+        }
+
+        $diskConfig = config('filesystems.disks.'.$this->diskName(), []);
+
+        if (! is_array($diskConfig)) {
+            throw new RuntimeException('The configured receipt storage disk is invalid.');
+        }
+
+        $missing = collect(['bucket', 'region'])
+            ->reject(fn (string $key): bool => filled($diskConfig[$key] ?? null))
+            ->values()
+            ->all();
+
+        if ($missing === []) {
+            return;
+        }
+
+        throw new RuntimeException(
+            sprintf(
+                'The [%s] receipt storage disk is missing required S3 configuration: %s.',
+                $this->diskName(),
+                implode(', ', $missing),
+            ),
+        );
     }
 
     private function temporaryUrlRedirect(string $path, string $downloadName): RedirectResponse

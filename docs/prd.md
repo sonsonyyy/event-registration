@@ -382,6 +382,17 @@ Uploaded proof-of-payment files must be stored on S3-compatible object storage i
 - Local development may still use local disk when cloud credentials are not configured
 - Receipt delivery should use authorized temporary access or an application-controlled proxy route
 - Bucket contents must not be exposed publicly by default
+- Production receipt storage must have `ONLINE_REGISTRATION_RECEIPTS_DISK=s3`, `AWS_DEFAULT_REGION`, and `AWS_BUCKET` configured
+- Production deployments may use static AWS credentials or an IAM role / equivalent provider identity
+- `AWS_URL` and `AWS_ENDPOINT` should remain empty for standard AWS S3 and only be set for S3-compatible providers when required
+- `AWS_USE_PATH_STYLE_ENDPOINT` should remain `false` unless the object-storage provider explicitly requires path-style access
+
+#### Production Bucket Settings
+- Keep the bucket private and block all public access
+- Disable public website hosting for the receipt bucket
+- Limit application access to object read, write, and delete operations only
+- Use short-lived temporary URLs for authorized receipt access instead of public object URLs
+- Keep region and bucket naming consistent with deployed environment configuration
 
 ---
 

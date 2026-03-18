@@ -210,6 +210,8 @@ test('online registrants only see accessible events and cannot submit registrati
 test('online registrations can store receipts on s3 when the configured disk uses s3', function () {
     Storage::fake('s3');
     config()->set('registration.receipts_disk', 's3');
+    config()->set('filesystems.disks.s3.bucket', 'event-registration-receipts');
+    config()->set('filesystems.disks.s3.region', 'ap-southeast-1');
 
     $pastor = Pastor::factory()->create();
     $registrant = User::factory()->onlineRegistrant()->create([
