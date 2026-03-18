@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage, usePoll } from '@inertiajs/react';
 import {
     ChevronLeft,
     ChevronRight,
@@ -360,6 +360,11 @@ function PublicEventsCarousel({
 
 export default function Welcome() {
     const { auth, events, registrationFlow, faqs } = usePage<PageProps>().props;
+
+    usePoll(20000, {
+        only: ['events'],
+    });
+
     const currentYear = new Intl.DateTimeFormat('en-US', {
         year: 'numeric',
         timeZone: 'Asia/Manila',

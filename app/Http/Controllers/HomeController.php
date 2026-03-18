@@ -13,9 +13,9 @@ class HomeController extends Controller
     public function __invoke(EventCapacity $eventCapacity): Response
     {
         return Inertia::render('welcome', [
-            'events' => $this->publicEvents($eventCapacity),
-            'registrationFlow' => $this->registrationFlow(),
-            'faqs' => $this->registrationFaqs(),
+            'events' => fn (): array => $this->publicEvents($eventCapacity),
+            'registrationFlow' => fn (): array => $this->registrationFlow(),
+            'faqs' => fn (): array => $this->registrationFaqs(),
         ]);
     }
 
