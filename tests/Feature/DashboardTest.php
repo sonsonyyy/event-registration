@@ -24,12 +24,36 @@ test('authenticated users can visit the dashboard', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('dashboard')
+            ->where('name', config('app.name'))
+            ->where('appVersion', config('app.version'))
+            ->where('auth.user.name', $user->name)
+            ->where('auth.user.email', $user->email)
             ->has('dashboard.hero')
             ->has('dashboard.links')
             ->has('dashboard.scope')
             ->has('dashboard.metrics', 4)
             ->has('dashboard.open_events')
-            ->has('dashboard.recent_registrations'));
+            ->has('dashboard.recent_registrations')
+            ->where('auth.can.viewSystemAdminMenu', false));
+});
+
+test('only super admins receive the system admin menu flag', function () {
+    $superAdmin = User::factory()->superAdmin()->create();
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($superAdmin)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->where('auth.can.viewSystemAdminMenu', true));
+
+    $this->actingAs($admin)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->where('auth.can.viewSystemAdminMenu', false));
 });
 
 test('manager dashboard is limited to the assigned section scope', function () {

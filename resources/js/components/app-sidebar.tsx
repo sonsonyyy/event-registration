@@ -13,7 +13,6 @@ import RegistrationVerificationController from '@/actions/App/Http/Controllers/R
 import RegistrantApprovalController from '@/actions/App/Http/Controllers/RegistrantApprovalController';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
-import { NavUser } from '@/components/nav-user';
 import {
     Sidebar,
     SidebarContent,
@@ -24,11 +23,15 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import type { NavItem } from '@/types';
+import type { Auth, NavItem, NavItemGroup } from '@/types';
 
 export function AppSidebar() {
-    const { auth } = usePage().props;
-    const mainNavItems: NavItem[] = [
+    const { auth, appVersion, name } = usePage<{
+        auth: Auth;
+        appVersion: string;
+        name: string;
+    }>().props;
+    const menuNavItems: NavItem[] = [
         {
             title: 'Dashboard',
             href: dashboard(),
@@ -79,15 +82,9 @@ export function AppSidebar() {
                   },
               ]
             : []),
-        ...(auth.can.manageUsers
-            ? [
-                  {
-                      title: 'Users',
-                      href: UserController.index(),
-                      icon: Users,
-                  },
-              ]
-            : []),
+    ];
+
+    const adminNavItems: NavItem[] = [
         ...(auth.can.manageEvents
             ? [
                   {
@@ -97,7 +94,17 @@ export function AppSidebar() {
                   },
               ]
             : []),
-        ...(auth.can.manageMasterData
+        ...(auth.can.manageUsers
+            && auth.can.viewSystemAdminMenu
+            ? [
+                  {
+                      title: 'Users',
+                      href: UserController.index(),
+                      icon: Users,
+                  },
+              ]
+            : []),
+        ...(auth.can.manageMasterData && auth.can.viewSystemAdminMenu
             ? [
                   {
                       title: 'Departments',
@@ -123,6 +130,17 @@ export function AppSidebar() {
             : []),
     ];
 
+    const navGroups: NavItemGroup[] = [
+        {
+            title: 'Menu',
+            items: menuNavItems,
+        },
+        {
+            title: 'Admin',
+            items: adminNavItems,
+        },
+    ];
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -138,11 +156,18 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain groups={navGroups} />
             </SidebarContent>
 
-            <SidebarFooter>
-                <NavUser />
+            <SidebarFooter className="border-t border-sidebar-border/60 p-3 group-data-[collapsible=icon]:hidden">
+                <div className="rounded-md border border-sidebar-border/70 bg-sidebar-accent/70 px-3 py-3">
+                    <p className="truncate text-sm font-medium text-sidebar-foreground">
+                        {name}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                        Version {appVersion}
+                    </p>
+                </div>
             </SidebarFooter>
         </Sidebar>
     );

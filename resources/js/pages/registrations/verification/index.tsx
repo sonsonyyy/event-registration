@@ -21,6 +21,7 @@ import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import RegistrationRecordDialog from '@/components/registration-record-dialog';
+import SummaryStatCards from '@/components/summary-stat-cards';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -296,40 +297,10 @@ export default function RegistrationVerificationIndex({
                     description={`Review uploaded receipts and resolve registrations within ${scopeSummary}.`}
                 />
 
-                <div className="grid gap-4 xl:grid-cols-4">
-                    {summaryCards.map((card) => (
-                        <div
-                            key={card.title}
-                            className={`${reviewWorkspaceStyles.summaryCard} ${card.cardClassName}`}
-                        >
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="space-y-3">
-                                    <div
-                                        className={`text-xs font-semibold tracking-[0.22em] uppercase ${reviewWorkspaceStyles.summaryEyebrow}`}
-                                    >
-                                        {card.title}
-                                    </div>
-                                    <div
-                                        className={`text-3xl font-semibold tracking-[-0.04em] ${reviewWorkspaceStyles.summaryValue}`}
-                                    >
-                                        {card.value}
-                                    </div>
-                                    <div
-                                        className={`text-sm ${reviewWorkspaceStyles.summarySubtitle}`}
-                                    >
-                                        {card.subtitle}
-                                    </div>
-                                </div>
-
-                                <div
-                                    className={`${reviewWorkspaceStyles.summaryIconWrapper} ${card.iconWrapperClassName}`}
-                                >
-                                    <card.icon className="size-5" />
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                <SummaryStatCards
+                    gridClassName="grid gap-4 xl:grid-cols-4"
+                    items={summaryCards}
+                />
 
                 <div className={reviewWorkspaceStyles.shell}>
                     <div className={reviewWorkspaceStyles.band}>

@@ -101,6 +101,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'appVersion' => config('app.version'),
             'auth' => [
                 'user' => $user ? [
                     'id' => $user->id,
@@ -117,6 +118,7 @@ class HandleInertiaRequests extends Middleware
                 'can' => [
                     'manageEvents' => $user?->can('create', Event::class) ?? false,
                     'manageMasterData' => $user?->can('viewAny', District::class) ?? false,
+                    'viewSystemAdminMenu' => $user?->isSuperAdmin() ?? false,
                     'manageOnlineRegistrations' => ($user?->isOnlineRegistrant() ?? false)
                         && ($user?->can('viewAnyOnline', Registration::class) ?? false),
                     'manageOnsiteRegistrations' => $user?->can('viewAnyOnsite', Registration::class) ?? false,

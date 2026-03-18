@@ -1,5 +1,14 @@
 import { Head } from '@inertiajs/react';
+import {
+    BadgeCheck,
+    Building2,
+    CalendarRange,
+    Clock3,
+    Users,
+} from 'lucide-react';
+import { reviewWorkspaceStyles } from '@/components/data-table-presets';
 import Heading from '@/components/heading';
+import SummaryStatCards from '@/components/summary-stat-cards';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -85,33 +94,6 @@ type Props = {
     };
 };
 
-const metricCardClasses = [
-    {
-        card: 'border border-[#d6e2de] border-t-4 border-t-[#184d47] bg-[linear-gradient(145deg,_rgba(24,77,71,0.10),_rgba(255,255,255,0.98))] shadow-[#184d47]/8',
-        label: 'text-slate-600',
-        value: 'text-slate-900',
-        description: 'text-slate-600',
-    },
-    {
-        card: 'border border-[#d9e2de] border-t-4 border-t-slate-900 bg-white shadow-[#184d47]/6',
-        label: 'text-slate-600',
-        value: 'text-slate-900',
-        description: 'text-slate-600',
-    },
-    {
-        card: 'border border-[#d9e2de] border-t-4 border-t-slate-900 bg-white shadow-[#184d47]/6',
-        label: 'text-slate-600',
-        value: 'text-slate-900',
-        description: 'text-slate-600',
-    },
-    {
-        card: 'border border-[#184d47]/20 border-t-4 border-t-[#8bc4b5] bg-[#184d47] text-white shadow-[#184d47]/20',
-        label: 'text-white/75',
-        value: 'text-white',
-        description: 'text-white/75',
-    },
-];
-
 const formatDateTime = (value: string | null): string => {
     if (! value) {
         return 'Not submitted';
@@ -156,6 +138,60 @@ const paymentStatusVariant = (
 
 const registrationModeLabel = (mode: string): string =>
     mode === 'online' ? 'Online' : 'Onsite';
+
+const metricCardAppearance = (
+    label: string,
+): {
+    cardClassName: string;
+    iconWrapperClassName: string;
+    iconClassName: string;
+    iconPresentation: 'plain';
+    icon: typeof CalendarRange;
+} => {
+    switch (label.toLowerCase()) {
+        case 'pending verification':
+            return {
+                cardClassName: reviewWorkspaceStyles.summaryCardPending,
+                iconWrapperClassName: '',
+                iconClassName: 'text-amber-700 dark:text-amber-300',
+                iconPresentation: 'plain',
+                icon: Clock3,
+            };
+        case 'active users':
+            return {
+                cardClassName: reviewWorkspaceStyles.summaryCardApproved,
+                iconWrapperClassName: '',
+                iconClassName: 'text-[#184d47] dark:text-emerald-300',
+                iconPresentation: 'plain',
+                icon: Users,
+            };
+        case 'active churches':
+        case 'assigned churches':
+            return {
+                cardClassName: reviewWorkspaceStyles.summaryCardApproved,
+                iconWrapperClassName: '',
+                iconClassName: 'text-[#184d47] dark:text-emerald-300',
+                iconPresentation: 'plain',
+                icon: Building2,
+            };
+        case 'open events':
+            return {
+                cardClassName: reviewWorkspaceStyles.summaryCardApproved,
+                iconWrapperClassName: '',
+                iconClassName: 'text-[#184d47] dark:text-emerald-300',
+                iconPresentation: 'plain',
+                icon: CalendarRange,
+            };
+        default:
+            return {
+                cardClassName: reviewWorkspaceStyles.summaryCardApproved,
+                iconWrapperClassName: '',
+                iconClassName: 'text-[#184d47] dark:text-emerald-300',
+                iconPresentation: 'plain',
+                icon: BadgeCheck,
+            };
+    }
+};
 
 export default function Dashboard({ dashboard }: Props) {
     const noticeClassName =
@@ -252,30 +288,24 @@ export default function Dashboard({ dashboard }: Props) {
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    {dashboard.metrics.map((metric, index) => {
-                        const style =
-                            metricCardClasses[index] ??
-                            metricCardClasses[metricCardClasses.length - 1];
+                    <SummaryStatCards
+                        gridClassName="contents"
+                        items={dashboard.metrics.map((metric) => {
+                            const style = metricCardAppearance(metric.label);
 
-                        return (
-                            <Card
-                                key={metric.label}
-                                className={`overflow-hidden rounded-md py-0 shadow-sm ${style.card}`}
-                            >
-                                <CardContent className="p-5">
-                                    <div className={`text-sm font-medium ${style.label}`}>
-                                        {metric.label}
-                                    </div>
-                                    <div className={`mt-5 text-3xl font-semibold ${style.value}`}>
-                                        {metric.value}
-                                    </div>
-                                    <div className={`mt-2 text-sm ${style.description}`}>
-                                        {metric.description}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
+                            return {
+                                title: metric.label,
+                                value: metric.value,
+                                subtitle: metric.description,
+                                icon: style.icon,
+                                cardClassName: style.cardClassName,
+                                iconWrapperClassName:
+                                    style.iconWrapperClassName,
+                                iconClassName: style.iconClassName,
+                                iconPresentation: style.iconPresentation,
+                            };
+                        })}
+                    />
                 </div>
 
                 <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">

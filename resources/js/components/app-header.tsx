@@ -104,7 +104,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                   },
               ]
             : []),
-        ...(auth.can.manageUsers
+        ...(auth.can.manageUsers && auth.can.viewSystemAdminMenu
             ? [
                   {
                       title: 'Users',
@@ -122,7 +122,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                   },
               ]
             : []),
-        ...(auth.can.manageMasterData
+        ...(auth.can.manageMasterData && auth.can.viewSystemAdminMenu
             ? [
                   {
                       title: 'Departments',

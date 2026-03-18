@@ -79,7 +79,7 @@ export const reviewWorkspaceStyles = {
     summaryValue: 'text-slate-900 dark:text-slate-100',
     summarySubtitle: 'text-slate-600 dark:text-slate-400',
     summaryIconWrapper:
-        'flex size-11 items-center justify-center rounded-2xl',
+        'flex size-11 items-center justify-center rounded-md',
     summaryIconPending:
         'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
     summaryIconApproved:
