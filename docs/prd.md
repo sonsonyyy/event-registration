@@ -30,6 +30,7 @@ The system is operated per district deployment, but the product structure should
 - Onsite registration
 - Online registration
 - Receipt upload for online registration
+- S3-backed receipt storage
 - Registration verification
 - In-app workflow notifications
 - Capacity tracking and reservation
@@ -359,11 +360,32 @@ Used by authorized church registrants assigned to a pastor/church.
 - System reserves event and fee-category capacity immediately after successful submission
 - Receipt or reference number is required
 - Proof of payment is required
+- Proof of payment files must be stored in S3-compatible object storage for production use
+- Uploaded receipt access must remain authorization-controlled
 - One receipt can cover multiple fee-category quantities in one submission
 
 ---
 
-### 6.9 Notifications
+### 6.9 File Storage
+#### Description
+Uploaded proof-of-payment files must be stored on S3-compatible object storage instead of relying on local application disk storage.
+
+#### Functional Requirements
+- Store online registration receipt uploads on a configurable cloud disk
+- Keep stored receipt objects private by default
+- Preserve original file name and upload timestamp metadata
+- Support authorized viewing of receipts during verification and history review
+- Delete replaced receipt objects after successful updates
+
+#### Storage Rules
+- Production deployments should use S3 or S3-compatible object storage
+- Local development may still use local disk when cloud credentials are not configured
+- Receipt delivery should use authorized temporary access or an application-controlled proxy route
+- Bucket contents must not be exposed publicly by default
+
+---
+
+### 6.10 Notifications
 #### Description
 In-app workflow notifications keep reviewers and registrants aware of approval and verification updates.
 
@@ -393,7 +415,7 @@ In-app workflow notifications keep reviewers and registrants aware of approval a
 
 ---
 
-### 6.10 Reports
+### 6.11 Reports
 #### Required Reports
 - Event total registration
 - No registration report
@@ -460,7 +482,7 @@ If general non-departmental events exist at a scope, at least one general review
 2. Selects an open event
 3. Adds one or more fee-category line items
 4. Enters receipt/reference number
-5. Uploads proof of payment
+5. Uploads proof of payment to private cloud object storage
 6. Submits registration and reserves capacity immediately
 7. Assigned reviewers receive in-app notification for verification
 8. Assigned reviewer verifies or returns the registration
@@ -497,6 +519,11 @@ If general non-departmental events exist at a scope, at least one general review
 - `events.section_id` nullable
 - `events.department_id` nullable
 
+### Receipt Storage Notes
+- Existing registration receipt metadata remains the source of truth
+- `receipt_file_path` stores the object key on the configured storage disk
+- The storage disk should be environment-driven so local and production deployments can differ safely
+
 ---
 
 ## 10. Product Direction
@@ -508,5 +535,6 @@ The product should be implemented around this model:
 - `null department` means general authority within the assigned scope
 - position/title is metadata, not authorization
 - registrant accounts stay church-based
+- uploaded receipt files should be stored on private S3-compatible object storage in production
 
 This keeps the system operationally clear while supporting both departmental and general district events.

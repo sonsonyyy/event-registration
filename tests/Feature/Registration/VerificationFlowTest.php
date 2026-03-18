@@ -177,6 +177,45 @@ test('admins can open uploaded receipts and verify online registrations', functi
     Notification::assertSentTo($registrant, RegistrationVerified::class);
 });
 
+test('verification receipt route redirects to a temporary url when receipts are stored on s3', function () {
+    Storage::fake('s3');
+    config()->set('registration.receipts_disk', 's3');
+
+    $admin = User::factory()->admin()->create();
+    $event = verificationEvent();
+    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+    ]);
+    $pastor = Pastor::factory()->create();
+    $registrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $pastor->section->district_id,
+        'section_id' => $pastor->section_id,
+        'pastor_id' => $pastor->id,
+    ]);
+    $receiptPath = 'registration-receipts/2026/03/receipt-admin-s3.pdf';
+
+    Storage::disk('s3')->put($receiptPath, 'receipt-content');
+    Storage::disk('s3')->buildTemporaryUrlsUsing(function (string $path): string {
+        return 'https://storage.example.test/'.$path.'?signature=temp';
+    });
+
+    $registration = createOnlineRegistrationForVerification(
+        $event,
+        $pastor,
+        $registrant,
+        $feeCategory,
+        [
+            'receipt_file_path' => $receiptPath,
+            'receipt_original_name' => 'receipt-admin-s3.pdf',
+        ],
+    );
+
+    $this->actingAs($admin)
+        ->get(route('registrations.verification.receipt', $registration))
+        ->assertRedirect('https://storage.example.test/'.$receiptPath.'?signature=temp');
+});
+
 test('department-scoped reviewers are limited to matching departments and event scope', function () {
     Storage::fake('local');
     config()->set('registration.receipts_disk', 'local');

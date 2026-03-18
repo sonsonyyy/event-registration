@@ -17,6 +17,7 @@ The MVP will support:
 - Onsite registration
 - Online registration per church / pastor
 - Receipt upload and verification
+- S3-backed receipt storage for online registration uploads
 - In-app workflow notifications
 - Capacity tracking, reservation, and registration limits
 - Reports by event, section, and department
@@ -313,6 +314,8 @@ The data model may retain `Unpaid` and `Partial` for future use, but the MVP rec
 - System reserves capacity immediately on successful submission
 - Receipt / reference number is required
 - Proof of payment is required
+- Proof of payment files are stored on S3-compatible object storage instead of local server disk
+- Access to uploaded receipts must remain authorization-controlled
 - One receipt may cover multiple fee-category quantities
 
 ### Registration Statuses
@@ -371,7 +374,24 @@ If general non-departmental events exist at a scope, a non-departmental reviewer
 
 ---
 
-## 12. Reports
+## 12. File Storage Module
+
+### Functions
+- Store uploaded online-registration receipts in an S3-compatible bucket
+- Keep uploaded receipts outside the local application disk in production use
+- Preserve original file name and upload timestamp metadata
+- Support authorized viewing of uploaded receipts during verification
+
+### Storage Rules
+- Receipt files must use a configurable cloud disk
+- Receipt files must remain private by default
+- Verification and registration history screens must access receipts through authorized temporary access, not public bucket exposure
+- Replaced receipts should delete the previous object after a successful update
+- Failed or rolled-back uploads must not leave orphaned objects when cleanup is possible
+
+---
+
+## 13. Reports
 
 ### Required Reports
 1. Event total registration
@@ -394,7 +414,7 @@ If general non-departmental events exist at a scope, a non-departmental reviewer
 
 ---
 
-## 13. Target Database Changes
+## 14. Target Database Changes
 
 ### New / Updated Entities
 
@@ -434,13 +454,19 @@ If general non-departmental events exist at a scope, a non-departmental reviewer
 
 Existing registration and fee-category tables remain, but must respect event scope and department ownership during authorization and reporting.
 
+#### `registrations`
+- Existing receipt path metadata remains valid
+- `receipt_file_path` stores the object key/path on the configured disk
+- `receipt_original_name` stores the original uploaded file name
+- `receipt_uploaded_at` stores upload timestamp metadata
+
 #### `notifications`
 - Standard Laravel database notifications table
 - Used for in-app workflow notifications and unread counts
 
 ---
 
-## 14. MVP Validation Rules
+## 15. MVP Validation Rules
 - Prevent section creation without district
 - Prevent pastor creation without section
 - Prevent event creation without a valid scope configuration
@@ -451,11 +477,12 @@ Existing registration and fee-category tables remain, but must respect event sco
 - Prevent registration when event is full or closed
 - Prevent registration updates from exceeding available reserved capacity
 - Validate receipt upload type and size
+- Require valid cloud storage configuration before enabling production receipt uploads
 - Preserve historical records through archive behavior instead of hard deletion
 
 ---
 
-## 15. Recommended MVP Screens
+## 16. Recommended MVP Screens
 1. Login
 2. Dashboard
 3. Event List / Event Form
@@ -474,7 +501,7 @@ Existing registration and fee-category tables remain, but must respect event sco
 
 ---
 
-## 16. Finalized Direction Before Implementation
+## 17. Finalized Direction Before Implementation
 
 The implementation should follow this model:
 - role decides permission
@@ -487,5 +514,6 @@ The implementation should follow this model:
 - database notifications persist workflow history
 - authenticated users receive realtime in-app notifications
 - homepage capacity refresh uses polling against reservation-aware event metrics
+- receipt uploads are stored on S3-compatible object storage with private access
 
 This is the agreed target state for the next major update before application code changes begin.

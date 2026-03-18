@@ -17,6 +17,7 @@ use App\Notifications\RegistrationSubmittedForReview;
 use App\Support\DepartmentScopeAccess;
 use App\Support\EventCapacity;
 use App\Support\NotificationRecipientResolver;
+use App\Support\RegistrationReceiptStorage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,7 +26,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -36,6 +36,7 @@ class OnlineRegistrationController extends Controller
     public function __construct(
         private readonly EventCapacity $eventCapacity,
         private readonly NotificationRecipientResolver $notificationRecipientResolver,
+        private readonly RegistrationReceiptStorage $registrationReceiptStorage,
     ) {}
 
     public function index(IndexOnlineRegistrationRequest $request): Response
@@ -109,8 +110,7 @@ class OnlineRegistrationController extends Controller
             ]);
         }
 
-        $receiptDisk = (string) config('registration.receipts_disk');
-        $receiptPath = $this->storeReceipt($receipt, $receiptDisk);
+        $receiptPath = $this->registrationReceiptStorage->store($receipt);
         $receiptUploadedAt = now();
 
         try {
@@ -182,7 +182,7 @@ class OnlineRegistrationController extends Controller
                 $storedRegistration = $registration->loadMissing('event', 'pastor.section.district', 'encodedByUser.role');
             });
         } catch (Throwable $throwable) {
-            Storage::disk($receiptDisk)->delete($receiptPath);
+            $this->registrationReceiptStorage->delete($receiptPath);
 
             throw $throwable;
         }
@@ -199,9 +199,8 @@ class OnlineRegistrationController extends Controller
     {
         $validated = $request->validated();
         $receipt = $request->file('receipt');
-        $receiptDisk = (string) config('registration.receipts_disk');
         $replacementReceiptPath = $receipt instanceof UploadedFile
-            ? $this->storeReceipt($receipt, $receiptDisk)
+            ? $this->registrationReceiptStorage->store($receipt)
             : null;
         $replacementUploadedAt = $receipt instanceof UploadedFile ? now() : null;
         $previousReceiptPath = null;
@@ -297,7 +296,7 @@ class OnlineRegistrationController extends Controller
             });
         } catch (Throwable $throwable) {
             if ($replacementReceiptPath !== null) {
-                Storage::disk($receiptDisk)->delete($replacementReceiptPath);
+                $this->registrationReceiptStorage->delete($replacementReceiptPath);
             }
 
             throw $throwable;
@@ -308,7 +307,7 @@ class OnlineRegistrationController extends Controller
             && $previousReceiptPath !== null
             && $previousReceiptPath !== $replacementReceiptPath
         ) {
-            Storage::disk($receiptDisk)->delete($previousReceiptPath);
+            $this->registrationReceiptStorage->delete($previousReceiptPath);
         }
 
         if ($updatedRegistration instanceof Registration && $wasCorrectionResubmission) {
@@ -486,17 +485,6 @@ class OnlineRegistrationController extends Controller
             'district_name' => $pastor->section->district->name,
             'status' => $pastor->status,
         ];
-    }
-
-    /**
-     * Persist an uploaded receipt using the configured disk.
-     */
-    private function storeReceipt(UploadedFile $receipt, string $disk): string
-    {
-        $directory = trim((string) config('registration.receipt_directory'), '/');
-        $destination = $directory.'/'.now()->format('Y/m');
-
-        return $receipt->store($destination, $disk);
     }
 
     /**

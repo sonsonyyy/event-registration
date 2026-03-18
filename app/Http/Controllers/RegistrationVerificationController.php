@@ -16,22 +16,23 @@ use App\Notifications\RegistrationVerified;
 use App\Support\DepartmentScopeAccess;
 use App\Support\EventCapacity;
 use App\Support\NotificationRecipientResolver;
+use App\Support\RegistrationReceiptStorage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class RegistrationVerificationController extends Controller
 {
     public function __construct(
         private readonly EventCapacity $eventCapacity,
         private readonly NotificationRecipientResolver $notificationRecipientResolver,
+        private readonly RegistrationReceiptStorage $registrationReceiptStorage,
     ) {}
 
     public function index(IndexRegistrationVerificationRequest $request): Response
@@ -144,7 +145,7 @@ class RegistrationVerificationController extends Controller
         );
     }
 
-    public function receipt(Registration $registration): StreamedResponse
+    public function receipt(Registration $registration): SymfonyResponse
     {
         Gate::authorize('viewVerificationReceipt', $registration);
 
@@ -155,15 +156,13 @@ class RegistrationVerificationController extends Controller
             abort(404);
         }
 
-        $disk = (string) config('registration.receipts_disk');
-
-        if (! Storage::disk($disk)->exists($registration->receipt_file_path)) {
+        if (! $this->registrationReceiptStorage->exists($registration->receipt_file_path)) {
             abort(404);
         }
 
-        return Storage::disk($disk)->response(
+        return $this->registrationReceiptStorage->receiptResponse(
             $registration->receipt_file_path,
-            $registration->receipt_original_name ?? basename($registration->receipt_file_path),
+            $registration->receipt_original_name,
         );
     }
 
