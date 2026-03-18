@@ -206,6 +206,11 @@ class Registration extends Model
 
     public function reservesCapacity(): bool
     {
+        return $this->consumesCapacity();
+    }
+
+    public function consumesCapacity(): bool
+    {
         return in_array($this->registration_status, self::capacityReservedStatuses(), true);
     }
 

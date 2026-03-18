@@ -144,50 +144,43 @@ const metricCardAppearance = (
 ): {
     cardClassName: string;
     iconWrapperClassName: string;
-    iconClassName: string;
-    iconPresentation: 'plain';
     icon: typeof CalendarRange;
 } => {
     switch (label.toLowerCase()) {
         case 'pending verification':
             return {
                 cardClassName: reviewWorkspaceStyles.summaryCardPending,
-                iconWrapperClassName: '',
-                iconClassName: 'text-amber-700 dark:text-amber-300',
-                iconPresentation: 'plain',
+                iconWrapperClassName:
+                    reviewWorkspaceStyles.summaryIconPending,
                 icon: Clock3,
             };
         case 'active users':
             return {
                 cardClassName: reviewWorkspaceStyles.summaryCardApproved,
-                iconWrapperClassName: '',
-                iconClassName: 'text-[#184d47] dark:text-emerald-300',
-                iconPresentation: 'plain',
+                iconWrapperClassName:
+                    reviewWorkspaceStyles.summaryIconApproved,
                 icon: Users,
             };
         case 'active churches':
         case 'assigned churches':
             return {
                 cardClassName: reviewWorkspaceStyles.summaryCardApproved,
-                iconWrapperClassName: '',
-                iconClassName: 'text-[#184d47] dark:text-emerald-300',
-                iconPresentation: 'plain',
+                iconWrapperClassName:
+                    reviewWorkspaceStyles.summaryIconApproved,
                 icon: Building2,
             };
         case 'open events':
             return {
                 cardClassName: reviewWorkspaceStyles.summaryCardApproved,
-                iconWrapperClassName: '',
-                iconClassName: 'text-[#184d47] dark:text-emerald-300',
-                iconPresentation: 'plain',
+                iconWrapperClassName:
+                    reviewWorkspaceStyles.summaryIconApproved,
                 icon: CalendarRange,
             };
         default:
             return {
                 cardClassName: reviewWorkspaceStyles.summaryCardApproved,
-                iconWrapperClassName: '',
-                iconClassName: 'text-[#184d47] dark:text-emerald-300',
-                iconPresentation: 'plain',
+                iconWrapperClassName:
+                    reviewWorkspaceStyles.summaryIconApproved,
                 icon: BadgeCheck,
             };
     }
@@ -301,8 +294,6 @@ export default function Dashboard({ dashboard }: Props) {
                                 cardClassName: style.cardClassName,
                                 iconWrapperClassName:
                                     style.iconWrapperClassName,
-                                iconClassName: style.iconClassName,
-                                iconPresentation: style.iconPresentation,
                             };
                         })}
                     />

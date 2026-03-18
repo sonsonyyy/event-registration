@@ -4,15 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use App\Models\EventFeeCategory;
+use App\Support\EventCapacity;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class HomeController extends Controller
 {
-    public function __invoke(): Response
+    public function __invoke(EventCapacity $eventCapacity): Response
     {
         return Inertia::render('welcome', [
-            'events' => $this->publicEvents(),
+            'events' => $this->publicEvents($eventCapacity),
             'registrationFlow' => $this->registrationFlow(),
             'faqs' => $this->registrationFaqs(),
         ]);
@@ -23,7 +24,7 @@ class HomeController extends Controller
      *
      * @return array<int, array<string, mixed>>
      */
-    private function publicEvents(): array
+    private function publicEvents(EventCapacity $eventCapacity): array
     {
         return Event::query()
             ->where('status', Event::STATUS_OPEN)
@@ -41,18 +42,14 @@ class HomeController extends Controller
             ->orderBy('date_from')
             ->get()
             ->each(fn (Event $event): bool => $event->syncOperationalStatus())
-            ->filter(function (Event $event): bool {
+            ->filter(function (Event $event) use ($eventCapacity): bool {
                 if (! $event->canAcceptRegistrations()) {
                     return false;
                 }
 
-                return $event->feeCategories->contains(function (EventFeeCategory $feeCategory): bool {
-                    $remainingSlots = $feeCategory->remainingSlots();
-
-                    return $remainingSlots === null || $remainingSlots > 0;
-                });
+                return $eventCapacity->eventHasAvailableFeeCategories($event);
             })
-            ->map(function (Event $event): array {
+            ->map(function (Event $event) use ($eventCapacity): array {
                 return [
                     'id' => $event->getKey(),
                     'name' => $event->name,
@@ -62,18 +59,14 @@ class HomeController extends Controller
                     'date_to' => $event->date_to->toDateString(),
                     'registration_close_at' => $event->registration_close_at->toIso8601String(),
                     'total_capacity' => $event->total_capacity,
-                    'remaining_slots' => $event->remainingSlots(),
+                    'remaining_slots' => $eventCapacity->remainingSlotsForEvent($event),
                     'fee_categories' => $event->feeCategories
-                        ->filter(function (EventFeeCategory $feeCategory): bool {
-                            $remainingSlots = $feeCategory->remainingSlots();
-
-                            return $remainingSlots === null || $remainingSlots > 0;
-                        })
+                        ->filter(fn (EventFeeCategory $feeCategory): bool => $eventCapacity->feeCategoryHasCapacity($feeCategory))
                         ->map(fn (EventFeeCategory $feeCategory): array => [
                             'id' => $feeCategory->getKey(),
                             'category_name' => $feeCategory->category_name,
                             'amount' => (string) $feeCategory->amount,
-                            'remaining_slots' => $feeCategory->remainingSlots(),
+                            'remaining_slots' => $eventCapacity->remainingSlotsForFeeCategory($feeCategory),
                         ])
                         ->values()
                         ->all(),

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\EventCapacity;
 use Database\Factories\EventFeeCategoryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -59,23 +60,11 @@ class EventFeeCategory extends Model
 
     public function reservedQuantity(): int
     {
-        if (array_key_exists('reserved_quantity', $this->attributes)) {
-            return (int) $this->attributes['reserved_quantity'];
-        }
-
-        if ($this->relationLoaded('reservedRegistrationItems')) {
-            return (int) $this->reservedRegistrationItems->sum('quantity');
-        }
-
-        return (int) $this->reservedRegistrationItems()->sum('quantity');
+        return app(EventCapacity::class)->reservedQuantityForFeeCategory($this);
     }
 
     public function remainingSlots(): ?int
     {
-        if ($this->slot_limit === null) {
-            return null;
-        }
-
-        return max($this->slot_limit - $this->reservedQuantity(), 0);
+        return app(EventCapacity::class)->remainingSlotsForFeeCategory($this);
     }
 }

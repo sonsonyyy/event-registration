@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\EventCapacity;
 use Carbon\CarbonInterface;
 use Database\Factories\EventFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -184,25 +185,17 @@ class Event extends Model
 
     public function reservedQuantity(): int
     {
-        if (array_key_exists('reserved_quantity', $this->attributes)) {
-            return (int) $this->attributes['reserved_quantity'];
-        }
-
-        if ($this->relationLoaded('reservedRegistrationItems')) {
-            return (int) $this->reservedRegistrationItems->sum('quantity');
-        }
-
-        return (int) $this->reservedRegistrationItems()->sum('quantity');
+        return app(EventCapacity::class)->reservedQuantityForEvent($this);
     }
 
     public function remainingSlots(): int
     {
-        return max($this->total_capacity - $this->reservedQuantity(), 0);
+        return app(EventCapacity::class)->remainingSlotsForEvent($this);
     }
 
     public function isFull(): bool
     {
-        return $this->remainingSlots() === 0;
+        return app(EventCapacity::class)->eventIsFull($this);
     }
 
     public function registrationWindowIsOpen(?CarbonInterface $now = null): bool

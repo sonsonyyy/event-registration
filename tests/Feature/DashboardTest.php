@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\EventFeeCategory;
 use App\Models\Pastor;
 use App\Models\Registration;
+use App\Models\RegistrationItem;
 use App\Models\Section;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -170,6 +171,26 @@ test('department-scoped admins only see district events and registrations for th
             ->where('dashboard.recent_registrations.0.id', $youthRegistration->id));
 });
 
+test('dashboard open events use reservation aware remaining slots', function () {
+    $user = User::factory()->superAdmin()->create();
+    $event = createDashboardEvent([
+        'total_capacity' => 20,
+    ]);
+    $feeCategory = $event->feeCategories()->firstOrFail();
+
+    reserveDashboardQuantityForEvent($event, $feeCategory, 7, Registration::STATUS_PENDING_VERIFICATION);
+    reserveDashboardQuantityForEvent($event, $feeCategory, 4, Registration::STATUS_REJECTED);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->has('dashboard.open_events', 1)
+            ->where('dashboard.open_events.0.id', $event->id)
+            ->where('dashboard.open_events.0.remaining_slots', 13));
+});
+
 test('online registrant dashboard is limited to the assigned church scope', function () {
     $district = District::factory()->create([
         'name' => 'Central Luzon',
@@ -274,4 +295,20 @@ function createDashboardEvent(array $attributes = []): Event
     ]);
 
     return $event;
+}
+
+function reserveDashboardQuantityForEvent(Event $event, EventFeeCategory $feeCategory, int $quantity, string $status): void
+{
+    $registration = Registration::factory()->create([
+        'event_id' => $event->id,
+        'registration_status' => $status,
+    ]);
+
+    RegistrationItem::factory()->create([
+        'registration_id' => $registration->id,
+        'fee_category_id' => $feeCategory->id,
+        'quantity' => $quantity,
+        'unit_amount' => '800.00',
+        'subtotal_amount' => $quantity * 800,
+    ]);
 }

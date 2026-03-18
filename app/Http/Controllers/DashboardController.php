@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Event;
-use App\Models\EventFeeCategory;
 use App\Models\Pastor;
 use App\Models\Registration;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\DepartmentScopeAccess;
+use App\Support\EventCapacity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -19,7 +19,7 @@ class DashboardController extends Controller
     /**
      * Handle the incoming request.
      */
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request, EventCapacity $eventCapacity): Response
     {
         $user = $request->user();
 
@@ -32,7 +32,7 @@ class DashboardController extends Controller
             'pastor.section.district',
         ]);
 
-        $allOpenEvents = $this->openEvents($user);
+        $allOpenEvents = $this->openEvents($user, $eventCapacity);
         $registrationQuery = $this->registrationQuery($user);
 
         return Inertia::render('dashboard', [
@@ -496,7 +496,7 @@ class DashboardController extends Controller
      *     registration_close_at: string
      * }>
      */
-    private function openEvents(User $user): array
+    private function openEvents(User $user, EventCapacity $eventCapacity): array
     {
         $query = Event::query()
             ->where('status', Event::STATUS_OPEN)
@@ -516,16 +516,12 @@ class DashboardController extends Controller
         return $query
             ->get()
             ->each(fn (Event $event): bool => $event->syncOperationalStatus())
-            ->filter(function (Event $event): bool {
+            ->filter(function (Event $event) use ($eventCapacity): bool {
                 if (! $event->canAcceptRegistrations()) {
                     return false;
                 }
 
-                return $event->feeCategories->contains(function (EventFeeCategory $feeCategory): bool {
-                    $remainingSlots = $feeCategory->remainingSlots();
-
-                    return $remainingSlots === null || $remainingSlots > 0;
-                });
+                return $eventCapacity->eventHasAvailableFeeCategories($event);
             })
             ->map(fn (Event $event): array => [
                 'id' => $event->getKey(),
@@ -533,7 +529,7 @@ class DashboardController extends Controller
                 'venue' => $event->venue,
                 'date_from' => $event->date_from->toDateString(),
                 'date_to' => $event->date_to->toDateString(),
-                'remaining_slots' => $event->remainingSlots(),
+                'remaining_slots' => $eventCapacity->remainingSlotsForEvent($event),
                 'registration_close_at' => $event->registration_close_at->toIso8601String(),
             ])
             ->values()
