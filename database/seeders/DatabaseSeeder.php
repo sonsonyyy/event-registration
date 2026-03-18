@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             DemoChurchHierarchySeeder::class,
             PastorRosterSeeder::class,
             EventSeeder::class,
+            SuperAdminUserSeeder::class,
             AdminUserSeeder::class,
             ManagerUserSeeder::class,
         ]);

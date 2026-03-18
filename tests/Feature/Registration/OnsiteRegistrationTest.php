@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Department;
 use App\Models\District;
 use App\Models\Event;
 use App\Models\EventFeeCategory;
@@ -128,15 +129,27 @@ test('managers are limited to onsite registrations and pastors within their assi
     $outsidePastor = Pastor::factory()->for($otherSection)->create([
         'church_name' => 'Outside Section Church',
     ]);
-    $event = onsiteRegistrationEvent();
-    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+    $managedEvent = onsiteRegistrationEvent([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $managedSection->id,
+    ]);
+    $outsideEvent = onsiteRegistrationEvent([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $otherSection->id,
+    ]);
+    $managedFeeCategory = EventFeeCategory::factory()->for($managedEvent)->create([
+        'category_name' => 'Regular (Onsite)',
+        'amount' => '450.00',
+        'slot_limit' => 20,
+    ]);
+    $outsideFeeCategory = EventFeeCategory::factory()->for($outsideEvent)->create([
         'category_name' => 'Regular (Onsite)',
         'amount' => '450.00',
         'slot_limit' => 20,
     ]);
 
-    createOnsiteRegistration($event, $managedPastor, $staff, $feeCategory, 2);
-    createOnsiteRegistration($event, $outsidePastor, $staff, $feeCategory, 3);
+    createOnsiteRegistration($managedEvent, $managedPastor, $staff, $managedFeeCategory, 2);
+    createOnsiteRegistration($outsideEvent, $outsidePastor, $staff, $outsideFeeCategory, 3);
 
     $this->actingAs($manager)
         ->get(route('registrations.onsite.create'))
@@ -158,18 +171,98 @@ test('managers are limited to onsite registrations and pastors within their assi
 
     $this->actingAs($manager)
         ->post(route('registrations.onsite.store'), [
-            'event_id' => $event->id,
+            'event_id' => $outsideEvent->id,
             'pastor_id' => $outsidePastor->id,
             'payment_reference' => '',
             'remarks' => '',
             'line_items' => [
                 [
-                    'fee_category_id' => $feeCategory->id,
+                    'fee_category_id' => $outsideFeeCategory->id,
                     'quantity' => 1,
                 ],
             ],
         ])
         ->assertForbidden();
+});
+
+test('department-scoped managers only see onsite events in their section and department', function () {
+    $district = District::factory()->create();
+    $managedSection = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $otherSection = Section::factory()->for($district)->create([
+        'name' => 'Section 2',
+    ]);
+    $youthDepartment = Department::factory()->create([
+        'name' => 'Youth Ministries',
+    ]);
+    $ladiesDepartment = Department::factory()->create([
+        'name' => 'Ladies Ministries',
+    ]);
+    $manager = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $managedSection->id,
+        'department_id' => $youthDepartment->id,
+    ]);
+    $pastor = Pastor::factory()->for($managedSection)->create();
+
+    $accessibleEvent = onsiteRegistrationEvent([
+        'name' => 'Section 1 Youth Event',
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $managedSection->id,
+        'department_id' => $youthDepartment->id,
+    ]);
+    $otherDepartmentEvent = onsiteRegistrationEvent([
+        'name' => 'Section 1 Ladies Event',
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $managedSection->id,
+        'department_id' => $ladiesDepartment->id,
+    ]);
+    $otherSectionEvent = onsiteRegistrationEvent([
+        'name' => 'Section 2 Youth Event',
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $otherSection->id,
+        'department_id' => $youthDepartment->id,
+    ]);
+    $districtEvent = onsiteRegistrationEvent([
+        'name' => 'District Youth Event',
+        'department_id' => $youthDepartment->id,
+    ]);
+
+    foreach ([$accessibleEvent, $otherDepartmentEvent, $otherSectionEvent, $districtEvent] as $event) {
+        EventFeeCategory::factory()->for($event)->create([
+            'category_name' => 'Regular (Onsite)',
+            'amount' => '500.00',
+        ]);
+    }
+
+    $this->actingAs($manager)
+        ->get(route('registrations.onsite.create'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/onsite/create')
+            ->has('events', 1)
+            ->where('events.0.id', $accessibleEvent->id)
+            ->where('events.0.name', 'Section 1 Youth Event'));
+
+    $this->actingAs($manager)
+        ->from(route('registrations.onsite.create'))
+        ->post(route('registrations.onsite.store'), [
+            'event_id' => $otherDepartmentEvent->id,
+            'pastor_id' => $pastor->id,
+            'payment_reference' => 'OR-2026-9201',
+            'remarks' => '',
+            'line_items' => [
+                [
+                    'fee_category_id' => $otherDepartmentEvent->feeCategories()->value('id'),
+                    'quantity' => 1,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('registrations.onsite.create'))
+        ->assertSessionHasErrors(['event_id']);
+
+    expect(Registration::query()->count())->toBe(0);
 });
 
 test('online registrants cannot access onsite registration routes', function () {

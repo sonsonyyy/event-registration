@@ -63,8 +63,9 @@ test('managers are limited to their assigned section', function () {
     expect($gate->allows('view', $context['pastorOutsideSection']))->toBeFalse();
     expect($gate->allows('createOnsite', [Registration::class, $context['pastorInSection']]))->toBeTrue();
     expect($gate->allows('createOnsite', [Registration::class, $context['pastorOutsideSection']]))->toBeFalse();
-    expect($gate->allows('update', $context['onlineRegistrationInSection']))->toBeTrue();
+    expect($gate->allows('update', $context['onlineRegistrationInSection']))->toBeFalse();
     expect($gate->allows('update', $context['onlineRegistrationOutsideSection']))->toBeFalse();
+    expect($gate->allows('update', $context['sectionVerificationRegistration']))->toBeTrue();
     expect($gate->allows('verifyReceipt', $context['sectionVerificationRegistration']))->toBeTrue();
     expect($gate->allows('verifyReceipt', $context['outsideSectionVerificationRegistration']))->toBeFalse();
     expect($gate->allows('verifyReceipt', $context['districtOnlineRegistration']))->toBeFalse();
@@ -139,6 +140,72 @@ test('department-scoped reviewers are limited to matching departments during ver
     expect($managerGate->allows('verifyReceipt', $context['departmentSectionVerificationRegistration']))->toBeTrue();
     expect($managerGate->allows('verifyReceipt', $context['otherDepartmentSectionVerificationRegistration']))->toBeFalse();
     expect($managerGate->allows('verifyReceipt', $context['districtOnlineRegistration']))->toBeFalse();
+});
+
+test('department-scoped managers are limited to onsite registration events in their section and department', function () {
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $otherSection = Section::factory()->for($district)->create();
+    $youthDepartment = Department::factory()->create([
+        'name' => 'Youth Ministries',
+    ]);
+    $ladiesDepartment = Department::factory()->create([
+        'name' => 'Ladies Ministries',
+    ]);
+    $manager = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'department_id' => $youthDepartment->id,
+    ]);
+    $pastor = Pastor::factory()->for($section)->create();
+    $encoder = User::factory()->registrationStaff()->create();
+
+    $accessibleEvent = Event::factory()->create([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+        'department_id' => $youthDepartment->id,
+    ]);
+    $otherDepartmentEvent = Event::factory()->create([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+        'department_id' => $ladiesDepartment->id,
+    ]);
+    $otherSectionEvent = Event::factory()->create([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $otherSection->id,
+        'department_id' => $youthDepartment->id,
+    ]);
+
+    $accessibleRegistration = Registration::factory()
+        ->for($accessibleEvent)
+        ->for($pastor)
+        ->for($encoder, 'encodedByUser')
+        ->create([
+            'registration_mode' => Registration::MODE_ONSITE,
+        ]);
+    $otherDepartmentRegistration = Registration::factory()
+        ->for($otherDepartmentEvent)
+        ->for($pastor)
+        ->for($encoder, 'encodedByUser')
+        ->create([
+            'registration_mode' => Registration::MODE_ONSITE,
+        ]);
+    $otherSectionRegistration = Registration::factory()
+        ->for($otherSectionEvent)
+        ->for(Pastor::factory()->for($otherSection)->create())
+        ->for($encoder, 'encodedByUser')
+        ->create([
+            'registration_mode' => Registration::MODE_ONSITE,
+        ]);
+
+    $gate = Gate::forUser($manager);
+
+    expect($gate->allows('createOnsite', [Registration::class, $pastor, $accessibleEvent]))->toBeTrue();
+    expect($gate->allows('createOnsite', [Registration::class, $pastor, $otherDepartmentEvent]))->toBeFalse();
+    expect($gate->allows('createOnsite', [Registration::class, $pastor, $otherSectionEvent]))->toBeFalse();
+    expect($gate->allows('updateOnsite', $accessibleRegistration))->toBeTrue();
+    expect($gate->allows('updateOnsite', $otherDepartmentRegistration))->toBeFalse();
+    expect($gate->allows('updateOnsite', $otherSectionRegistration))->toBeFalse();
 });
 
 test('online registrants are limited to their assigned pastor', function () {

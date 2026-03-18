@@ -260,19 +260,7 @@ class User extends Authenticatable
 
     public function canAccessRegistration(Registration $registration): bool
     {
-        if ($this->hasAdminAccess()) {
-            return true;
-        }
-
-        if ($this->isManager()) {
-            return $this->managesSection($registration->pastor->section_id);
-        }
-
-        if ($this->isRegistrationStaff()) {
-            return $registration->encoded_by_user_id === $this->getKey();
-        }
-
-        return $this->belongsToPastor($registration->pastor_id);
+        return DepartmentScopeAccess::canAccessRegistrationRecord($this, $registration);
     }
 
     public function canViewRegistrantApprovalQueue(): bool

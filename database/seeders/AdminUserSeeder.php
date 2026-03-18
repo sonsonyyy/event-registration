@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\District;
 use App\Models\Role;
-use App\Models\Section;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -37,11 +36,6 @@ class AdminUserSeeder extends Seeder
             ->where('name', 'Central Luzon')
             ->firstOrFail();
 
-        $section = Section::query()
-            ->where('district_id', $district->id)
-            ->where('name', 'Section 3')
-            ->firstOrFail();
-
         foreach ($this->adminUsers() as $adminUser) {
             User::query()->updateOrCreate(
                 ['email' => $adminUser['email']],
@@ -50,7 +44,7 @@ class AdminUserSeeder extends Seeder
                     'password' => 'password',
                     'role_id' => $adminRole->id,
                     'district_id' => $district->id,
-                    'section_id' => $section->id,
+                    'section_id' => null,
                     'department_id' => null,
                     'pastor_id' => null,
                     'position_title' => null,
@@ -74,10 +68,6 @@ class AdminUserSeeder extends Seeder
             [
                 'name' => 'Jerome Oliveros',
                 'email' => 'jeromeoliveros65@gmail.com',
-            ],
-            [
-                'name' => 'Erickson Salangsang',
-                'email' => 'salangsangerickson@gmail.com',
             ],
         ];
     }

@@ -19,6 +19,7 @@ class DepartmentSeeder extends Seeder
             'Sunday School',
             'Home Missions',
             'Music Commission',
+            'Information Technology Commission',
         ])->each(function (string $departmentName): void {
             Department::query()->updateOrCreate(
                 ['name' => $departmentName],

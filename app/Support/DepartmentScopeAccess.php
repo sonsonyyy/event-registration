@@ -11,6 +11,63 @@ class DepartmentScopeAccess
 {
     private function __construct() {}
 
+    public static function canAccessEvent(User $user, Event $event): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        if ($user->isAdmin()) {
+            return $event->isDistrictScoped()
+                && self::matchesDepartmentScope($user, $event);
+        }
+
+        if ($user->isManager()) {
+            return $user->section_id !== null
+                && $event->isSectionScoped()
+                && $event->section_id === $user->section_id
+                && self::matchesDepartmentScope($user, $event);
+        }
+
+        if ($user->isRegistrationStaff()) {
+            return true;
+        }
+
+        if ($user->isOnlineRegistrant()) {
+            $sectionId = $user->section_id ?? $user->pastor?->section_id;
+
+            if ($sectionId === null) {
+                return false;
+            }
+
+            return $event->isDistrictScoped()
+                || ($event->isSectionScoped() && $event->section_id === $sectionId);
+        }
+
+        return false;
+    }
+
+    public static function canAccessRegistrationRecord(User $user, Registration $registration): bool
+    {
+        if (! $registration->relationLoaded('event')) {
+            $registration->load('event');
+        }
+
+        if ($user->isSuperAdmin() || $user->isAdmin() || $user->isManager()) {
+            return self::canAccessEvent($user, $registration->event);
+        }
+
+        if ($user->isRegistrationStaff()) {
+            return $registration->encoded_by_user_id === $user->getKey();
+        }
+
+        if ($user->isOnlineRegistrant()) {
+            return $user->belongsToPastor($registration->pastor_id);
+        }
+
+        return false;
+    }
+
     public static function canViewApprovalQueue(User $reviewer): bool
     {
         if ($reviewer->isSuperAdmin() || $reviewer->isAdmin()) {

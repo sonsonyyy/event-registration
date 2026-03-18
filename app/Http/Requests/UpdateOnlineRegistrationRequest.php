@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Event;
 use App\Models\Registration;
+use App\Support\DepartmentScopeAccess;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -70,6 +72,15 @@ class UpdateOnlineRegistrationRequest extends FormRequest
                     return;
                 }
 
+                $event = $this->selectedEvent();
+
+                if ($event !== null && ! DepartmentScopeAccess::canAccessEvent($this->user(), $event)) {
+                    $validator->errors()->add(
+                        'event_id',
+                        'The selected event is not available to your account.',
+                    );
+                }
+
                 if (
                     $registration->receipt_file_path === null
                     && ! $this->hasFile('receipt')
@@ -106,5 +117,16 @@ class UpdateOnlineRegistrationRequest extends FormRequest
             'line_items.*.quantity.required' => 'Enter a quantity.',
             'line_items.*.quantity.min' => 'Quantities must be at least 1.',
         ];
+    }
+
+    private function selectedEvent(): ?Event
+    {
+        $eventId = $this->input('event_id');
+
+        if (! filled($eventId)) {
+            return null;
+        }
+
+        return Event::query()->find($eventId);
     }
 }

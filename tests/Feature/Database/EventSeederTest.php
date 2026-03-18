@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Department;
 use App\Models\Event;
 use Database\Seeders\DatabaseSeeder;
 
@@ -7,7 +8,7 @@ test('database seeder creates the default open event with fee categories', funct
     $this->seed(DatabaseSeeder::class);
 
     $event = Event::query()
-        ->with('feeCategories')
+        ->with(['feeCategories', 'department'])
         ->where('name', 'CLD Youth Conference 2026')
         ->firstOrFail();
 
@@ -23,7 +24,8 @@ test('database seeder creates the default open event with fee categories', funct
         ->and($event->status)->toBe(Event::STATUS_OPEN)
         ->and($event->scope_type)->toBe(Event::SCOPE_DISTRICT)
         ->and($event->section_id)->toBeNull()
-        ->and($event->department_id)->toBeNull()
+        ->and($event->department?->name)->toBe('Youth Ministries')
+        ->and($event->department_id)->toBe(Department::query()->where('name', 'Youth Ministries')->value('id'))
         ->and($event->total_capacity)->toBe(1200)
         ->and($event->feeCategories)->toHaveCount(3)
         ->and($feeCategories->keys()->sort()->values()->all())->toBe([

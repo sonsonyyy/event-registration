@@ -115,8 +115,8 @@ class DemoChurchHierarchySeeder extends Seeder
      * @return array<int, array{
      *     name: string,
      *     legacy_name: string|null,
-     *     description: string,
-     *     sections: array<int, array{name: string, legacy_name: string|null, description: string}>
+     *     description: string|null,
+     *     sections: array<int, array{name: string, legacy_name: string|null, description: string|null}>
      * }>
      */
     protected function districtDefinitions(): array
@@ -125,22 +125,22 @@ class DemoChurchHierarchySeeder extends Seeder
             [
                 'name' => 'Central Luzon',
                 'legacy_name' => 'Demo District',
-                'description' => 'Primary seeded district for UI and access testing.',
+                'description' => null,
                 'sections' => [
                     [
                         'name' => 'Section 1',
                         'legacy_name' => 'North Section',
-                        'description' => 'Seeded section assigned to the manager demo user.',
+                        'description' => null,
                     ],
                     [
                         'name' => 'Section 2',
                         'legacy_name' => 'Central Section',
-                        'description' => 'Seeded section for admin CRUD testing.',
+                        'description' => null,
                     ],
                     [
                         'name' => 'Section 3',
                         'legacy_name' => 'South Section',
-                        'description' => 'Seeded section for additional hierarchy coverage.',
+                        'description' => null,
                     ],
                 ],
             ],
@@ -203,7 +203,7 @@ class DemoChurchHierarchySeeder extends Seeder
     }
 
     /**
-     * @param  array{name: string, legacy_name: string|null, description: string, sections: array<int, array{name: string, legacy_name: string|null, description: string}>}  $districtDefinition
+     * @param  array{name: string, legacy_name: string|null, description: string|null, sections: array<int, array{name: string, legacy_name: string|null, description: string|null}>}  $districtDefinition
      */
     private function deleteObsoleteManagedSections(District $district, array $districtDefinition): void
     {
