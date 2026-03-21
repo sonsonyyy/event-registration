@@ -265,7 +265,12 @@ export default function RegistrationRecordDialog({
                     ],
                     content: receipt?.url ? (
                         <div>
-                            <Button asChild size="sm" variant="outline">
+                            <Button
+                                asChild
+                                size="sm"
+                                variant="outline"
+                                className="h-9 rounded-md px-3 text-[13px] sm:text-sm"
+                            >
                                 <a
                                     href={receipt.url}
                                     target="_blank"
@@ -280,21 +285,21 @@ export default function RegistrationRecordDialog({
                 {
                     title: 'Line Items',
                     content: (
-                        <div className="divide-y divide-slate-200/80 dark:divide-slate-800">
+                        <div className="space-y-3">
                             {items.map((item) => (
                                 <div
                                     key={item.id}
-                                    className="grid gap-2 py-3 first:pt-0 last:pb-0 md:grid-cols-[minmax(0,1fr)_220px] md:items-center"
+                                    className="grid gap-3 rounded-md border border-[#d6e2de] bg-[linear-gradient(145deg,_rgba(24,77,71,0.06),_rgba(255,255,255,0.98))] px-3 py-3 shadow-sm shadow-[#184d47]/6 md:grid-cols-[minmax(0,1fr)_220px] md:items-center md:px-4 dark:border-slate-800 dark:bg-[linear-gradient(145deg,_rgba(16,24,20,0.98),_rgba(19,38,34,0.94))]"
                                 >
                                     <div>
-                                        <div className="font-medium text-slate-900 dark:text-slate-100">
+                                        <div className="text-[13px] font-medium text-slate-900 sm:text-sm dark:text-slate-100">
                                             {item.category_name}
                                         </div>
-                                        <div className="text-sm text-slate-500 dark:text-slate-400">
+                                        <div className="text-[13px] text-slate-500 sm:text-sm dark:text-slate-400">
                                             {item.quantity} delegates
                                         </div>
                                     </div>
-                                    <div className="text-sm leading-6 text-slate-600 dark:text-slate-300 md:text-right">
+                                    <div className="text-[13px] leading-6 text-slate-600 sm:text-sm dark:text-slate-300 md:text-right">
                                         <div>{formatCurrency(item.unit_amount)} each</div>
                                         <div className="font-medium text-slate-900 dark:text-slate-100">
                                             {formatCurrency(item.subtotal_amount)}
@@ -328,11 +333,11 @@ export default function RegistrationRecordDialog({
                           {
                               title: 'Review History',
                               content: (
-                                  <div className="divide-y divide-slate-200/80 dark:divide-slate-800">
+                                  <div className="space-y-3">
                                       {reviews.map((review) => (
                                           <div
                                               key={review.id}
-                                              className="space-y-2 py-4 first:pt-0 last:pb-0"
+                                              className="space-y-2 rounded-md border border-[#d6e2de] bg-[linear-gradient(145deg,_rgba(24,77,71,0.06),_rgba(255,255,255,0.98))] px-3 py-3 shadow-sm shadow-[#184d47]/6 sm:px-4 dark:border-slate-800 dark:bg-[linear-gradient(145deg,_rgba(16,24,20,0.98),_rgba(19,38,34,0.94))]"
                                           >
                                               <DataTableBadge
                                                   tone={resolveDataTableTone(
@@ -349,16 +354,16 @@ export default function RegistrationRecordDialog({
                                                   {review.decision}
                                               </DataTableBadge>
                                               {review.reason && (
-                                                  <div className="text-sm leading-6 text-slate-900 dark:text-slate-100">
+                                                  <div className="text-[13px] leading-6 text-slate-900 sm:text-sm dark:text-slate-100">
                                                       {review.reason}
                                                   </div>
                                               )}
                                               {review.notes && (
-                                                  <div className="text-sm leading-6 text-slate-500 dark:text-slate-400">
+                                                  <div className="text-[13px] leading-6 text-slate-500 sm:text-sm dark:text-slate-400">
                                                       {review.notes}
                                                   </div>
                                               )}
-                                              <div className="text-xs font-semibold tracking-[0.16em] text-slate-400 uppercase dark:text-slate-500">
+                                              <div className="text-[10px] font-semibold tracking-[0.16em] text-slate-400 uppercase sm:text-xs dark:text-slate-500">
                                                   {review.reviewer?.name ??
                                                       'System'}{' '}
                                                   •{' '}
