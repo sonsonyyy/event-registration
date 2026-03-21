@@ -33,13 +33,13 @@ export default function DataTableToolbar({
                 onSubmit();
             }}
             className={cn(
-                'flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between',
+                'flex min-w-0 flex-col gap-4 xl:flex-row xl:items-center xl:justify-between',
                 className,
             )}
         >
             <div
                 className={cn(
-                    'relative flex-1 max-w-3xl',
+                    'relative min-w-0 max-w-3xl flex-1',
                     searchWrapperClassName,
                 )}
             >
@@ -60,7 +60,7 @@ export default function DataTableToolbar({
             {action && (
                 <div
                     className={cn(
-                        'flex shrink-0 justify-end',
+                        'flex w-full shrink-0 justify-end xl:w-auto [&>*]:w-full sm:[&>*]:w-auto',
                         actionClassName,
                     )}
                 >

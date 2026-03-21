@@ -394,8 +394,8 @@ export default function Welcome() {
                 className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(193,223,214,0.45),_transparent_34%),linear-gradient(180deg,_#f7f5ef_0%,_#fffdf8_48%,_#f2efe7_100%)] text-slate-900"
                 style={{ fontFamily: 'Manrope, sans-serif' }}
             >
-                <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
-                    <header className="flex items-center justify-between py-2">
+                <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-6 text-[0.9375rem] sm:px-6 sm:text-base lg:px-8">
+                    <header className="flex flex-wrap items-center justify-between gap-3 py-2 sm:flex-nowrap">
                         <div className="flex items-center gap-3">
                             <AppLogo />
                         </div>
@@ -421,21 +421,22 @@ export default function Welcome() {
                             </a>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2 sm:gap-3">
                             <Link
                                 href={RegistrantAccessController.create()}
-                                className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-white/60 hover:text-slate-900"
+                                className="inline-flex max-w-full items-center gap-2 rounded-md px-2.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-white/60 hover:text-slate-900 sm:px-3 sm:text-sm"
                             >
-                                Request Church Access
+                                <span className="sm:hidden">Request Access</span>
+                                <span className="hidden sm:inline">Request Church Access</span>
                             </Link>
                             {auth.user ? (
-                                <Button asChild className="h-10 rounded-md px-5">
+                                <Button asChild className="h-10 rounded-md px-4 text-xs sm:px-5 sm:text-sm">
                                     <Link href={dashboard()}>Dashboard</Link>
                                 </Button>
                             ) : (
                                 <Link
                                     href={login()}
-                                    className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-white/60 hover:text-slate-900"
+                                    className="inline-flex items-center gap-2 rounded-md px-2.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-white/60 hover:text-slate-900 sm:px-3 sm:text-sm"
                                 >
                                     <LogIn className="size-4" />
                                     Log in
@@ -444,7 +445,7 @@ export default function Welcome() {
                         </div>
                     </header>
 
-                    <main className="flex flex-1 flex-col gap-12 pt-10 pb-12 lg:gap-16 lg:pt-16">
+                    <main className="flex flex-1 flex-col gap-10 pt-8 pb-12 lg:gap-16 lg:pt-16">
                         <section className="grid gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] lg:items-start">
                             <div className="max-w-3xl space-y-8">
                                 <div className="space-y-5">
@@ -453,22 +454,22 @@ export default function Welcome() {
                                     </Badge>
 
                                     <div className="space-y-4">
-                                        <h1 className="max-w-3xl text-4xl font-extrabold tracking-[-0.04em] text-balance sm:text-5xl lg:text-6xl">
+                                        <h1 className="max-w-3xl text-3xl font-extrabold tracking-[-0.04em] text-balance sm:text-5xl lg:text-6xl">
                                             Professional event registration for district and department gatherings.
                                         </h1>
-                                        <p className="max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+                                        <p className="max-w-2xl text-sm leading-7 text-slate-600 sm:text-lg">
                                             View open events, monitor remaining slots, and manage registration submissions with receipt upload and verification tracking.
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className="flex flex-col gap-3 sm:flex-row">
-                                    <Button asChild size="lg" className="h-12 rounded-md px-6">
+                                    <Button asChild size="lg" className="h-11 rounded-md px-5 text-sm sm:h-12 sm:px-6">
                                         <Link href={primaryActionHref}>
                                             {primaryActionLabel}
                                         </Link>
                                     </Button>
-                                    <Button variant="outline" asChild size="lg" className="h-12 rounded-md px-6">
+                                    <Button variant="outline" asChild size="lg" className="h-11 rounded-md px-5 text-sm sm:h-12 sm:px-6">
                                         <a href="#available-events">Browse available events</a>
                                     </Button>
                                 </div>

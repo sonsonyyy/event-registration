@@ -78,7 +78,7 @@ export function NotificationMenu() {
             <DropdownMenuContent
                 align="end"
                 sideOffset={10}
-                className="w-[24rem] rounded-lg p-0"
+                className="w-[min(24rem,calc(100vw-1rem))] rounded-lg p-0"
             >
                 <DropdownMenuLabel className="flex items-center justify-between gap-4 px-4 py-3">
                     <div className="space-y-1">

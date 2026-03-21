@@ -5,13 +5,19 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\EventFeeCategory;
 use App\Support\EventCapacity;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 
 class HomeController extends Controller
 {
-    public function __invoke(EventCapacity $eventCapacity): Response
+    public function __invoke(Request $request, EventCapacity $eventCapacity): Response|RedirectResponse
     {
+        if ($request->user() !== null) {
+            return to_route('dashboard');
+        }
+
         return Inertia::render('welcome', [
             'events' => fn (): array => $this->publicEvents($eventCapacity),
             'registrationFlow' => fn (): array => $this->registrationFlow(),

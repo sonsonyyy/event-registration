@@ -4,8 +4,17 @@ use App\Models\Event;
 use App\Models\EventFeeCategory;
 use App\Models\Registration;
 use App\Models\RegistrationItem;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
+
+test('authenticated users are redirected away from the welcome page', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('home'))
+        ->assertRedirect(route('dashboard'));
+});
 
 test('welcome page lists open events that can still accept registrations', function () {
     config()->set('app.asset_url', 'http://assets.test');

@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BarChart3, Building2, CalendarRange, Landmark, Layers3, LayoutGrid, Map, Menu, ReceiptText, Search, ShieldCheck, UserRoundCheck, Users } from 'lucide-react';
+import { BarChart3, Building2, CalendarRange, Landmark, Layers3, LayoutGrid, Map, Menu, ReceiptText, ShieldCheck, UserRoundCheck, Users } from 'lucide-react';
 import DepartmentController from '@/actions/App/Http/Controllers/Admin/DepartmentController';
 import DistrictController from '@/actions/App/Http/Controllers/Admin/DistrictController';
 import EventController from '@/actions/App/Http/Controllers/Admin/EventController';
@@ -49,7 +49,7 @@ type Props = {
 const activeItemStyles =
     'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
 
-export function AppHeader({ breadcrumbs = [] }: Props) {
+export function AppHeader({ breadcrumbs: _breadcrumbs = [] }: Props) {
     const page = usePage();
     const { auth } = page.props;
     const getInitials = useInitials();
@@ -240,21 +240,14 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     </div>
 
                     <div className="ml-auto flex items-center space-x-2">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="group h-9 w-9 cursor-pointer"
-                        >
-                            <Search className="!size-5 opacity-80 group-hover:opacity-100" />
-                        </Button>
                         <NotificationMenu />
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="ghost"
-                                    className="size-10 rounded-full p-1"
+                                    className="h-10 gap-3 rounded-md px-1 py-1.5 sm:px-2"
                                 >
-                                    <Avatar className="size-8 overflow-hidden rounded-full">
+                                    <Avatar className="size-8 shrink-0 overflow-hidden rounded-full">
                                         <AvatarImage
                                             src={auth.user.avatar}
                                             alt={auth.user.name}
@@ -263,6 +256,16 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             {getInitials(auth.user.name)}
                                         </AvatarFallback>
                                     </Avatar>
+                                    <div className="hidden min-w-0 text-left sm:block">
+                                        <div className="truncate text-sm font-medium leading-tight">
+                                            {auth.user.name}
+                                        </div>
+                                        {auth.user.role_name && (
+                                            <div className="truncate text-xs text-muted-foreground">
+                                                {auth.user.role_name}
+                                            </div>
+                                        )}
+                                    </div>
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56" align="end">
@@ -272,10 +275,10 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     </div>
                 </div>
             </div>
-            {breadcrumbs.length > 1 && (
-                <div className="flex w-full border-b border-sidebar-border/70">
+            {_breadcrumbs.length > 1 && (
+                <div className="hidden w-full border-b border-sidebar-border/70 sm:flex">
                     <div className="mx-auto flex h-12 w-full items-center justify-start px-4 text-neutral-500 md:max-w-7xl">
-                        <Breadcrumbs breadcrumbs={breadcrumbs} />
+                        <Breadcrumbs breadcrumbs={_breadcrumbs} />
                     </div>
                 </div>
             )}
