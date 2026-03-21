@@ -26,20 +26,20 @@ export default function SummaryStatCards({ items, gridClassName }: Props) {
                     key={item.title}
                     className={`${reviewWorkspaceStyles.summaryCard} ${item.cardClassName}`}
                 >
-                    <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-3 sm:gap-4">
+                        <div className="space-y-2 sm:space-y-3">
                             <div
-                                className={`text-xs font-semibold tracking-[0.22em] uppercase ${reviewWorkspaceStyles.summaryEyebrow}`}
+                                className={`text-[11px] font-semibold tracking-[0.2em] uppercase sm:text-xs sm:tracking-[0.22em] ${reviewWorkspaceStyles.summaryEyebrow}`}
                             >
                                 {item.title}
                             </div>
                             <div
-                                className={`text-3xl font-semibold tracking-[-0.04em] ${reviewWorkspaceStyles.summaryValue}`}
+                                className={`text-2xl font-semibold tracking-[-0.04em] sm:text-3xl ${reviewWorkspaceStyles.summaryValue}`}
                             >
                                 {item.value}
                             </div>
                             <div
-                                className={`text-sm ${reviewWorkspaceStyles.summarySubtitle}`}
+                                className={`text-[13px] sm:text-sm ${reviewWorkspaceStyles.summarySubtitle}`}
                             >
                                 {item.subtitle}
                             </div>
@@ -48,13 +48,13 @@ export default function SummaryStatCards({ items, gridClassName }: Props) {
                         <div
                             className={cn(
                                 item.iconPresentation === 'plain'
-                                    ? 'flex size-11 items-center justify-center'
+                                    ? 'flex size-9 items-center justify-center sm:size-11'
                                     : reviewWorkspaceStyles.summaryIconWrapper,
                                 item.iconWrapperClassName,
                             )}
                         >
                             <item.icon
-                                className={cn('size-5', item.iconClassName)}
+                                className={cn('size-4.5 sm:size-5', item.iconClassName)}
                             />
                         </div>
                     </div>

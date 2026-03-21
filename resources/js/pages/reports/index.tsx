@@ -516,7 +516,7 @@ export default function ReportsIndex({
                                 </div>
 
                                 <div className="overflow-x-auto">
-                                    <table className="min-w-full divide-y divide-[#e2ebe6] text-sm dark:divide-slate-800">
+                                    <table className="min-w-[44rem] w-full divide-y divide-[#e2ebe6] text-[0.8125rem] sm:min-w-full sm:text-sm dark:divide-slate-800">
                                         <thead className="bg-slate-50/80 dark:bg-slate-900/60">
                                             <tr className="text-left text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                                                 <th className="px-6 py-3 font-medium">
