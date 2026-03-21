@@ -14,9 +14,15 @@ type SelectOption = {
 type Props = {
     statusOptions: SelectOption[];
     scopeTypeOptions: SelectOption[];
+    districts: Array<{
+        id: number;
+        name: string;
+        status: string;
+    }>;
     sections: Array<{
         id: number;
         name: string;
+        district_id: number;
         district_name: string;
         status: string;
     }>;
@@ -25,6 +31,12 @@ type Props = {
         name: string;
         status: string;
     }>;
+    formDefaults: {
+        scope_type: string;
+        district_id: number | null;
+        section_id: number | null;
+        department_id: number | null;
+    };
     feeCategoryStatusOptions: SelectOption[];
 };
 
@@ -46,8 +58,10 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function CreateEvent({
     statusOptions,
     scopeTypeOptions,
+    districts,
     sections,
     departments,
+    formDefaults,
     feeCategoryStatusOptions,
 }: Props) {
     return (
@@ -62,8 +76,10 @@ export default function CreateEvent({
                 <EventForm
                     statusOptions={statusOptions}
                     scopeTypeOptions={scopeTypeOptions}
+                    districts={districts}
                     sections={sections}
                     departments={departments}
+                    formDefaults={formDefaults}
                     feeCategoryStatusOptions={feeCategoryStatusOptions}
                 />
             </div>

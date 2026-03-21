@@ -40,7 +40,9 @@ test('admins can view event total registration and churches without registration
         'church_name' => 'Hope Chapel',
         'pastor_name' => 'Pastor Anne Reyes',
     ]);
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
     $encoder = User::factory()->registrationStaff()->create();
     $event = reportEvent();
     $regular = EventFeeCategory::factory()->for($event)->create([
@@ -89,7 +91,7 @@ test('admins can view event total registration and churches without registration
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('reports/index')
-            ->where('scopeSummary', 'District events • all sections • all departments')
+            ->where('scopeSummary', 'District events • No department')
             ->where('filters.event_id', $event->id)
             ->where('filters.section_id', null)
             ->where('filters.search', '')
@@ -132,7 +134,9 @@ test('admins can filter and search churches without registration report', functi
         'church_name' => 'Hope Chapel',
         'pastor_name' => 'Pastor Anne Reyes',
     ]);
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
     $encoder = User::factory()->registrationStaff()->create();
     $event = reportEvent();
     $regular = EventFeeCategory::factory()->for($event)->create([
@@ -170,6 +174,42 @@ test('admins can filter and search churches without registration report', functi
             ->where('churchesWithoutRegistration.data.0.pastor_name', 'Pastor Anne Reyes'));
 
     expect($pastorThree->church_name)->toBe('Hope Chapel');
+});
+
+test('admin report section filters stay inside the assigned district', function () {
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $otherDistrict = District::factory()->create([
+        'name' => 'Northern Luzon',
+    ]);
+    $section = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    Section::factory()->for($otherDistrict)->create([
+        'name' => 'Outside Section',
+    ]);
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+
+    reportEvent([
+        'district_id' => $district->id,
+        'department_id' => null,
+    ]);
+    reportEvent([
+        'district_id' => $otherDistrict->id,
+        'department_id' => null,
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('reports.index'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('reports/index')
+            ->has('sections', 1)
+            ->where('sections.0.id', $section->id)
+            ->where('sections.0.district_name', 'Central Luzon'));
 });
 
 test('managers only see report data inside their assigned section', function () {
@@ -260,7 +300,7 @@ test('managers only see report data inside their assigned section', function () 
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('reports/index')
-            ->where('scopeSummary', 'Central Luzon • Section 1 • all departments')
+            ->where('scopeSummary', 'Central Luzon • Section 1 • No department')
             ->where('canFilterBySection', false)
             ->where('filters.section_id', $sectionOne->id)
             ->where('selectedSection.name', 'Section 1')
@@ -275,6 +315,81 @@ test('managers only see report data inside their assigned section', function () 
             ->where('churchesWithoutRegistration.data.0.church_name', 'Faith Harvest Church'));
 
     expect($pastorTwo->church_name)->not->toBe($pastorThree->church_name);
+});
+
+test('managers only see their own section data for district-wide report events', function () {
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $sectionOne = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $sectionTwo = Section::factory()->for($district)->create([
+        'name' => 'Section 2',
+    ]);
+    $pastorOne = Pastor::factory()->for($sectionOne)->create([
+        'church_name' => 'Grace Community Church',
+        'pastor_name' => 'Pastor Jane Doe',
+    ]);
+    $pastorTwo = Pastor::factory()->for($sectionOne)->create([
+        'church_name' => 'Faith Harvest Church',
+        'pastor_name' => 'Pastor Mark Lim',
+    ]);
+    $outsidePastor = Pastor::factory()->for($sectionTwo)->create([
+        'church_name' => 'River of Life Church',
+        'pastor_name' => 'Pastor Joel Cruz',
+    ]);
+    $manager = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $sectionOne->id,
+    ]);
+    $encoder = User::factory()->registrationStaff()->create();
+    $event = reportEvent([
+        'scope_type' => Event::SCOPE_DISTRICT,
+        'department_id' => null,
+    ]);
+    $regular = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+    ]);
+
+    createReportedRegistration(
+        $event,
+        $pastorOne,
+        $encoder,
+        $regular,
+        Registration::MODE_ONLINE,
+        Registration::STATUS_PENDING_VERIFICATION,
+        3,
+    );
+
+    createReportedRegistration(
+        $event,
+        $outsidePastor,
+        $encoder,
+        $regular,
+        Registration::MODE_ONSITE,
+        Registration::STATUS_COMPLETED,
+        5,
+    );
+
+    $this->actingAs($manager)
+        ->get(route('reports.index', [
+            'event_id' => $event->id,
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('reports/index')
+            ->where('scopeSummary', 'Central Luzon • Section 1 • No department')
+            ->where('filters.section_id', $sectionOne->id)
+            ->where('selectedSection.name', 'Section 1')
+            ->where('eventTotalRegistration.total_registered_quantity', 3)
+            ->where('eventTotalRegistration.registration_count', 1)
+            ->where('churchesWithoutRegistration.meta.total', 1)
+            ->has('churchesWithoutRegistration.data', 1)
+            ->where('churchesWithoutRegistration.data.0.church_name', 'Faith Harvest Church'));
+
+    expect($pastorTwo->church_name)->not->toBe($outsidePastor->church_name);
 });
 
 test('department-scoped admins only see district report events for their department', function () {
@@ -361,7 +476,9 @@ test('admins can export churches without registration based on report scope', fu
         'church_name' => 'Hope Chapel',
         'pastor_name' => 'Pastor Anne Reyes',
     ]);
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
     $encoder = User::factory()->registrationStaff()->create();
     $event = reportEvent();
     $regular = EventFeeCategory::factory()->for($event)->create([
@@ -413,12 +530,19 @@ test('users without report access cannot open the reports page', function () {
 
 function reportEvent(array $attributes = []): Event
 {
+    $sectionId = $attributes['section_id'] ?? null;
+    $districtId = $attributes['district_id']
+        ?? ($sectionId !== null
+            ? Section::query()->find($sectionId)?->district_id
+            : District::query()->value('id'));
+
     return Event::factory()->create([
         'name' => 'CLD Youth Conference 2026',
         'status' => Event::STATUS_OPEN,
         'total_capacity' => 2000,
         'registration_open_at' => now()->subDays(3),
         'registration_close_at' => now()->addDays(30),
+        'district_id' => $districtId,
         ...$attributes,
     ]);
 }

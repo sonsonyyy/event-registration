@@ -11,11 +11,33 @@ use App\Models\Section;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
-test('admins can browse the event management pages', function () {
-    $admin = User::factory()->admin()->create();
+test('admins can browse district event management pages inside their district scope', function () {
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $otherDistrict = District::factory()->create([
+        'name' => 'Northern Luzon',
+    ]);
     $department = Department::factory()->create();
-    $section = Section::factory()->for(District::factory())->create();
-    $event = Event::factory()->create([
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+        'department_id' => $department->id,
+    ]);
+    $section = Section::factory()->for($district)->create();
+    $managedEvent = Event::factory()->create([
+        'name' => 'District Youth Summit',
+        'district_id' => $district->id,
+        'status' => Event::STATUS_OPEN,
+        'department_id' => $department->id,
+        'scope_type' => Event::SCOPE_DISTRICT,
+        'section_id' => null,
+        'total_capacity' => 20,
+        'registration_open_at' => now()->subDay(),
+        'registration_close_at' => now()->addDays(3),
+    ]);
+    $sectionalEvent = Event::factory()->create([
+        'name' => 'Section 1 Youth Summit',
+        'district_id' => $district->id,
         'status' => Event::STATUS_OPEN,
         'department_id' => $department->id,
         'scope_type' => Event::SCOPE_SECTION,
@@ -24,16 +46,29 @@ test('admins can browse the event management pages', function () {
         'registration_open_at' => now()->subDay(),
         'registration_close_at' => now()->addDays(3),
     ]);
-    $countedFeeCategory = EventFeeCategory::factory()->for($event)->create([
+    $otherDistrictEvent = Event::factory()->create([
+        'name' => 'Northern Luzon District Event',
+        'district_id' => $otherDistrict->id,
+        'status' => Event::STATUS_OPEN,
+        'department_id' => $department->id,
+        'scope_type' => Event::SCOPE_DISTRICT,
+        'section_id' => null,
+        'total_capacity' => 20,
+        'registration_open_at' => now()->subDay(),
+        'registration_close_at' => now()->addDays(3),
+    ]);
+    $countedFeeCategory = EventFeeCategory::factory()->for($managedEvent)->create([
         'category_name' => 'Regular (Online)',
         'slot_limit' => 10,
     ]);
-    EventFeeCategory::factory()->for($event)->create([
+    EventFeeCategory::factory()->for($managedEvent)->create([
         'category_name' => 'Regular (Onsite)',
         'slot_limit' => null,
     ]);
-    reserveQuantityForEvent($event, $countedFeeCategory, 7, Registration::STATUS_PENDING_VERIFICATION);
-    reserveQuantityForEvent($event, $countedFeeCategory, 4, Registration::STATUS_DRAFT);
+    EventFeeCategory::factory()->for($sectionalEvent)->create();
+    EventFeeCategory::factory()->for($otherDistrictEvent)->create();
+    reserveQuantityForEvent($managedEvent, $countedFeeCategory, 7, Registration::STATUS_PENDING_VERIFICATION);
+    reserveQuantityForEvent($managedEvent, $countedFeeCategory, 4, Registration::STATUS_DRAFT);
 
     $this->actingAs($admin)
         ->get(route('admin.events.index'))
@@ -41,7 +76,7 @@ test('admins can browse the event management pages', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/events/index')
             ->has('events.data', 1)
-            ->where('events.data.0.name', $event->name)
+            ->where('events.data.0.name', $managedEvent->name)
             ->where('events.data.0.reserved_quantity', 7)
             ->where('events.data.0.remaining_slots', 13)
             ->where('events.data.0.status', Event::STATUS_OPEN)
@@ -56,29 +91,39 @@ test('admins can browse the event management pages', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/events/create')
             ->has('statusOptions', 5)
-            ->has('scopeTypeOptions', 2)
+            ->has('scopeTypeOptions', 1)
+            ->has('districts', 1)
             ->has('sections')
             ->has('departments')
+            ->where('formDefaults.scope_type', Event::SCOPE_DISTRICT)
+            ->where('formDefaults.district_id', $district->id)
+            ->where('formDefaults.section_id', null)
+            ->where('formDefaults.department_id', $department->id)
             ->has('feeCategoryStatusOptions', 2));
 
     $this->actingAs($admin)
-        ->get(route('admin.events.edit', $event))
+        ->get(route('admin.events.edit', $managedEvent))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/events/edit')
-            ->where('event.name', $event->name)
-            ->where('event.scope_type', Event::SCOPE_SECTION)
+            ->where('event.name', $managedEvent->name)
+            ->where('event.scope_type', Event::SCOPE_DISTRICT)
+            ->where('event.district_id', $district->id)
             ->where('event.department_id', $department->id)
-            ->where('event.section_id', $section->id)
+            ->where('event.section_id', null)
             ->where('event.remaining_slots', 13)
             ->where('event.fee_categories.0.reserved_quantity', 7));
 });
 
 test('admins can search and paginate events by name venue or description', function () {
-    $admin = User::factory()->admin()->create();
+    $district = District::factory()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
 
     Event::factory()->create([
         'name' => 'Leaders Summit',
+        'district_id' => $district->id,
         'venue' => 'Clark Freeport',
         'description' => 'Leadership training event',
         'date_from' => '2026-06-10',
@@ -86,6 +131,7 @@ test('admins can search and paginate events by name venue or description', funct
 
     Event::factory()->create([
         'name' => 'Worship Night',
+        'district_id' => $district->id,
         'venue' => 'SMX Clark',
         'description' => 'District-wide gathering',
         'date_from' => '2026-06-12',
@@ -93,6 +139,7 @@ test('admins can search and paginate events by name venue or description', funct
 
     Event::factory()->create([
         'name' => 'Youth Conference',
+        'district_id' => $district->id,
         'venue' => 'San Fernando',
         'description' => 'Held near Clark for section leaders',
         'date_from' => '2026-06-14',
@@ -114,25 +161,99 @@ test('admins can search and paginate events by name venue or description', funct
             ->where('events.data.0.name', 'Youth Conference'));
 });
 
-test('non admins cannot access admin event management routes', function () {
-    $manager = User::factory()->manager()->create();
+test('managers can browse and manage only their own sectional event pages', function () {
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $otherSection = Section::factory()->for($district)->create([
+        'name' => 'Section 2',
+    ]);
+    $department = Department::factory()->create();
+    $manager = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'department_id' => $department->id,
+    ]);
+    $managedEvent = Event::factory()->create([
+        'name' => 'Section 1 Youth Rally',
+        'district_id' => $district->id,
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+        'department_id' => $department->id,
+    ]);
+    EventFeeCategory::factory()->for($managedEvent)->create();
+    Event::factory()->create([
+        'name' => 'Section 2 Youth Rally',
+        'district_id' => $district->id,
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $otherSection->id,
+        'department_id' => $department->id,
+    ]);
+    Event::factory()->create([
+        'name' => 'District Youth Rally',
+        'district_id' => $district->id,
+        'scope_type' => Event::SCOPE_DISTRICT,
+        'section_id' => null,
+        'department_id' => $department->id,
+    ]);
 
     $this->actingAs($manager)
         ->get(route('admin.events.index'))
-        ->assertForbidden();
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/events/index')
+            ->has('events.data', 1)
+            ->where('events.data.0.name', $managedEvent->name));
 
     $this->actingAs($manager)
+        ->get(route('admin.events.create'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/events/create')
+            ->has('scopeTypeOptions', 1)
+            ->has('districts', 1)
+            ->has('sections', 1)
+            ->where('formDefaults.scope_type', Event::SCOPE_SECTION)
+            ->where('formDefaults.district_id', $district->id)
+            ->where('formDefaults.section_id', $section->id)
+            ->where('formDefaults.department_id', $department->id));
+
+    $this->actingAs($manager)
+        ->get(route('admin.events.edit', $managedEvent))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/events/edit')
+            ->where('event.name', $managedEvent->name)
+            ->where('event.scope_type', Event::SCOPE_SECTION)
+            ->where('event.district_id', $district->id)
+            ->where('event.section_id', $section->id));
+});
+
+test('registration staff cannot access event management routes', function () {
+    $staff = User::factory()->registrationStaff()->create();
+
+    $this->actingAs($staff)
+        ->get(route('admin.events.index'))
+        ->assertForbidden();
+
+    $this->actingAs($staff)
         ->post(route('admin.events.store'), eventPayload())
         ->assertForbidden();
 });
 
-test('admins can create events with multiple fee categories', function () {
-    $admin = User::factory()->admin()->create();
+test('admins can create district-wide events with multiple fee categories', function () {
+    $district = District::factory()->create();
     $department = Department::factory()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+        'department_id' => $department->id,
+    ]);
 
     $this->actingAs($admin)
         ->post(route('admin.events.store'), eventPayload([
             'name' => 'District Camp 2026',
+            'district_id' => $district->id,
             'department_id' => $department->id,
         ]))
         ->assertRedirect(route('admin.events.index'));
@@ -140,6 +261,7 @@ test('admins can create events with multiple fee categories', function () {
     $event = Event::query()->where('name', 'District Camp 2026')->firstOrFail();
 
     expect($event->status)->toBe(Event::STATUS_OPEN)
+        ->and($event->district_id)->toBe($district->id)
         ->and($event->department_id)->toBe($department->id)
         ->and($event->scope_type)->toBe(Event::SCOPE_DISTRICT)
         ->and($event->feeCategories()->count())->toBe(2)
@@ -147,8 +269,40 @@ test('admins can create events with multiple fee categories', function () {
         ->and($event->feeCategories()->where('category_name', 'Regular (Onsite)')->exists())->toBeTrue();
 });
 
-test('admins must pass the event validation rules', function () {
-    $admin = User::factory()->admin()->create();
+test('managers can create sectional events inside their own section scope', function () {
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $department = Department::factory()->create();
+    $manager = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'department_id' => $department->id,
+    ]);
+
+    $this->actingAs($manager)
+        ->post(route('admin.events.store'), eventPayload([
+            'name' => 'Section 1 Youth Camp',
+            'scope_type' => Event::SCOPE_SECTION,
+            'district_id' => $district->id,
+            'section_id' => $section->id,
+            'department_id' => $department->id,
+        ]))
+        ->assertRedirect(route('admin.events.index'));
+
+    $event = Event::query()->where('name', 'Section 1 Youth Camp')->firstOrFail();
+
+    expect($event->district_id)->toBe($district->id)
+        ->and($event->section_id)->toBe($section->id)
+        ->and($event->scope_type)->toBe(Event::SCOPE_SECTION)
+        ->and($event->department_id)->toBe($department->id);
+});
+
+test('event validation enforces owner district and scope rules', function () {
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
 
     $this->actingAs($admin)
         ->from(route('admin.events.create'))
@@ -162,7 +316,8 @@ test('admins must pass the event validation rules', function () {
             'registration_close_at' => '2026-06-04T08:00',
             'total_capacity' => 10,
             'status' => Event::STATUS_OPEN,
-            'scope_type' => Event::SCOPE_SECTION,
+            'scope_type' => Event::SCOPE_DISTRICT,
+            'district_id' => '',
             'section_id' => '',
             'department_id' => 999999,
             'fee_categories' => [
@@ -186,22 +341,39 @@ test('admins must pass the event validation rules', function () {
             'venue',
             'date_to',
             'registration_close_at',
-            'section_id',
+            'district_id',
             'department_id',
             'fee_categories',
         ]);
+
+    $manager = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+    ]);
+
+    $this->actingAs($manager)
+        ->from(route('admin.events.create'))
+        ->post(route('admin.events.store'), eventPayload([
+            'name' => 'Blocked District Event',
+            'district_id' => $district->id,
+            'scope_type' => Event::SCOPE_DISTRICT,
+            'section_id' => null,
+        ]))
+        ->assertRedirect(route('admin.events.create'))
+        ->assertSessionHasErrors(['scope_type']);
 });
 
-test('admins can update events and synchronize fee categories', function () {
-    $admin = User::factory()->admin()->create();
+test('admins can update district-wide events and synchronize fee categories', function () {
+    $district = District::factory()->create();
     $department = Department::factory()->create([
         'name' => 'Youth Ministries',
     ]);
-    $replacementDepartment = Department::factory()->create([
-        'name' => 'Sunday School',
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+        'department_id' => $department->id,
     ]);
-    $section = Section::factory()->for(District::factory())->create();
     $event = Event::factory()->create([
+        'district_id' => $district->id,
         'status' => Event::STATUS_DRAFT,
         'department_id' => $department->id,
         'total_capacity' => 100,
@@ -226,9 +398,10 @@ test('admins can update events and synchronize fee categories', function () {
             'registration_close_at' => '2026-06-30T18:00',
             'total_capacity' => 250,
             'status' => Event::STATUS_OPEN,
-            'scope_type' => Event::SCOPE_SECTION,
-            'section_id' => $section->id,
-            'department_id' => $replacementDepartment->id,
+            'scope_type' => Event::SCOPE_DISTRICT,
+            'district_id' => $district->id,
+            'section_id' => null,
+            'department_id' => $department->id,
             'fee_categories' => [
                 [
                     'id' => $retainedFeeCategory->id,
@@ -250,18 +423,53 @@ test('admins can update events and synchronize fee categories', function () {
     expect($event->refresh()->name)->toBe('Updated District Camp')
         ->and($event->venue)->toBe('Updated Venue')
         ->and($event->status)->toBe(Event::STATUS_OPEN)
-        ->and($event->scope_type)->toBe(Event::SCOPE_SECTION)
-        ->and($event->section_id)->toBe($section->id)
-        ->and($event->department_id)->toBe($replacementDepartment->id)
+        ->and($event->scope_type)->toBe(Event::SCOPE_DISTRICT)
+        ->and($event->district_id)->toBe($district->id)
+        ->and($event->section_id)->toBeNull()
+        ->and($event->department_id)->toBe($department->id)
         ->and($event->feeCategories()->count())->toBe(2)
         ->and($event->feeCategories()->where('category_name', 'Regular (Online) Updated')->exists())->toBeTrue()
         ->and($event->feeCategories()->where('category_name', 'Regular (Onsite)')->exists())->toBeTrue()
         ->and($event->feeCategories()->whereKey($removedFeeCategory->id)->exists())->toBeFalse();
 });
 
+test('managers cannot manage district-wide events and admins cannot manage sectional events', function () {
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $manager = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+    ]);
+    $districtEvent = Event::factory()->create([
+        'district_id' => $district->id,
+        'scope_type' => Event::SCOPE_DISTRICT,
+        'section_id' => null,
+    ]);
+    $sectionEvent = Event::factory()->create([
+        'district_id' => $district->id,
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+    ]);
+
+    $this->actingAs($manager)
+        ->get(route('admin.events.edit', $districtEvent))
+        ->assertForbidden();
+
+    $this->actingAs($admin)
+        ->get(route('admin.events.edit', $sectionEvent))
+        ->assertForbidden();
+});
+
 test('admins cannot reduce event capacity below reserved quantities or remove used fee categories', function () {
-    $admin = User::factory()->admin()->create();
+    $district = District::factory()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
     $event = Event::factory()->create([
+        'district_id' => $district->id,
         'status' => Event::STATUS_OPEN,
         'total_capacity' => 10,
         'registration_open_at' => now()->subDay(),
@@ -286,6 +494,7 @@ test('admins cannot reduce event capacity below reserved quantities or remove us
             'total_capacity' => 5,
             'status' => Event::STATUS_OPEN,
             'scope_type' => $event->scope_type,
+            'district_id' => $event->district_id,
             'section_id' => $event->section_id,
             'department_id' => $event->department_id,
             'fee_categories' => [],
@@ -306,6 +515,7 @@ test('admins cannot reduce event capacity below reserved quantities or remove us
             'total_capacity' => 10,
             'status' => Event::STATUS_OPEN,
             'scope_type' => $event->scope_type,
+            'district_id' => $event->district_id,
             'section_id' => $event->section_id,
             'department_id' => $event->department_id,
             'fee_categories' => [
@@ -323,8 +533,13 @@ test('admins cannot reduce event capacity below reserved quantities or remove us
 });
 
 test('admins can delete events without registrations', function () {
-    $admin = User::factory()->admin()->create();
-    $event = Event::factory()->create();
+    $district = District::factory()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $event = Event::factory()->create([
+        'district_id' => $district->id,
+    ]);
     $feeCategory = EventFeeCategory::factory()->for($event)->create();
 
     $this->actingAs($admin)
@@ -338,8 +553,12 @@ test('admins can delete events without registrations', function () {
 });
 
 test('admins can archive events with recorded registrations and keep historical relations', function () {
-    $admin = User::factory()->admin()->create();
+    $district = District::factory()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
     $event = Event::factory()->create([
+        'district_id' => $district->id,
         'status' => Event::STATUS_OPEN,
         'registration_open_at' => now()->subDay(),
         'registration_close_at' => now()->addDay(),
@@ -370,9 +589,13 @@ test('admins can archive events with recorded registrations and keep historical 
 });
 
 test('full or expired open events are automatically surfaced as closed with no remaining slots', function () {
-    $admin = User::factory()->admin()->create();
+    $district = District::factory()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
     $fullEvent = Event::factory()->create([
         'name' => 'Full Event',
+        'district_id' => $district->id,
         'status' => Event::STATUS_OPEN,
         'date_from' => '2026-08-01',
         'date_to' => '2026-08-03',
@@ -382,6 +605,7 @@ test('full or expired open events are automatically surfaced as closed with no r
     ]);
     $expiredEvent = Event::factory()->create([
         'name' => 'Expired Event',
+        'district_id' => $district->id,
         'status' => Event::STATUS_OPEN,
         'date_from' => '2026-09-01',
         'date_to' => '2026-09-03',
@@ -424,6 +648,7 @@ function eventPayload(array $overrides = []): array
         'total_capacity' => 500,
         'status' => Event::STATUS_OPEN,
         'scope_type' => Event::SCOPE_DISTRICT,
+        'district_id' => null,
         'section_id' => null,
         'department_id' => null,
         'fee_categories' => [

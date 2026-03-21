@@ -9,15 +9,18 @@ use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('admins can browse the user management pages', function () {
-    $admin = User::factory()->admin()->create();
-    $department = Department::factory()->create();
     $district = District::factory()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $department = Department::factory()->create();
     $section = Section::factory()->for($district)->create();
     $pastor = Pastor::factory()->for($section)->create();
     $managedUser = User::factory()->manager()->create([
         'district_id' => $district->id,
         'section_id' => $section->id,
     ]);
+    User::factory()->manager()->create();
 
     $this->actingAs($admin)
         ->get(route('admin.users.index'))
@@ -64,21 +67,35 @@ test('admins can browse the user management pages', function () {
 });
 
 test('admins can search and paginate users', function () {
-    $admin = User::factory()->admin()->create();
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
 
     User::factory()->manager()->create([
         'name' => 'North Section Account',
         'email' => 'north-manager@example.com',
+        'district_id' => $district->id,
+        'section_id' => $section->id,
     ]);
 
     User::factory()->manager()->create([
         'name' => 'South Section Account',
         'email' => 'south-manager@example.com',
+        'district_id' => $district->id,
+        'section_id' => $section->id,
     ]);
 
     User::factory()->registrationStaff()->create([
         'name' => 'Registration Encoder',
         'email' => 'encoder@example.com',
+        'district_id' => $district->id,
+    ]);
+
+    User::factory()->manager()->create([
+        'name' => 'Outside District Manager',
+        'email' => 'outside-manager@example.com',
     ]);
 
     $this->actingAs($admin)
@@ -100,9 +117,11 @@ test('admins can search and paginate users', function () {
 });
 
 test('admins can filter users by section, role, and status', function () {
-    $admin = User::factory()->admin()->create();
     $northDistrict = District::factory()->create([
         'name' => 'North District',
+    ]);
+    $admin = User::factory()->admin()->create([
+        'district_id' => $northDistrict->id,
     ]);
     $southDistrict = District::factory()->create([
         'name' => 'South District',
@@ -171,11 +190,13 @@ test('non admins cannot access admin user management routes', function () {
 });
 
 test('admins can create users with role and scope assignments', function () {
-    $admin = User::factory()->admin()->create();
+    $district = District::factory()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
     $department = Department::factory()->create([
         'name' => 'Youth Ministries',
     ]);
-    $district = District::factory()->create();
     $section = Section::factory()->for($district)->create();
     $pastor = Pastor::factory()->for($section)->create();
     $managerRole = Role::query()->firstOrCreate([
@@ -238,9 +259,11 @@ test('admins can create users with role and scope assignments', function () {
 });
 
 test('admins must satisfy role and scope validation rules when creating users', function () {
-    $admin = User::factory()->admin()->create();
-    $department = Department::factory()->create();
     $district = District::factory()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $department = Department::factory()->create();
     $otherDistrict = District::factory()->create();
     $section = Section::factory()->for($district)->create();
     $otherSection = Section::factory()->for($otherDistrict)->create();
@@ -299,19 +322,19 @@ test('admins must satisfy role and scope validation rules when creating users', 
 });
 
 test('admins can update users and replace their scope assignment', function () {
-    $admin = User::factory()->admin()->create();
+    $district = District::factory()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
     $department = Department::factory()->create([
         'name' => 'Youth Ministries',
     ]);
     $replacementDepartment = Department::factory()->create([
         'name' => 'Music Commission',
     ]);
-    $district = District::factory()->create();
-    $otherDistrict = District::factory()->create();
     $section = Section::factory()->for($district)->create();
-    $otherSection = Section::factory()->for($otherDistrict)->create();
     $pastor = Pastor::factory()->for($section)->create();
-    $otherPastor = Pastor::factory()->for($otherSection)->create();
+    $replacementPastor = Pastor::factory()->for($section)->create();
     $managedUser = User::factory()->manager()->create([
         'district_id' => $district->id,
         'department_id' => $department->id,
@@ -329,10 +352,10 @@ test('admins can update users and replace their scope assignment', function () {
             'password' => '',
             'password_confirmation' => '',
             'role_id' => $onlineRegistrantRole->id,
-            'district_id' => '',
+            'district_id' => $district->id,
             'department_id' => $replacementDepartment->id,
-            'section_id' => '',
-            'pastor_id' => $otherPastor->id,
+            'section_id' => $section->id,
+            'pastor_id' => $replacementPastor->id,
             'position_title' => 'Church Secretary',
             'status' => 'inactive',
         ])
@@ -343,17 +366,22 @@ test('admins can update users and replace their scope assignment', function () {
     expect($managedUser->name)->toBe('Updated Registrant')
         ->and($managedUser->email)->toBe('updated.registrant@example.com')
         ->and($managedUser->roleName())->toBe(Role::ONLINE_REGISTRANT)
-        ->and($managedUser->district_id)->toBe($otherDistrict->id)
+        ->and($managedUser->district_id)->toBe($district->id)
         ->and($managedUser->department_id)->toBe($replacementDepartment->id)
-        ->and($managedUser->section_id)->toBe($otherSection->id)
-        ->and($managedUser->pastor_id)->toBe($otherPastor->id)
+        ->and($managedUser->section_id)->toBe($section->id)
+        ->and($managedUser->pastor_id)->toBe($replacementPastor->id)
         ->and($managedUser->position_title)->toBe('Church Secretary')
         ->and($managedUser->status)->toBe('inactive');
 });
 
 test('admins can delete users but not their own account', function () {
-    $admin = User::factory()->admin()->create();
-    $managedUser = User::factory()->registrationStaff()->create();
+    $district = District::factory()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $managedUser = User::factory()->registrationStaff()->create([
+        'district_id' => $district->id,
+    ]);
 
     $this->actingAs($admin)
         ->delete(route('admin.users.destroy', $managedUser))
@@ -373,9 +401,13 @@ test('admins can delete users but not their own account', function () {
 });
 
 test('admins can create a replacement account with the email of an archived user', function () {
-    $admin = User::factory()->admin()->create();
+    $district = District::factory()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
     $archivedUser = User::factory()->registrationStaff()->create([
         'email' => 'archived-user@example.com',
+        'district_id' => $district->id,
     ]);
     $role = Role::query()->firstOrCreate([
         'name' => Role::REGISTRATION_STAFF,
@@ -390,7 +422,7 @@ test('admins can create a replacement account with the email of an archived user
             'password' => 'password',
             'password_confirmation' => 'password',
             'role_id' => $role->id,
-            'district_id' => null,
+            'district_id' => $district->id,
             'section_id' => null,
             'pastor_id' => null,
             'status' => 'active',
@@ -402,4 +434,36 @@ test('admins can create a replacement account with the email of an archived user
         'name' => 'Replacement Staff',
         'deleted_at' => null,
     ]);
+});
+
+test('admins cannot update users outside their assigned district', function () {
+    $district = District::factory()->create();
+    $otherDistrict = District::factory()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $otherSection = Section::factory()->for($otherDistrict)->create();
+    $otherPastor = Pastor::factory()->for($otherSection)->create();
+    $managedUser = User::factory()->registrationStaff()->create([
+        'district_id' => $otherDistrict->id,
+    ]);
+    $role = Role::query()->firstOrCreate([
+        'name' => Role::ONLINE_REGISTRANT,
+    ]);
+
+    $this->actingAs($admin)
+        ->patch(route('admin.users.update', $managedUser), [
+            'name' => 'Cross District Update',
+            'email' => 'cross-district@example.com',
+            'password' => '',
+            'password_confirmation' => '',
+            'role_id' => $role->id,
+            'district_id' => $otherDistrict->id,
+            'department_id' => '',
+            'section_id' => $otherSection->id,
+            'pastor_id' => $otherPastor->id,
+            'position_title' => 'Church Secretary',
+            'status' => 'active',
+        ])
+        ->assertForbidden();
 });

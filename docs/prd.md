@@ -68,9 +68,17 @@ Supported departments for the current district are:
 - Information Technology Commission
 
 ### 3.3 General vs Departmental Access
-- `department_id = null` means the account or event is general / non-departmental.
-- General accounts can operate across departments within their geographic scope.
-- Department-scoped accounts are limited to their assigned department within their geographic scope.
+Permissions must always be evaluated by combining:
+- role
+- territorial scope
+- department scope
+- action type
+
+Department matching is strict:
+- If a user belongs to a department, they only match records and events in that same department
+- If a user has no department, they only match records and events with no department
+- No-department is not a wildcard
+- Same department alone does not grant authority
 
 ### 3.4 Positions and Titles
 District and sectional positions such as `President`, `Director`, `Presbyter`, and `Secretary` are organizational titles, not permission roles.
@@ -91,6 +99,11 @@ Deployment-wide system owner for IT or platform administration.
 - Approve church access requests
 - Verify any registration
 - Override scope restrictions when needed
+- Generate all reports
+
+#### Scope Rules
+- Must not be assigned to any district, section, department, or pastor
+- No position/title is required
 
 ---
 
@@ -99,21 +112,24 @@ Deployment-wide system owner for IT or platform administration.
 District-scoped reviewer and operator.
 
 #### Scope Rules
-- Always district-scoped
-- May be department-scoped
-- May be general / non-departmental
+- Must belong to one district
+- May belong to exactly one department or no department
+- Must not be assigned to a pastor
+- Must not be treated as section-scoped
 
 #### Permissions
 - Manage users
 - Manage districts, sections, departments, and pastors/churches
-- Manage events and fee categories
-- Approve church access requests
-- Review and verify registrations
-- View reports for accessible scope
+- Manage district-wide events and fee categories inside matching district and department scope
+- Post onsite registrations for district-wide events inside matching district and department scope
+- Verify online registrations for district-wide events inside matching district and department scope
+- View reports for accessible district and department scope
 
 #### Access Rules
-- A general admin can access all district events, whether departmental or non-departmental
-- A department-scoped admin can access only events in the assigned department within the district
+- A no-department admin matches only no-department district events
+- A department-scoped admin matches only district events in the same department
+- Admins do not manage sectional events
+- Admins do not process account requests in this ruleset
 
 ---
 
@@ -122,19 +138,21 @@ District-scoped reviewer and operator.
 Section-scoped reviewer and operator.
 
 #### Scope Rules
-- Always section-scoped
-- May be department-scoped
-- May be general / non-departmental
+- Must belong to one section
+- May belong to exactly one department or no department
+- Must not be assigned to a pastor
 
 #### Permissions
-- Approve church access requests
-- Review and verify registrations
-- View reports for accessible scope
-- Perform allowed registration operations within assigned scope
+- Process account requests for churches in the same section
+- Manage sectional events and fee categories inside matching section and department scope
+- Post onsite registrations for churches in the same section when the event and department scope match
+- Verify online registrations for churches in the same section when the event and department scope match
+- View reports for accessible section and department scope
 
 #### Access Rules
-- A general manager can access all events within the assigned section, whether departmental or non-departmental
-- A department-scoped manager can access only events in the assigned department within the assigned section
+- A no-department manager matches only no-department section events
+- A department-scoped manager matches only section events in the same department
+- Managers may help process district-wide registrations for their own section, but that does not make them managers of the district-wide event record
 
 ---
 
@@ -149,7 +167,14 @@ Operational user for onsite event registration.
 - Save onsite transactions
 
 #### Current Rule
-Registration staff remains operationally focused and department-neutral in this phase unless expanded later.
+Registration staff is operational only.
+
+#### Scope Rules
+- Scope depends on assigned district, optional section, and optional department
+- Must not be assigned to a pastor
+- No position/title is required
+- Cannot manage event records
+- Can post registrations only inside explicitly assigned scope
 
 ---
 
@@ -180,9 +205,19 @@ An event may be:
 - Sectional event with no department
 
 ### Event Scope Rules
-- District events are visible to district-scoped reviewers according to department rules
-- Sectional events are visible to section-scoped reviewers according to department rules
-- General events require general reviewers at the matching geographic scope
+Managing an event is separate from viewing an event or helping with registration.
+
+- District event under a department:
+  - managed by `Super Admin` or an `Admin` in the same district and same department
+- District event with no department:
+  - managed by `Super Admin` or a no-department `Admin` in the same district
+- Sectional event under a department:
+  - managed by `Super Admin` or a `Manager` in the same section and same department
+- Sectional event with no department:
+  - managed by `Super Admin` or a no-department `Manager` in the same section
+- Managers may view district-wide events for workflow purposes when separate registration rules allow it, but they do not manage the event record
+- Admins may view sectional events for workflow purposes when separate registration rules allow it, but they do not manage the event record
+- Registration Staff and Registrants cannot manage events
 
 ### Event Fields
 - Event name
@@ -195,9 +230,19 @@ An event may be:
 - Status
 - Total capacity
 - Remaining slots (computed)
+- Owning district
 - Scope type (`district` or `section`)
 - Assigned section (required for sectional events, otherwise null)
 - Assigned department (optional)
+
+### Event Ownership Storage Rules
+- Every event stores `district_id`
+- District-wide events must store the owning `district_id` and keep `section_id` null
+- Sectional events must store both `section_id` and the matching `district_id` from that section
+- Event management, reporting, verification, and onsite posting must use the stored event district instead of inferring district ownership from related registrations
+- Non-superadmin event forms must prefill and lock actor-owned scope fields:
+  - `Admin` defaults to district-wide scope, assigned district, and assigned department or no-department lane
+  - `Manager` defaults to sectional scope, assigned district, assigned section, and assigned department or no-department lane
 
 ### Fee Categories
 Each event can have multiple fee categories such as:
@@ -318,8 +363,16 @@ Manage privileged accounts, registrant accounts, and scope assignments.
 - Archive events
 - Configure fee categories
 - Set total capacity
-- Set event scope and department ownership
+- Set event scope, owning district, and department ownership
 - Open and close registration
+
+#### Business Rules
+- Every event must store an owning district
+- District-wide events require `district_id` and must not store `section_id`
+- Sectional events require `section_id` and must store the matching section district on `district_id`
+- `Admin` can manage only district-wide events in the same district and matching department scope
+- `Manager` can manage only sectional events in the same section and matching department scope
+- Workflow visibility for registration help does not change event-record ownership
 
 ---
 
@@ -339,6 +392,11 @@ Used by registration staff, managers, or admins for onsite transactions.
 - Onsite registration is quantity-based, not delegate-based
 - Onsite transactions are recorded as `Paid` in the current MVP
 - `Unpaid` and `Partial` remain reserved for future workflow expansion
+- `Registration Staff` can post onsite registrations only inside explicitly assigned territorial and department scope
+- `Admin` can post onsite registrations only for district-wide events in the same district and matching department scope
+- `Manager` can post onsite registrations for churches inside the assigned section when the event is available to that section and department scope matches
+- Manager help on district-wide events is a workflow action only, not event ownership
+- Onsite posting does not send notifications
 
 ---
 
@@ -438,6 +496,16 @@ In-app workflow notifications keep reviewers and registrants aware of approval a
 - Registration summary by pastor/church
 - Payment summary based on submitted references and receipts
 
+#### Report Access Rules
+- `Super Admin` can generate all reports across all scopes
+- `Admin` can generate reports only for events inside the assigned district and matching department scope
+- A no-department `Admin` can report only on no-department district events
+- `Manager` can generate reports only for events inside the assigned section and matching department scope
+- A no-department `Manager` can report only on no-department section events
+- Report section filters must show only sections inside the signed-in user’s district, or the manager’s own section
+- For district-wide events, a `Manager` may see only data from the manager's own section
+- Managers must not see data from other sections
+
 ---
 
 ## 7. Key Business Rules
@@ -445,45 +513,58 @@ In-app workflow notifications keep reviewers and registrants aware of approval a
 ### 7.1 Church Access Request Approval
 Church representative access requests may be approved by:
 - Super Admin
-- Admin
 - Manager
 
-This approval rule is geographic-scope based, not department-restricted. Both department-scoped and general admin/manager accounts may approve requests within their allowed geographic scope.
+This approval rule is section-scoped. Managers may process requests only when they belong to the same section as the requesting church. Department does not restrict account request handling in this ruleset, and Admins do not process account requests unless a later rule explicitly adds that authority.
+
+New account requests notify:
+- Managers in the same section as the requesting church
+- Optional `Super Admin`
 
 ### 7.2 Registration Verification Ownership
-- A general district event must be verified by a general district reviewer or Super Admin
-- A general sectional event must be verified by a general section reviewer or Super Admin
-- A departmental district event may be verified by:
-  - a department-scoped district reviewer for that department
-  - a general district reviewer
-  - Super Admin
-- A departmental sectional event may be verified by:
-  - a department-scoped section reviewer for that department
-  - a general section reviewer
-  - Super Admin
+- `Admin` can verify only district-wide events in the same district and matching department scope
+- `Manager` can verify registrations for churches in the assigned section when the event is district-wide or sectional and department scope matches
+- No-department reviewers match only no-department events
+- `Super Admin` can verify any registration
+- Event ownership does not automatically determine verification ownership; role, territorial scope, department scope, and action type must all match
 
 ### 7.3 General Event Coverage
-If general non-departmental events exist at a scope, at least one general reviewer account must exist at that scope.
+If general non-departmental events exist at a scope, at least one no-department reviewer account must exist at that scope.
 
-### 7.4 Historical Data
+### 7.4 Verification Notifications
+- District-wide event under a department -> matching district `Admin`, matching section `Manager`, optional `Super Admin`
+- District-wide event with no department -> no-department district `Admin`, no-department section `Manager`, optional `Super Admin`
+- Sectional event under a department -> matching section `Manager`, optional `Super Admin`
+- Sectional event with no department -> no-department section `Manager`, optional `Super Admin`
+
+### 7.5 Historical Data
 - Archive operations must preserve historical registrations and review history
 - Archived users, events, departments, sections, pastors, and fee categories must remain available for historical reporting and future audit trail features
+
+### 7.6 Authorization Precedence
+Apply permission logic in this order:
+1. `Super Admin` override
+2. role authority for the action
+3. territorial scope check
+4. strict department match
+5. section / church ownership where relevant
+6. deny by default
 
 ---
 
 ## 8. Core Workflows
 
 ### 8.1 Event Setup Workflow
-1. Super Admin or Admin sets up districts, sections, departments, and pastors/churches
-2. Admin creates event
-3. Admin assigns event scope and optional department
-4. Admin sets fee categories and capacity
-5. Admin creates user accounts with role, geographic scope, optional department, and optional title
+1. Super Admin sets up or oversees districts, sections, departments, and pastors/churches
+2. Admin creates district-wide events inside matching district and department scope
+3. Manager creates sectional events inside matching section and department scope
+4. Event owner assigns the owning district, scope, and optional department
+5. Super Admin or Admin creates user accounts with role, territorial scope, optional department, and optional title
 6. Registration opens
 
 ### 8.2 Church Access Workflow
 1. Church representative requests access for an assigned pastor/church
-2. Super Admin, Admin, or Manager reviews the request
+2. Super Admin or a Manager in the same section reviews the request
 3. Reviewers receive in-app notifications for new requests
 4. Approved account can sign in and submit registrations
 5. Registrant receives approval or rejection notification
@@ -527,6 +608,7 @@ If general non-departmental events exist at a scope, at least one general review
 - `users.department_id` nullable
 - `users.position_title` nullable
 - `events.scope_type`
+- `events.district_id` nullable for migration/backfill, required for managed events going forward
 - `events.section_id` nullable
 - `events.department_id` nullable
 
@@ -541,11 +623,13 @@ If general non-departmental events exist at a scope, at least one general review
 
 The product should be implemented around this model:
 - role controls permissions
-- geographic scope controls reach
-- optional department controls the organizational lane
-- `null department` means general authority within the assigned scope
+- territorial scope controls reach
+- department scope must match strictly
+- `null department` means no-department only, not wildcard authority
+- action type must be evaluated separately
 - position/title is metadata, not authorization
 - registrant accounts stay church-based
+- same department does not automatically grant authority
 - uploaded receipt files should be stored on private S3-compatible object storage in production
 
 This keeps the system operationally clear while supporting both departmental and general district events.

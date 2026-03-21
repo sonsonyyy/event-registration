@@ -40,6 +40,15 @@ test('managers can view a verification queue scoped to their assigned section', 
         'amount' => '800.00',
         'slot_limit' => 20,
     ]);
+    $districtEvent = verificationEvent([
+        'scope_type' => Event::SCOPE_DISTRICT,
+        'department_id' => null,
+    ]);
+    $districtFeeCategory = EventFeeCategory::factory()->for($districtEvent)->create([
+        'category_name' => 'District Regular (Online)',
+        'amount' => '900.00',
+        'slot_limit' => 20,
+    ]);
     $otherEvent = verificationEvent([
         'scope_type' => Event::SCOPE_SECTION,
         'section_id' => $otherSection->id,
@@ -67,6 +76,16 @@ test('managers can view a verification queue scoped to their assigned section', 
         'section_id' => $otherSection->id,
         'pastor_id' => $otherPastor->id,
     ]);
+
+    createOnlineRegistrationForVerification(
+        $districtEvent,
+        $assignedPastor,
+        $assignedRegistrant,
+        $districtFeeCategory,
+        [
+            'payment_reference' => 'DEP-CLD-1000',
+        ],
+    );
 
     createOnlineRegistrationForVerification(
         $assignedEvent,
@@ -110,17 +129,17 @@ test('managers can view a verification queue scoped to their assigned section', 
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('registrations/verification/index')
-            ->where('scopeSummary', 'Central Luzon • Section 1 • all departments')
+            ->where('scopeSummary', 'Central Luzon • Section 1 • No department')
             ->where('filters.status', 'all')
             ->where('filters.search', 'Grace Community')
-            ->where('summary.pending_verification', 1)
+            ->where('summary.pending_verification', 2)
             ->where('summary.needs_correction', 0)
             ->where('summary.verified', 1)
             ->where('summary.rejected', 0)
             ->has('statusOptions', 5)
-            ->has('registrations.data', 2)
+            ->has('registrations.data', 3)
             ->where('registrations.data.0.pastor.church_name', 'Grace Community Church')
-            ->where('registrations.data.1.registration_status', Registration::STATUS_VERIFIED));
+            ->where('registrations.data.2.registration_status', Registration::STATUS_VERIFIED));
 });
 
 test('admins can open uploaded receipts and verify online registrations', function () {
@@ -129,13 +148,15 @@ test('admins can open uploaded receipts and verify online registrations', functi
     Storage::fake('local');
     config()->set('registration.receipts_disk', 'local');
 
-    $admin = User::factory()->admin()->create();
+    $pastor = Pastor::factory()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $pastor->section->district_id,
+    ]);
     $event = verificationEvent();
     $feeCategory = EventFeeCategory::factory()->for($event)->create([
         'category_name' => 'Regular (Online)',
         'amount' => '800.00',
     ]);
-    $pastor = Pastor::factory()->create();
     $registrant = User::factory()->onlineRegistrant()->create([
         'district_id' => $pastor->section->district_id,
         'section_id' => $pastor->section_id,
@@ -183,13 +204,15 @@ test('verification receipt route redirects to a temporary url when receipts are 
     config()->set('filesystems.disks.s3.bucket', 'event-registration-receipts');
     config()->set('filesystems.disks.s3.region', 'ap-southeast-1');
 
-    $admin = User::factory()->admin()->create();
+    $pastor = Pastor::factory()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $pastor->section->district_id,
+    ]);
     $event = verificationEvent();
     $feeCategory = EventFeeCategory::factory()->for($event)->create([
         'category_name' => 'Regular (Online)',
         'amount' => '800.00',
     ]);
-    $pastor = Pastor::factory()->create();
     $registrant = User::factory()->onlineRegistrant()->create([
         'district_id' => $pastor->section->district_id,
         'section_id' => $pastor->section_id,
@@ -332,7 +355,7 @@ test('department-scoped reviewers are limited to matching departments and event 
         ]))
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
-            ->where('scopeSummary', 'district events • Youth Ministries')
+            ->where('scopeSummary', 'Central Luzon • district events • Youth Ministries')
             ->where('summary.pending_verification', 1)
             ->where('summary.needs_correction', 0)
             ->where('summary.verified', 0)
@@ -361,9 +384,14 @@ test('department-scoped reviewers are limited to matching departments and event 
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->where('scopeSummary', 'Central Luzon • Section 1 • Youth Ministries')
-            ->where('summary.pending_verification', 1)
-            ->has('registrations.data', 1)
-            ->where('registrations.data.0.event.name', $youthSectionEvent->name));
+            ->where('summary.pending_verification', 2)
+            ->has('registrations.data', 2)
+            ->where('registrations.data.0.event.name', $youthDistrictEvent->name)
+            ->where('registrations.data.1.event.name', $youthSectionEvent->name));
+
+    $this->actingAs($departmentManager)
+        ->get(route('registrations.verification.receipt', $youthDistrictRegistration))
+        ->assertSuccessful();
 
     $this->actingAs($departmentManager)
         ->get(route('registrations.verification.receipt', $youthSectionRegistration))
@@ -631,13 +659,15 @@ test('rejected registrations cannot be reviewed again', function () {
     Storage::fake('local');
     config()->set('registration.receipts_disk', 'local');
 
-    $admin = User::factory()->admin()->create();
+    $pastor = Pastor::factory()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $pastor->section->district_id,
+    ]);
     $event = verificationEvent();
     $feeCategory = EventFeeCategory::factory()->for($event)->create([
         'category_name' => 'Regular (Online)',
         'amount' => '800.00',
     ]);
-    $pastor = Pastor::factory()->create();
     $registrant = User::factory()->onlineRegistrant()->create([
         'district_id' => $pastor->section->district_id,
         'section_id' => $pastor->section_id,
@@ -684,12 +714,19 @@ test('rejected registrations cannot be reviewed again', function () {
 
 function verificationEvent(array $attributes = []): Event
 {
+    $sectionId = $attributes['section_id'] ?? null;
+    $districtId = $attributes['district_id']
+        ?? ($sectionId !== null
+            ? Section::query()->find($sectionId)?->district_id
+            : District::query()->value('id'));
+
     return Event::factory()->create([
         'name' => 'CLD Youth Conference 2026',
         'status' => Event::STATUS_OPEN,
         'total_capacity' => 200,
         'registration_open_at' => now()->subDay(),
         'registration_close_at' => now()->addDays(30),
+        'district_id' => $districtId,
         ...$attributes,
     ]);
 }

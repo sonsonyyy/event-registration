@@ -201,6 +201,12 @@ class ReportsController extends Controller
 
         if ($user->isManager()) {
             $sections->whereKey($user->section_id);
+        } elseif ($user->isAdmin()) {
+            if ($user->district_id === null) {
+                $sections->whereRaw('1 = 0');
+            } else {
+                $sections->where('district_id', $user->district_id);
+            }
         }
 
         return $sections->get();
@@ -502,10 +508,6 @@ HTML;
         }
 
         if ($user->isAdmin()) {
-            if ($user->department_id === null) {
-                return 'District events • all sections • all departments';
-            }
-
             return 'District events • '.$this->departmentLabel($user);
         }
 
@@ -566,6 +568,6 @@ HTML;
     {
         return $user->department?->name
             ?? $user->department()->value('name')
-            ?? 'all departments';
+            ?? 'No department';
     }
 }

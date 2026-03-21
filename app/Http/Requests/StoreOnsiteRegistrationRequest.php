@@ -102,7 +102,10 @@ class StoreOnsiteRegistrationRequest extends FormRequest
                 $event->loadSum('reservedRegistrationItems as reserved_quantity', 'quantity');
                 $event->syncOperationalStatus();
 
-                if (! DepartmentScopeAccess::canAccessEvent($this->user(), $event)) {
+                if (
+                    $pastor !== null
+                    && ! DepartmentScopeAccess::canPostOnsiteRegistration($this->user(), $pastor, $event)
+                ) {
                     $validator->errors()->add(
                         'event_id',
                         'The selected event is not available to your account.',

@@ -48,6 +48,7 @@ class Event extends Model
         'total_capacity',
         'status',
         'scope_type',
+        'district_id',
         'section_id',
         'department_id',
     ];
@@ -96,6 +97,11 @@ class Event extends Model
     public function section(): BelongsTo
     {
         return $this->belongsTo(Section::class)->withTrashed();
+    }
+
+    public function district(): BelongsTo
+    {
+        return $this->belongsTo(District::class)->withTrashed();
     }
 
     public function department(): BelongsTo

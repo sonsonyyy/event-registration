@@ -2,7 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\District;
 use App\Models\Event;
+use App\Models\Section;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -33,6 +35,9 @@ class EventFactory extends Factory
             'total_capacity' => fake()->numberBetween(100, 1000),
             'status' => Event::STATUS_DRAFT,
             'scope_type' => Event::SCOPE_DISTRICT,
+            'district_id' => fn (array $attributes) => isset($attributes['section_id']) && $attributes['section_id'] !== null
+                ? Section::query()->withTrashed()->find($attributes['section_id'])?->district_id
+                : District::factory(),
             'section_id' => null,
             'department_id' => null,
         ];

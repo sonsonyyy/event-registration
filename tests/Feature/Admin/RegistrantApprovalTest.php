@@ -10,7 +10,7 @@ use App\Notifications\RegistrantAccessRejected;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 
-test('admins can review self-service registrant account requests', function () {
+test('super admins can review self-service registrant account requests', function () {
     Notification::fake();
 
     $district = District::factory()->create([
@@ -19,10 +19,7 @@ test('admins can review self-service registrant account requests', function () {
     $department = Department::factory()->create([
         'name' => 'Youth Ministries',
     ]);
-    $admin = User::factory()->admin()->create([
-        'district_id' => $district->id,
-        'department_id' => $department->id,
-    ]);
+    $superAdmin = User::factory()->superAdmin()->create();
     $section = Section::factory()->for($district)->create([
         'name' => 'Section 1',
     ]);
@@ -57,19 +54,19 @@ test('admins can review self-service registrant account requests', function () {
         'email' => 'admin-created@example.com',
     ]);
 
-    $this->actingAs($admin)
+    $this->actingAs($superAdmin)
         ->get(route('account-requests.index'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('account-requests/index')
-            ->where('scopeSummary', 'Central Luzon • all sections')
+            ->where('scopeSummary', 'all districts')
             ->where('filters.status', User::APPROVAL_PENDING)
             ->where('summary.pending', 1)
             ->where('summary.approved', 0)
             ->has('requests.data', 1)
             ->where('requests.data.0.email', 'request@example.com'));
 
-    $this->actingAs($admin)
+    $this->actingAs($superAdmin)
         ->patch(route('account-requests.update', $pendingRequest), [
             'decision' => User::APPROVAL_APPROVED,
         ])
@@ -78,7 +75,7 @@ test('admins can review self-service registrant account requests', function () {
     $pendingRequest->refresh();
 
     expect($pendingRequest->approval_status)->toBe(User::APPROVAL_APPROVED)
-        ->and($pendingRequest->approval_reviewed_by_user_id)->toBe($admin->id)
+        ->and($pendingRequest->approval_reviewed_by_user_id)->toBe($superAdmin->id)
         ->and($pendingRequest->approval_reviewed_at)->not->toBeNull();
 
     Notification::assertSentTo($pendingRequest, RegistrantAccessApproved::class);
@@ -89,6 +86,33 @@ test('admins can review self-service registrant account requests', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->where('auth.can.manageOnlineRegistrations', true)
             ->where('dashboard.account_notice', null));
+});
+
+test('admins cannot review self-service registrant account requests', function () {
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $pendingRequest = User::factory()
+        ->onlineRegistrant()
+        ->selfServiceAccount()
+        ->pendingApproval()
+        ->create([
+            'district_id' => $district->id,
+            'section_id' => $section->id,
+            'pastor_id' => Pastor::factory()->for($section)->create()->id,
+        ]);
+
+    $this->actingAs($admin)
+        ->get(route('account-requests.index'))
+        ->assertForbidden();
+
+    $this->actingAs($admin)
+        ->patch(route('account-requests.update', $pendingRequest), [
+            'decision' => User::APPROVAL_APPROVED,
+        ])
+        ->assertForbidden();
 });
 
 test('managers can only review self-service registrant requests within their assigned section', function () {
@@ -158,10 +182,13 @@ test('managers can only review self-service registrant requests within their ass
         ->assertForbidden();
 });
 
-test('admins cannot approve a third registrant account for the same church', function () {
-    $admin = User::factory()->admin()->create();
+test('managers cannot approve a third registrant account for the same church', function () {
     $district = District::factory()->create();
     $section = Section::factory()->for($district)->create();
+    $manager = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+    ]);
     $pastor = Pastor::factory()->for($section)->create();
     $pendingRequest = User::factory()
         ->onlineRegistrant()
@@ -187,7 +214,7 @@ test('admins cannot approve a third registrant account for the same church', fun
         'email' => 'second@example.com',
     ]);
 
-    $this->actingAs($admin)
+    $this->actingAs($manager)
         ->from(route('account-requests.index'))
         ->patch(route('account-requests.update', $pendingRequest), [
             'decision' => User::APPROVAL_APPROVED,
@@ -201,9 +228,12 @@ test('admins cannot approve a third registrant account for the same church', fun
 test('reviewers notify registrants when requests are rejected', function () {
     Notification::fake();
 
-    $admin = User::factory()->admin()->create();
     $district = District::factory()->create();
     $section = Section::factory()->for($district)->create();
+    $manager = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+    ]);
     $pastor = Pastor::factory()->for($section)->create();
     $pendingRequest = User::factory()
         ->onlineRegistrant()
@@ -215,7 +245,7 @@ test('reviewers notify registrants when requests are rejected', function () {
             'pastor_id' => $pastor->id,
         ]);
 
-    $this->actingAs($admin)
+    $this->actingAs($manager)
         ->patch(route('account-requests.update', $pendingRequest), [
             'decision' => User::APPROVAL_REJECTED,
         ])

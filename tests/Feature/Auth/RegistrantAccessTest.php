@@ -159,9 +159,7 @@ test('self-service requests notify eligible reviewers', function () {
     $pastor = Pastor::factory()->for($section)->create([
         'church_name' => 'Grace Community Church',
     ]);
-    $eligibleAdmin = User::factory()->admin()->create([
-        'district_id' => $district->id,
-    ]);
+    $eligibleSuperAdmin = User::factory()->superAdmin()->create();
     $eligibleManager = User::factory()->manager()->create([
         'district_id' => $district->id,
         'section_id' => $section->id,
@@ -180,7 +178,7 @@ test('self-service requests notify eligible reviewers', function () {
         'password_confirmation' => 'password',
     ])->assertRedirect(route('login'));
 
-    Notification::assertSentTo($eligibleAdmin, RegistrantAccessRequested::class);
+    Notification::assertSentTo($eligibleSuperAdmin, RegistrantAccessRequested::class);
     Notification::assertSentTo($eligibleManager, RegistrantAccessRequested::class);
     Notification::assertNotSentTo($outsideManager, RegistrantAccessRequested::class);
 });

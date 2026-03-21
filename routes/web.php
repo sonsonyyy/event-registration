@@ -16,6 +16,7 @@ use App\Http\Controllers\RegistrantApprovalController;
 use App\Http\Controllers\RegistrationVerificationController;
 use App\Http\Controllers\ReportsController;
 use App\Models\District;
+use App\Models\Event as ManagedEvent;
 use App\Models\Registration;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -87,9 +88,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('admin')
         ->name('admin.')
+        ->group(function (): void {
+            Route::resource('events', EventController::class)
+                ->except('show')
+                ->middleware('can:viewAny,'.ManagedEvent::class);
+        });
+
+    Route::prefix('admin')
+        ->name('admin.')
         ->middleware('can:viewAny,'.District::class)
         ->group(function (): void {
-            Route::resource('events', EventController::class)->except('show');
             Route::resource('users', UserController::class)->except('show');
             Route::resource('departments', DepartmentController::class)->except('show');
             Route::resource('districts', DistrictController::class)->except('show');

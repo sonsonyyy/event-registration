@@ -43,6 +43,7 @@ test('mvp schema tables and key columns exist', function () {
     ]))->toBeTrue();
     expect(Schema::hasColumns('events', [
         'scope_type',
+        'district_id',
         'section_id',
         'department_id',
     ]))->toBeTrue();
@@ -106,6 +107,7 @@ test('core mvp model relationships resolve correctly', function () {
         ->create();
     $event = Event::factory()->create([
         'scope_type' => Event::SCOPE_SECTION,
+        'district_id' => $district->id,
         'section_id' => $section->id,
         'department_id' => $department->id,
     ]);
@@ -151,6 +153,7 @@ test('core mvp model relationships resolve correctly', function () {
     expect($user->section->is($section))->toBeTrue();
     expect($user->department->is($department))->toBeTrue();
     expect($user->pastor->is($pastor))->toBeTrue();
+    expect($event->district->is($district))->toBeTrue();
     expect($event->section->is($section))->toBeTrue();
     expect($event->department->is($department))->toBeTrue();
     expect($event->feeCategories->first()->is($feeCategory))->toBeTrue();

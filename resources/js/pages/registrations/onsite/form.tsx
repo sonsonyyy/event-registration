@@ -1,6 +1,7 @@
-import { Link, useForm } from '@inertiajs/react';
+import { Link, useForm, usePage } from '@inertiajs/react';
 import { Building2, Plus, ReceiptText, Trash2, UsersRound } from 'lucide-react';
 import type { FormEvent } from 'react';
+import { useEffect } from 'react';
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
 import FormSelect from '@/components/form-select';
 import InputError from '@/components/input-error';
@@ -19,6 +20,7 @@ import {
     formControlClassName,
     formTextareaClassName,
 } from '@/lib/ui-styles';
+import type { Auth } from '@/types/auth';
 
 type FeeCategoryOption = {
     id: number;
@@ -55,6 +57,11 @@ type SectionOption = {
     name: string;
     district_id: number;
     district_name: string;
+};
+
+type DistrictOption = {
+    id: number;
+    name: string;
 };
 
 type LineItemFormValue = {
@@ -119,6 +126,7 @@ export default function OnsiteRegistrationForm({
     pastors,
     registration,
 }: Props) {
+    const { auth } = usePage<{ auth: Auth }>().props;
     const isEditing = registration !== undefined;
     const initialPastor = registration
         ? pastors.find(
@@ -142,7 +150,19 @@ export default function OnsiteRegistrationForm({
     const selectedPastor =
         pastors.find((pastor) => pastor.id.toString() === form.data.pastor_id) ??
         null;
+    const isSuperAdminViewer = auth.can.viewSystemAdminMenu;
     const availableFeeCategories = selectedEvent?.fee_categories ?? [];
+    const districtOptions = Array.from(
+        new Map(
+            pastors.map((pastor) => [
+                pastor.district_id,
+                {
+                    id: pastor.district_id,
+                    name: pastor.district_name,
+                },
+            ]),
+        ).values(),
+    ).sort((left, right) => left.name.localeCompare(right.name));
     const sectionOptions = Array.from(
         new Map(
             pastors.map((pastor) => [
@@ -156,12 +176,50 @@ export default function OnsiteRegistrationForm({
             ]),
         ).values(),
     ).sort((left, right) => left.name.localeCompare(right.name));
+    const filteredSections = form.data.district_id
+        ? sectionOptions.filter(
+              (section) =>
+                  section.district_id.toString() === form.data.district_id,
+          )
+        : sectionOptions;
     const filteredPastors = form.data.section_id
         ? pastors.filter(
               (pastor) =>
                   pastor.section_id.toString() === form.data.section_id,
           )
-        : pastors;
+        : form.data.district_id
+          ? pastors.filter(
+                (pastor) =>
+                    pastor.district_id.toString() === form.data.district_id,
+            )
+          : pastors;
+
+    useEffect(() => {
+        if (districtOptions.length !== 1 || form.data.district_id !== '') {
+            return;
+        }
+
+        form.setData('district_id', districtOptions[0].id.toString());
+    }, [districtOptions, form]);
+
+    useEffect(() => {
+        if (filteredSections.length !== 1) {
+            return;
+        }
+
+        const nextSectionId = filteredSections[0].id.toString();
+
+        if (form.data.section_id === nextSectionId) {
+            return;
+        }
+
+        form.setData((currentData) => ({
+            ...currentData,
+            district_id: filteredSections[0].district_id.toString(),
+            section_id: nextSectionId,
+            pastor_id: '',
+        }));
+    }, [filteredSections, form, form.data.section_id]);
 
     let totalQuantity = 0;
     let totalAmount = 0;
@@ -193,8 +251,28 @@ export default function OnsiteRegistrationForm({
         }));
     };
 
+    const changeDistrict = (value: string): void => {
+        const nextSection = sectionOptions.find(
+            (section) =>
+                section.id.toString() === form.data.section_id &&
+                section.district_id.toString() === value,
+        );
+        const nextPastor = pastors.find(
+            (pastor) =>
+                pastor.id.toString() === form.data.pastor_id &&
+                pastor.district_id.toString() === value,
+        );
+
+        form.setData((currentData) => ({
+            ...currentData,
+            district_id: value,
+            section_id: nextSection?.id.toString() ?? '',
+            pastor_id: nextPastor?.id.toString() ?? '',
+        }));
+    };
+
     const changeSection = (value: string): void => {
-        const section = sectionOptions.find(
+        const section = filteredSections.find(
             (option) => option.id.toString() === value,
         );
         const nextPastor = pastors.find(
@@ -319,6 +397,27 @@ export default function OnsiteRegistrationForm({
 
                                 <div className="grid gap-5 xl:grid-cols-2">
                                     <div className="grid gap-2">
+                                        <Label htmlFor="district_id">District</Label>
+                                        <FormSelect
+                                            id="district_id"
+                                            name="district_id"
+                                            value={form.data.district_id}
+                                            onValueChange={changeDistrict}
+                                            placeholder="Select a district"
+                                            emptyLabel="Select a district"
+                                            disabled={
+                                                districtOptions.length === 0 ||
+                                                (!isSuperAdminViewer &&
+                                                    districtOptions.length === 1)
+                                            }
+                                            options={districtOptions.map((district) => ({
+                                                value: district.id.toString(),
+                                                label: district.name,
+                                            }))}
+                                        />
+                                    </div>
+
+                                    <div className="grid gap-2">
                                         <Label htmlFor="section_id">Section</Label>
                                         <FormSelect
                                             id="section_id"
@@ -327,7 +426,12 @@ export default function OnsiteRegistrationForm({
                                             onValueChange={changeSection}
                                             placeholder="Select a section"
                                             emptyLabel="Select a section"
-                                            options={sectionOptions.map((section) => ({
+                                            disabled={
+                                                filteredSections.length === 0 ||
+                                                (!isSuperAdminViewer &&
+                                                    filteredSections.length === 1)
+                                            }
+                                            options={filteredSections.map((section) => ({
                                                 value: section.id.toString(),
                                                 label: `${section.name} · ${section.district_name}`,
                                             }))}

@@ -90,17 +90,38 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(User::class, UserPolicy::class);
 
         Gate::define('viewReports', function (User $user): bool {
-            return $user->hasAdminAccess()
+            return $user->isAdmin() && $user->district_id !== null
+                || $user->isSuperAdmin()
                 || ($user->isManager() && $user->section_id !== null);
         });
 
         Gate::define('viewSectionReport', function (User $user, Section $section): bool {
-            return $user->hasAdminAccess() || $user->canAccessSection($section);
+            if ($user->isSuperAdmin()) {
+                return true;
+            }
+
+            if ($user->isAdmin()) {
+                return $user->district_id !== null
+                    && $section->district_id === $user->district_id;
+            }
+
+            return $user->isManager()
+                && $user->section_id !== null
+                && $user->section_id === $section->getKey();
         });
 
         Gate::define('viewPastorReport', function (User $user, Pastor $pastor): bool {
-            return $user->hasAdminAccess()
-                || ($user->isManager() && $user->managesSection($pastor->section_id));
+            if ($user->isSuperAdmin()) {
+                return true;
+            }
+
+            if ($user->isAdmin()) {
+                return $user->district_id !== null
+                    && $pastor->section?->district_id === $user->district_id;
+            }
+
+            return $user->isManager()
+                && $user->managesSection($pastor->section_id);
         });
     }
 }

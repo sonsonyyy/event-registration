@@ -22,8 +22,9 @@ class RegistrationPolicy
 
     public function viewAnyOnsite(User $user): bool
     {
-        return $user->isRegistrationStaff()
-            || ($user->isManager() && $user->section_id !== null);
+        return ($user->isAdmin() && $user->district_id !== null)
+            || ($user->isManager() && $user->section_id !== null)
+            || ($user->isRegistrationStaff() && $user->district_id !== null);
     }
 
     public function viewAnyOnline(User $user): bool
@@ -48,7 +49,11 @@ class RegistrationPolicy
 
     public function update(User $user, Registration $registration): bool
     {
-        if ($user->isManager()) {
+        if ($user->isAdmin() || $user->isManager()) {
+            if ($registration->registration_mode !== Registration::MODE_ONSITE) {
+                return false;
+            }
+
             return $user->canAccessRegistration($registration);
         }
 
@@ -64,6 +69,10 @@ class RegistrationPolicy
     {
         if (! $registration->canBeUpdatedOnsite()) {
             return false;
+        }
+
+        if ($user->isAdmin()) {
+            return $user->canAccessRegistration($registration);
         }
 
         if ($user->isManager()) {
@@ -95,25 +104,30 @@ class RegistrationPolicy
 
     public function delete(User $user, Registration $registration): bool
     {
-        return $user->isManager() && $user->canAccessRegistration($registration);
+        return ($user->isAdmin() || $user->isManager())
+            && $user->canAccessRegistration($registration);
     }
 
     public function createOnsite(User $user, ?Pastor $pastor = null, ?Event $event = null): bool
     {
-        if ($event !== null && ! DepartmentScopeAccess::canAccessEvent($user, $event)) {
-            return false;
+        if ($pastor !== null && $event !== null) {
+            return DepartmentScopeAccess::canPostOnsiteRegistration($user, $pastor, $event);
         }
 
-        if ($user->isRegistrationStaff()) {
-            return true;
+        if ($pastor !== null) {
+            return DepartmentScopeAccess::canAccessPastorForOnsiteScope($user, $pastor);
+        }
+
+        if ($user->isAdmin()) {
+            return $user->district_id !== null;
         }
 
         if ($user->isManager()) {
-            if ($pastor === null) {
-                return $user->section_id !== null;
-            }
+            return $user->section_id !== null;
+        }
 
-            return $user->managesSection($pastor->section_id);
+        if ($user->isRegistrationStaff()) {
+            return $user->district_id !== null;
         }
 
         return false;

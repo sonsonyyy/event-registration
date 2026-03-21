@@ -205,6 +205,82 @@ test('department-scoped admins only see district events and registrations for th
             ->where('dashboard.recent_registrations.0.id', $youthRegistration->id));
 });
 
+test('district-scoped admin dashboard cards exclude other district data', function () {
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $otherDistrict = District::factory()->create([
+        'name' => 'Northern Luzon',
+    ]);
+    $section = Section::factory()->create([
+        'district_id' => $district->id,
+        'name' => 'Section 1',
+    ]);
+    $otherSection = Section::factory()->create([
+        'district_id' => $otherDistrict->id,
+        'name' => 'Section 2',
+    ]);
+    $pastor = Pastor::factory()->create([
+        'section_id' => $section->id,
+        'church_name' => 'Grace Community Church',
+        'status' => 'active',
+    ]);
+    Pastor::factory()->create([
+        'section_id' => $section->id,
+        'status' => 'inactive',
+    ]);
+    $otherPastor = Pastor::factory()->create([
+        'section_id' => $otherSection->id,
+        'church_name' => 'Outside District Church',
+        'status' => 'active',
+    ]);
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+    ]);
+    User::factory()->manager()->create([
+        'district_id' => $otherDistrict->id,
+        'section_id' => $otherSection->id,
+    ]);
+    User::factory()->registrationStaff()->inactive()->create([
+        'district_id' => $district->id,
+    ]);
+    $districtEvent = createDashboardEvent([
+        'district_id' => $district->id,
+        'department_id' => null,
+    ]);
+    $otherDistrictEvent = createDashboardEvent([
+        'district_id' => $otherDistrict->id,
+        'department_id' => null,
+    ]);
+    $districtRegistration = Registration::factory()->create([
+        'event_id' => $districtEvent->id,
+        'pastor_id' => $pastor->id,
+        'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
+    ]);
+    Registration::factory()->create([
+        'event_id' => $otherDistrictEvent->id,
+        'pastor_id' => $otherPastor->id,
+        'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->where('dashboard.metrics.0.value', 1)
+            ->where('dashboard.metrics.1.value', 1)
+            ->where('dashboard.metrics.2.value', 2)
+            ->where('dashboard.metrics.3.value', 1)
+            ->has('dashboard.open_events', 1)
+            ->where('dashboard.open_events.0.id', $districtEvent->id)
+            ->has('dashboard.recent_registrations', 1)
+            ->where('dashboard.recent_registrations.0.id', $districtRegistration->id));
+});
+
 test('dashboard open events use reservation aware remaining slots', function () {
     $user = User::factory()->superAdmin()->create();
     $event = createDashboardEvent([
@@ -312,6 +388,12 @@ test('pending online registrants see an approval notice and no online registrati
 
 function createDashboardEvent(array $attributes = []): Event
 {
+    $sectionId = $attributes['section_id'] ?? null;
+    $districtId = $attributes['district_id']
+        ?? ($sectionId !== null
+            ? Section::query()->find($sectionId)?->district_id
+            : District::query()->value('id'));
+
     $event = Event::factory()->create([
         'name' => 'CLD Youth Conference 2026',
         'status' => Event::STATUS_OPEN,
@@ -320,6 +402,7 @@ function createDashboardEvent(array $attributes = []): Event
         'registration_open_at' => now()->subDay(),
         'registration_close_at' => now()->addDays(10),
         'total_capacity' => 500,
+        'district_id' => $districtId,
         ...$attributes,
     ]);
 
