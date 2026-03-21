@@ -16,6 +16,23 @@ test('authenticated users are redirected away from the welcome page', function (
         ->assertRedirect(route('dashboard'));
 });
 
+test('development banner is displayed outside production', function () {
+    config()->set('app.env', 'local');
+
+    $this->get(route('home'))
+        ->assertSuccessful()
+        ->assertSeeText('Development Environment');
+});
+
+test('environment banner is hidden in production', function () {
+    config()->set('app.env', 'production');
+
+    $this->get(route('home'))
+        ->assertSuccessful()
+        ->assertDontSeeText('Development Environment')
+        ->assertDontSeeText('Staging Environment');
+});
+
 test('welcome page lists open events that can still accept registrations', function () {
     config()->set('app.asset_url', 'http://assets.test');
 

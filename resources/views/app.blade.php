@@ -43,7 +43,31 @@
         @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         @inertiaHead
     </head>
-    <body class="font-sans antialiased">
+    @php
+        $appEnvironment = config('app.env');
+        $environmentBanner = match ($appEnvironment) {
+            'staging' => [
+                'label' => 'Staging',
+                'class' => 'border-b border-amber-200 bg-[linear-gradient(90deg,_#fff5db,_#ffe9b8)] text-amber-950',
+            ],
+            'local', 'development' => [
+                'label' => 'Development',
+                'class' => 'border-b border-sky-200 bg-[linear-gradient(90deg,_#e5f3ff,_#d8ebff)] text-sky-950',
+            ],
+            default => null,
+        };
+    @endphp
+    <body
+        class="font-sans antialiased"
+        style="--app-env-banner-height: {{ $environmentBanner !== null ? '40px' : '0px' }};"
+    >
+        @if ($environmentBanner !== null)
+            <div class="{{ $environmentBanner['class'] }}">
+                <div class="mx-auto flex min-h-10 w-full max-w-7xl items-center justify-center px-4 py-2 text-center text-[11px] font-semibold tracking-[0.18em] uppercase sm:text-xs">
+                    {{ $environmentBanner['label'] }} Environment
+                </div>
+            </div>
+        @endif
         @inertia
     </body>
 </html>
