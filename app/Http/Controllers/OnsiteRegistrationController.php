@@ -120,7 +120,7 @@ class OnsiteRegistrationController extends Controller
                 ]);
             }
 
-            if (! DepartmentScopeAccess::canAccessEvent($request->user(), $event)) {
+            if (! DepartmentScopeAccess::canPostOnsiteRegistration($request->user(), $pastor, $event)) {
                 throw ValidationException::withMessages([
                     'event_id' => 'The selected event is not available to your account.',
                 ]);
@@ -354,8 +354,26 @@ class OnsiteRegistrationController extends Controller
             ->with('section.district')
             ->orderBy('church_name');
 
+        if ($user?->isAdmin() && $user->district_id !== null) {
+            $pastors->whereHas('section', function (Builder $query) use ($user): void {
+                $query->where('district_id', $user->district_id);
+            });
+        }
+
         if ($user?->isManager()) {
             $pastors->where('section_id', $user->section_id);
+        }
+
+        if ($user?->isRegistrationStaff()) {
+            if ($user->district_id === null) {
+                $pastors->whereRaw('1 = 0');
+            } elseif ($user->section_id !== null) {
+                $pastors->where('section_id', $user->section_id);
+            } else {
+                $pastors->whereHas('section', function (Builder $query) use ($user): void {
+                    $query->where('district_id', $user->district_id);
+                });
+            }
         }
 
         return $pastors
@@ -544,6 +562,16 @@ class OnsiteRegistrationController extends Controller
         if ($user?->isManager()) {
             $registrations->whereHas('pastor', function (Builder $query) use ($user): void {
                 $query->where('section_id', $user->section_id);
+            });
+
+            $registrations->whereHas('event', function (Builder $query) use ($user): void {
+                DepartmentScopeAccess::scopeAccessibleEvents($query, $user);
+            });
+        }
+
+        if ($user?->isAdmin() && $user->district_id !== null) {
+            $registrations->whereHas('pastor.section', function (Builder $query) use ($user): void {
+                $query->where('district_id', $user->district_id);
             });
 
             $registrations->whereHas('event', function (Builder $query) use ($user): void {

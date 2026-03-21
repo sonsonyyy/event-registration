@@ -1,5 +1,6 @@
-import { Link, useForm } from '@inertiajs/react';
+import { Link, useForm, usePage } from '@inertiajs/react';
 import type { FormEvent } from 'react';
+import { useEffect } from 'react';
 import EventController from '@/actions/App/Http/Controllers/Admin/EventController';
 import FormSelect from '@/components/form-select';
 import InputError from '@/components/input-error';
@@ -13,6 +14,7 @@ import {
     formTextareaClassName,
     mutedNoticeClassName,
 } from '@/lib/ui-styles';
+import type { Auth } from '@/types/auth';
 
 type PersistedFeeCategory = {
     id?: number;
@@ -45,6 +47,7 @@ type EventRecord = {
     registration_close_at: string;
     status: string;
     scope_type: string;
+    district_id: number | null;
     section_id: number | null;
     department_id: number | null;
     total_capacity: number;
@@ -63,7 +66,14 @@ type SelectOption = {
 type SectionOption = {
     id: number;
     name: string;
+    district_id: number;
     district_name: string;
+    status: string;
+};
+
+type DistrictOption = {
+    id: number;
+    name: string;
     status: string;
 };
 
@@ -77,8 +87,15 @@ type Props = {
     event?: EventRecord;
     statusOptions: SelectOption[];
     scopeTypeOptions: SelectOption[];
+    districts: DistrictOption[];
     sections: SectionOption[];
     departments: DepartmentOption[];
+    formDefaults?: {
+        scope_type: string;
+        district_id: number | null;
+        section_id: number | null;
+        department_id: number | null;
+    };
     feeCategoryStatusOptions: SelectOption[];
 };
 
@@ -92,6 +109,7 @@ type EventFormData = {
     registration_close_at: string;
     status: string;
     scope_type: string;
+    district_id: string;
     section_id: string;
     department_id: string;
     total_capacity: string;
@@ -113,10 +131,13 @@ export default function EventForm({
     event,
     statusOptions,
     scopeTypeOptions,
+    districts,
     sections,
     departments,
+    formDefaults,
     feeCategoryStatusOptions,
 }: Props) {
+    const { auth } = usePage<{ auth: Auth }>().props;
     const isEditing = event !== undefined;
     const form = useForm<EventFormData>({
         name: event?.name ?? '',
@@ -127,9 +148,24 @@ export default function EventForm({
         registration_open_at: event?.registration_open_at ?? '',
         registration_close_at: event?.registration_close_at ?? '',
         status: event?.status ?? 'draft',
-        scope_type: event?.scope_type ?? 'district',
-        section_id: event?.section_id?.toString() ?? '',
-        department_id: event?.department_id?.toString() ?? '',
+        scope_type:
+            event?.scope_type ??
+            formDefaults?.scope_type ??
+            scopeTypeOptions[0]?.value ??
+            'district',
+        district_id:
+            event?.district_id?.toString() ??
+            formDefaults?.district_id?.toString() ??
+            districts[0]?.id?.toString() ??
+            '',
+        section_id:
+            event?.section_id?.toString() ??
+            formDefaults?.section_id?.toString() ??
+            '',
+        department_id:
+            event?.department_id?.toString() ??
+            formDefaults?.department_id?.toString() ??
+            (departments.length === 1 ? departments[0].id.toString() : ''),
         total_capacity: event ? event.total_capacity.toString() : '',
         fee_categories:
             event?.fee_categories.map((feeCategory) => ({
@@ -141,6 +177,17 @@ export default function EventForm({
     const reservedQuantity = event?.reserved_quantity ?? 0;
     const totalCapacity = Number.parseInt(form.data.total_capacity || '0', 10);
     const remainingSlots = Math.max(totalCapacity - reservedQuantity, 0);
+    const isSuperAdminViewer = auth.can.viewSystemAdminMenu;
+    const filteredSections = form.data.district_id
+        ? sections.filter(
+              (section) =>
+                  section.district_id.toString() === form.data.district_id,
+          )
+        : sections;
+    const selectedDistrict =
+        districts.find(
+            (district) => district.id.toString() === form.data.district_id,
+        ) ?? null;
     const selectedSection =
         sections.find((section) => section.id.toString() === form.data.section_id) ??
         null;
@@ -151,14 +198,69 @@ export default function EventForm({
         ) ?? null;
     const scopeSummary =
         form.data.scope_type === 'section'
-            ? `${selectedSection ? `${selectedSection.name} · ${selectedSection.district_name}` : 'Choose a section'} · ${selectedDepartment?.name ?? 'General'}`
-            : `District-wide · ${selectedDepartment?.name ?? 'General'}`;
+            ? `${selectedSection ? `${selectedSection.name} · ${selectedSection.district_name}` : 'Choose a section'} · ${selectedDepartment?.name ?? 'No department'}`
+            : `${selectedDistrict?.name ?? 'Choose a district'} · District-wide · ${selectedDepartment?.name ?? 'No department'}`;
+
+    useEffect(() => {
+        if (districts.length !== 1 || form.data.district_id !== '') {
+            return;
+        }
+
+        form.setData('district_id', districts[0].id.toString());
+    }, [districts, form]);
+
+    useEffect(() => {
+        if (form.data.scope_type !== 'section' || filteredSections.length !== 1) {
+            return;
+        }
+
+        const nextSectionId = filteredSections[0].id.toString();
+
+        if (form.data.section_id === nextSectionId) {
+            return;
+        }
+
+        form.setData((currentData) => ({
+            ...currentData,
+            district_id: filteredSections[0].district_id.toString(),
+            section_id: nextSectionId,
+        }));
+    }, [filteredSections, form, form.data.scope_type, form.data.section_id]);
 
     const changeScopeType = (value: string): void => {
         form.setData((currentData) => ({
             ...currentData,
             scope_type: value,
             section_id: value === 'section' ? currentData.section_id : '',
+        }));
+    };
+
+    const changeDistrict = (value: string): void => {
+        const nextSection = sections.find(
+            (section) =>
+                section.id.toString() === form.data.section_id &&
+                section.district_id.toString() === value,
+        );
+
+        form.setData((currentData) => ({
+            ...currentData,
+            district_id: value,
+            section_id:
+                currentData.scope_type === 'section'
+                    ? nextSection?.id.toString() ?? ''
+                    : '',
+        }));
+    };
+
+    const changeSection = (value: string): void => {
+        const section = filteredSections.find(
+            (option) => option.id.toString() === value,
+        );
+
+        form.setData((currentData) => ({
+            ...currentData,
+            district_id: section?.district_id.toString() ?? currentData.district_id,
+            section_id: value,
         }));
     };
 
@@ -267,7 +369,7 @@ export default function EventForm({
                     <InputError message={form.errors.description} />
                 </div>
 
-                <div className="grid gap-6 xl:grid-cols-[220px_minmax(0,1fr)_minmax(0,1fr)]">
+                <div className="grid gap-6 xl:grid-cols-[220px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
                     <div className="grid gap-2">
                         <Label htmlFor="scope_type">Scope</Label>
                         <FormSelect
@@ -276,6 +378,10 @@ export default function EventForm({
                             value={form.data.scope_type}
                             onValueChange={changeScopeType}
                             placeholder="Select scope"
+                            disabled={
+                                !isSuperAdminViewer &&
+                                scopeTypeOptions.length === 1
+                            }
                             options={scopeTypeOptions.map((option) => ({
                                 value: option.value,
                                 label: option.label,
@@ -285,21 +391,42 @@ export default function EventForm({
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="section_id">Section</Label>
+                        <Label htmlFor="district_id">Owning district</Label>
+                        <FormSelect
+                            id="district_id"
+                            name="district_id"
+                            value={form.data.district_id}
+                            onValueChange={changeDistrict}
+                            placeholder="Select a district"
+                            disabled={
+                                form.data.scope_type === 'section' ||
+                                (!isSuperAdminViewer && districts.length === 1) ||
+                                districts.length === 0
+                            }
+                            options={districts.map((district) => ({
+                                value: district.id.toString(),
+                                label: `${district.name}${district.status === 'inactive' ? ' (Inactive)' : ''}`,
+                            }))}
+                        />
+                        <InputError message={form.errors.district_id} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="section_id">Owning section</Label>
                         <FormSelect
                             id="section_id"
                             name="section_id"
                             value={form.data.section_id}
-                            onValueChange={(value) =>
-                                form.setData('section_id', value)
-                            }
+                            onValueChange={changeSection}
                             placeholder="Select a section"
                             emptyLabel="No section scope"
                             disabled={
                                 form.data.scope_type !== 'section' ||
-                                sections.length === 0
+                                filteredSections.length === 0 ||
+                                (!isSuperAdminViewer &&
+                                    filteredSections.length === 1)
                             }
-                            options={sections.map((section) => ({
+                            options={filteredSections.map((section) => ({
                                 value: section.id.toString(),
                                 label: `${section.name} · ${section.district_name}${section.status === 'inactive' ? ' (Inactive)' : ''}`,
                             }))}
@@ -317,7 +444,12 @@ export default function EventForm({
                                 form.setData('department_id', value)
                             }
                             placeholder="Select a department"
-                            emptyLabel="General / no department"
+                            emptyLabel="No department"
+                            disabled={
+                                (!isSuperAdminViewer &&
+                                    departments.length <= 1) ||
+                                departments.length === 0
+                            }
                             options={departments.map((department) => ({
                                 value: department.id.toString(),
                                 label: `${department.name}${department.status === 'inactive' ? ' (Inactive)' : ''}`,

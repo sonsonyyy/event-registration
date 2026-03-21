@@ -1,5 +1,6 @@
-import { Link, useForm } from '@inertiajs/react';
+import { Link, useForm, usePage } from '@inertiajs/react';
 import type { FormEvent } from 'react';
+import { useEffect } from 'react';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
 import FormSelect from '@/components/form-select';
 import InputError from '@/components/input-error';
@@ -19,6 +20,7 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import { mutedNoticeClassName } from '@/lib/ui-styles';
+import type { Auth } from '@/types/auth';
 
 type UserRecord = {
     id: number;
@@ -126,6 +128,7 @@ export default function UserForm({
     statusOptions,
     minimalLayout = false,
 }: Props) {
+    const { auth } = usePage<{ auth: Auth }>().props;
     const isEditing = userRecord !== undefined;
     const form = useForm<UserFormData>({
         name: userRecord?.name ?? '',
@@ -140,6 +143,7 @@ export default function UserForm({
         position_title: userRecord?.position_title ?? '',
         status: userRecord?.status ?? 'active',
     });
+    const isSuperAdminViewer = auth.can.viewSystemAdminMenu;
 
     const selectedRole =
         roles.find((role) => role.id.toString() === form.data.role_id) ?? null;
@@ -154,7 +158,12 @@ export default function UserForm({
               (pastor) =>
                   pastor.section_id.toString() === form.data.section_id,
           )
-        : pastors;
+        : form.data.district_id
+          ? pastors.filter(
+                (pastor) =>
+                    pastor.district_id.toString() === form.data.district_id,
+            )
+          : pastors;
     const selectedDistrict =
         districts.find(
             (district) => district.id.toString() === form.data.district_id,
@@ -172,6 +181,54 @@ export default function UserForm({
         pastors.find(
             (pastor) => pastor.id.toString() === form.data.pastor_id,
         ) ?? null;
+    const requiresSection = selectedRole?.name === 'Manager';
+    const requiresPastor = selectedRole?.name === 'Online Registrant';
+
+    useEffect(() => {
+        if (districts.length !== 1 || form.data.district_id !== '') {
+            return;
+        }
+
+        form.setData('district_id', districts[0].id.toString());
+    }, [districts, form]);
+
+    useEffect(() => {
+        if (!requiresSection || filteredSections.length !== 1) {
+            return;
+        }
+
+        const nextSectionId = filteredSections[0].id.toString();
+
+        if (form.data.section_id === nextSectionId) {
+            return;
+        }
+
+        form.setData((currentData) => ({
+            ...currentData,
+            district_id: filteredSections[0].district_id.toString(),
+            section_id: nextSectionId,
+            pastor_id: '',
+        }));
+    }, [filteredSections, form, form.data.section_id, requiresSection]);
+
+    useEffect(() => {
+        if (!requiresPastor || filteredPastors.length !== 1) {
+            return;
+        }
+
+        const nextPastorId = filteredPastors[0].id.toString();
+
+        if (form.data.pastor_id === nextPastorId) {
+            return;
+        }
+
+        form.setData((currentData) => ({
+            ...currentData,
+            district_id: filteredPastors[0].district_id.toString(),
+            section_id: filteredPastors[0].section_id.toString(),
+            pastor_id: nextPastorId,
+        }));
+    }, [filteredPastors, form, form.data.pastor_id, requiresPastor]);
 
     const changeRole = (value: string): void => {
         const roleName = roles.find((role) => role.id.toString() === value)?.name;
@@ -179,7 +236,14 @@ export default function UserForm({
         form.setData((currentData) => ({
             ...currentData,
             role_id: value,
-            pastor_id: roleName === 'Manager' ? '' : currentData.pastor_id,
+            section_id:
+                roleName === 'Admin'
+                    ? ''
+                    : currentData.section_id,
+            pastor_id:
+                roleName === 'Online Registrant'
+                    ? currentData.pastor_id
+                    : '',
         }));
     };
 
@@ -413,6 +477,9 @@ export default function UserForm({
                         value={form.data.district_id}
                         onValueChange={changeDistrict}
                         placeholder="Select a district"
+                        disabled={
+                            !isSuperAdminViewer && districts.length === 1
+                        }
                         emptyLabel="No district scope"
                         options={districts.map((district) => ({
                             value: district.id.toString(),
@@ -431,6 +498,13 @@ export default function UserForm({
                         onValueChange={changeSection}
                         placeholder="Select a section"
                         emptyLabel="No section scope"
+                        disabled={
+                            selectedRole?.name === 'Admin' ||
+                            (requiresSection &&
+                                !isSuperAdminViewer &&
+                                filteredSections.length === 1) ||
+                            filteredSections.length === 0
+                        }
                         options={filteredSections.map((section) => ({
                             value: section.id.toString(),
                             label: formatSectionOptionLabel(section),
@@ -448,6 +522,13 @@ export default function UserForm({
                         onValueChange={changePastor}
                         placeholder="Select a pastor"
                         emptyLabel="No pastor scope"
+                        disabled={
+                            !requiresPastor ||
+                            (requiresPastor &&
+                                !isSuperAdminViewer &&
+                                filteredPastors.length === 1) ||
+                            filteredPastors.length === 0
+                        }
                         options={filteredPastors.map((pastor) => ({
                             value: pastor.id.toString(),
                             label: formatPastorOptionLabel(pastor),

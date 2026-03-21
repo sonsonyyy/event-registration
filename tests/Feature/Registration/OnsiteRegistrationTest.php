@@ -12,8 +12,10 @@ use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('registration staff can create onsite registrations with multiple fee-category line items', function () {
-    $staff = User::factory()->registrationStaff()->create();
     $pastor = Pastor::factory()->create();
+    $staff = User::factory()->registrationStaff()->create([
+        'district_id' => $pastor->section->district_id,
+    ]);
     $event = onsiteRegistrationEvent();
     $regular = EventFeeCategory::factory()->for($event)->create([
         'category_name' => 'Regular (Onsite)',
@@ -87,9 +89,11 @@ test('registration staff can create onsite registrations with multiple fee-categ
 });
 
 test('onsite registrations can be searched and paginated', function () {
-    $staff = User::factory()->registrationStaff()->create();
     $pastor = Pastor::factory()->create([
         'church_name' => 'Grace Community Church',
+    ]);
+    $staff = User::factory()->registrationStaff()->create([
+        'district_id' => $pastor->section->district_id,
     ]);
     $event = onsiteRegistrationEvent();
     $feeCategory = EventFeeCategory::factory()->for($event)->create([
@@ -185,6 +189,102 @@ test('managers are limited to onsite registrations and pastors within their assi
         ->assertForbidden();
 });
 
+test('admins can post onsite registrations only for district-wide events in their district and department scope', function () {
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $otherDistrict = District::factory()->create();
+    $otherSection = Section::factory()->for($otherDistrict)->create([
+        'name' => 'Outside District',
+    ]);
+    $pastor = Pastor::factory()->for($section)->create();
+    $outsidePastor = Pastor::factory()->for($otherSection)->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $districtEvent = onsiteRegistrationEvent([
+        'name' => 'District General Event',
+        'department_id' => null,
+    ]);
+    $sectionEvent = onsiteRegistrationEvent([
+        'name' => 'Section General Event',
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+        'department_id' => null,
+    ]);
+    $departmentEvent = onsiteRegistrationEvent([
+        'name' => 'District Youth Event',
+        'department_id' => Department::factory()->create()->id,
+    ]);
+
+    foreach ([$districtEvent, $sectionEvent, $departmentEvent] as $event) {
+        EventFeeCategory::factory()->for($event)->create([
+            'category_name' => 'Regular (Onsite)',
+            'amount' => '500.00',
+        ]);
+    }
+
+    $this->actingAs($admin)
+        ->get(route('registrations.onsite.create'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/onsite/create')
+            ->has('events', 1)
+            ->where('events.0.id', $districtEvent->id)
+            ->where('events.0.name', 'District General Event')
+            ->has('pastors', 1)
+            ->where('pastors.0.id', $pastor->id));
+
+    $this->actingAs($admin)
+        ->post(route('registrations.onsite.store'), [
+            'event_id' => $districtEvent->id,
+            'pastor_id' => $pastor->id,
+            'payment_reference' => 'OR-2026-8101',
+            'remarks' => '',
+            'line_items' => [
+                [
+                    'fee_category_id' => $districtEvent->feeCategories()->value('id'),
+                    'quantity' => 1,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('registrations.onsite.index'));
+
+    $this->actingAs($admin)
+        ->from(route('registrations.onsite.create'))
+        ->post(route('registrations.onsite.store'), [
+            'event_id' => $sectionEvent->id,
+            'pastor_id' => $pastor->id,
+            'payment_reference' => 'OR-2026-8102',
+            'remarks' => '',
+            'line_items' => [
+                [
+                    'fee_category_id' => $sectionEvent->feeCategories()->value('id'),
+                    'quantity' => 1,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('registrations.onsite.create'))
+        ->assertSessionHasErrors(['event_id']);
+
+    $this->actingAs($admin)
+        ->from(route('registrations.onsite.create'))
+        ->post(route('registrations.onsite.store'), [
+            'event_id' => $districtEvent->id,
+            'pastor_id' => $outsidePastor->id,
+            'payment_reference' => 'OR-2026-8103',
+            'remarks' => '',
+            'line_items' => [
+                [
+                    'fee_category_id' => $districtEvent->feeCategories()->value('id'),
+                    'quantity' => 1,
+                ],
+            ],
+        ])
+        ->assertForbidden();
+});
+
 test('department-scoped managers only see onsite events in their section and department', function () {
     $district = District::factory()->create();
     $managedSection = Section::factory()->for($district)->create([
@@ -211,6 +311,8 @@ test('department-scoped managers only see onsite events in their section and dep
         'scope_type' => Event::SCOPE_SECTION,
         'section_id' => $managedSection->id,
         'department_id' => $youthDepartment->id,
+        'date_from' => now()->addDay()->toDateString(),
+        'date_to' => now()->addDays(2)->toDateString(),
     ]);
     $otherDepartmentEvent = onsiteRegistrationEvent([
         'name' => 'Section 1 Ladies Event',
@@ -227,6 +329,8 @@ test('department-scoped managers only see onsite events in their section and dep
     $districtEvent = onsiteRegistrationEvent([
         'name' => 'District Youth Event',
         'department_id' => $youthDepartment->id,
+        'date_from' => now()->addDays(3)->toDateString(),
+        'date_to' => now()->addDays(4)->toDateString(),
     ]);
 
     foreach ([$accessibleEvent, $otherDepartmentEvent, $otherSectionEvent, $districtEvent] as $event) {
@@ -241,9 +345,11 @@ test('department-scoped managers only see onsite events in their section and dep
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('registrations/onsite/create')
-            ->has('events', 1)
+            ->has('events', 2)
             ->where('events.0.id', $accessibleEvent->id)
-            ->where('events.0.name', 'Section 1 Youth Event'));
+            ->where('events.0.name', 'Section 1 Youth Event')
+            ->where('events.1.id', $districtEvent->id)
+            ->where('events.1.name', 'District Youth Event'));
 
     $this->actingAs($manager)
         ->from(route('registrations.onsite.create'))
@@ -296,8 +402,10 @@ test('online registrants cannot access onsite registration routes', function () 
 });
 
 test('onsite registration rejects invalid fee-category selections and capacity overflow', function () {
-    $staff = User::factory()->registrationStaff()->create();
     $pastor = Pastor::factory()->create();
+    $staff = User::factory()->registrationStaff()->create([
+        'district_id' => $pastor->section->district_id,
+    ]);
     $event = onsiteRegistrationEvent([
         'total_capacity' => 5,
     ]);
@@ -345,8 +453,10 @@ test('onsite registration rejects invalid fee-category selections and capacity o
 });
 
 test('onsite registrations require an official receipt or reference number on create and update', function () {
-    $staff = User::factory()->registrationStaff()->create();
     $pastor = Pastor::factory()->create();
+    $staff = User::factory()->registrationStaff()->create([
+        'district_id' => $pastor->section->district_id,
+    ]);
     $event = onsiteRegistrationEvent();
     $feeCategory = EventFeeCategory::factory()->for($event)->create([
         'category_name' => 'Regular (Onsite)',
@@ -409,12 +519,14 @@ test('onsite registrations require an official receipt or reference number on cr
 });
 
 test('staff can edit onsite registrations and replace grouped quantities', function () {
-    $staff = User::factory()->registrationStaff()->create();
     $pastor = Pastor::factory()->create([
         'church_name' => 'UPC',
         'pastor_name' => 'Jefhte Inso',
     ]);
-    $updatedPastor = Pastor::factory()->create([
+    $staff = User::factory()->registrationStaff()->create([
+        'district_id' => $pastor->section->district_id,
+    ]);
+    $updatedPastor = Pastor::factory()->for($pastor->section)->create([
         'church_name' => 'UPC',
         'pastor_name' => 'Junar Tongol',
     ]);
@@ -487,8 +599,10 @@ test('staff can edit onsite registrations and replace grouped quantities', funct
 });
 
 test('onsite registration update rejects capacity overflow while preserving current reserved quantity', function () {
-    $staff = User::factory()->registrationStaff()->create();
     $pastor = Pastor::factory()->create();
+    $staff = User::factory()->registrationStaff()->create([
+        'district_id' => $pastor->section->district_id,
+    ]);
     $event = onsiteRegistrationEvent([
         'total_capacity' => 5,
     ]);
@@ -563,12 +677,19 @@ test('onsite registration update rejects capacity overflow while preserving curr
 
 function onsiteRegistrationEvent(array $attributes = []): Event
 {
+    $sectionId = $attributes['section_id'] ?? null;
+    $districtId = $attributes['district_id']
+        ?? ($sectionId !== null
+            ? Section::query()->find($sectionId)?->district_id
+            : District::query()->value('id'));
+
     return Event::factory()->create([
         'name' => 'District Camp 2026',
         'status' => Event::STATUS_OPEN,
         'total_capacity' => 50,
         'registration_open_at' => now()->subDay(),
         'registration_close_at' => now()->addDays(5),
+        'district_id' => $districtId,
         ...$attributes,
     ]);
 }

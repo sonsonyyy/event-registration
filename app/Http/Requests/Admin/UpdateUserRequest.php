@@ -79,6 +79,9 @@ class UpdateUserRequest extends FormRequest
                 $district = $this->selectedDistrict();
                 $section = $this->selectedSection();
                 $pastor = $this->selectedPastor();
+                $resolvedDistrictId = $pastor?->section->district_id
+                    ?? $section?->district_id
+                    ?? $district?->getKey();
 
                 if ($section !== null && $district !== null && $section->district_id !== $district->getKey()) {
                     $validator->errors()->add(
@@ -105,6 +108,27 @@ class UpdateUserRequest extends FormRequest
                     );
                 }
 
+                if ($role?->name === Role::ADMIN && $resolvedDistrictId === null) {
+                    $validator->errors()->add(
+                        'district_id',
+                        'Admins must be assigned to a district.',
+                    );
+                }
+
+                if ($role?->name === Role::ADMIN && $section !== null) {
+                    $validator->errors()->add(
+                        'section_id',
+                        'Admins must remain district-scoped and cannot be assigned to a section.',
+                    );
+                }
+
+                if ($role?->name === Role::ADMIN && $pastor !== null) {
+                    $validator->errors()->add(
+                        'pastor_id',
+                        'Admins cannot be assigned to a pastor.',
+                    );
+                }
+
                 if ($role?->name === Role::MANAGER && $section === null) {
                     $validator->errors()->add(
                         'section_id',
@@ -119,10 +143,33 @@ class UpdateUserRequest extends FormRequest
                     );
                 }
 
+                if ($role?->name === Role::REGISTRATION_STAFF && $resolvedDistrictId === null) {
+                    $validator->errors()->add(
+                        'district_id',
+                        'Registration staff must be assigned to a district.',
+                    );
+                }
+
+                if ($role?->name === Role::REGISTRATION_STAFF && $pastor !== null) {
+                    $validator->errors()->add(
+                        'pastor_id',
+                        'Registration staff cannot be assigned to a pastor.',
+                    );
+                }
+
                 if ($role?->name === Role::ONLINE_REGISTRANT && $pastor === null) {
                     $validator->errors()->add(
                         'pastor_id',
                         'Online registrants must be assigned to a pastor.',
+                    );
+                }
+
+                $actor = $this->user();
+
+                if ($actor?->isAdmin() && $actor->district_id !== null && $resolvedDistrictId !== null && $resolvedDistrictId !== $actor->district_id) {
+                    $validator->errors()->add(
+                        'district_id',
+                        'You can only manage users inside your assigned district.',
                     );
                 }
             },

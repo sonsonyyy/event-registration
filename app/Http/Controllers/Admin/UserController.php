@@ -27,6 +27,7 @@ class UserController extends Controller
     {
         $filters = $request->filters();
         $users = $this->userIndexQuery(
+            $request->user(),
             $filters['search'],
             $filters['section_id'],
             $filters['role_id'],
@@ -51,7 +52,7 @@ class UserController extends Controller
                 ],
             ],
             'filters' => $filters,
-            'sections' => $this->sectionOptions(),
+            'sections' => $this->sectionOptions($request->user()),
             'roles' => $this->roleOptions(),
             'statusOptions' => $this->statusOptions(),
             'perPageOptions' => [10, 25, 50],
@@ -59,12 +60,31 @@ class UserController extends Controller
     }
 
     private function userIndexQuery(
+        User $actor,
         string $search,
         ?int $sectionId,
         ?int $roleId,
         ?string $status,
     ): Builder {
         return User::query()
+            ->when($actor->isAdmin(), function (Builder $query) use ($actor): void {
+                if ($actor->district_id === null) {
+                    $query->whereRaw('1 = 0');
+
+                    return;
+                }
+
+                $query->where(function (Builder $scopeQuery) use ($actor): void {
+                    $scopeQuery
+                        ->where('district_id', $actor->district_id)
+                        ->orWhereHas('section', function (Builder $sectionQuery) use ($actor): void {
+                            $sectionQuery->where('district_id', $actor->district_id);
+                        })
+                        ->orWhereHas('pastor.section', function (Builder $sectionQuery) use ($actor): void {
+                            $sectionQuery->where('district_id', $actor->district_id);
+                        });
+                });
+            })
             ->when($sectionId !== null, function (Builder $query) use ($sectionId): void {
                 $query->where('section_id', $sectionId);
             })
@@ -119,12 +139,15 @@ class UserController extends Controller
     {
         Gate::authorize('create', User::class);
 
+        /** @var User $actor */
+        $actor = auth()->user();
+
         return Inertia::render('admin/users/create', [
             'roles' => $this->roleOptions(),
             'departments' => $this->departmentOptions(),
-            'districts' => $this->districtOptions(),
-            'sections' => $this->sectionOptions(),
-            'pastors' => $this->pastorOptions(),
+            'districts' => $this->districtOptions($actor),
+            'sections' => $this->sectionOptions($actor),
+            'pastors' => $this->pastorOptions($actor),
             'statusOptions' => $this->statusOptions(),
         ]);
     }
@@ -151,6 +174,9 @@ class UserController extends Controller
     {
         Gate::authorize('update', $user);
 
+        /** @var User $actor */
+        $actor = auth()->user();
+
         $user->load([
             'role:id,name',
             'district:id,name',
@@ -166,9 +192,9 @@ class UserController extends Controller
             'userRecord' => $this->userFormData($user),
             'roles' => $this->roleOptions(),
             'departments' => $this->departmentOptions(),
-            'districts' => $this->districtOptions(),
-            'sections' => $this->sectionOptions(),
-            'pastors' => $this->pastorOptions(),
+            'districts' => $this->districtOptions($actor),
+            'sections' => $this->sectionOptions($actor),
+            'pastors' => $this->pastorOptions($actor),
             'statusOptions' => $this->statusOptions(),
         ]);
     }
@@ -331,9 +357,18 @@ class UserController extends Controller
      *
      * @return array<int, array<string, mixed>>
      */
-    private function districtOptions(): array
+    private function districtOptions(?User $actor = null): array
     {
         return District::query()
+            ->when($actor?->isAdmin(), function (Builder $query) use ($actor): void {
+                if ($actor?->district_id === null) {
+                    $query->whereRaw('1 = 0');
+
+                    return;
+                }
+
+                $query->whereKey($actor->district_id);
+            })
             ->orderBy('name')
             ->get()
             ->map(fn (District $district): array => [
@@ -350,9 +385,18 @@ class UserController extends Controller
      *
      * @return array<int, array<string, mixed>>
      */
-    private function sectionOptions(): array
+    private function sectionOptions(?User $actor = null): array
     {
         return Section::query()
+            ->when($actor?->isAdmin(), function (Builder $query) use ($actor): void {
+                if ($actor?->district_id === null) {
+                    $query->whereRaw('1 = 0');
+
+                    return;
+                }
+
+                $query->where('district_id', $actor->district_id);
+            })
             ->with('district:id,name')
             ->orderBy('name')
             ->get()
@@ -372,9 +416,20 @@ class UserController extends Controller
      *
      * @return array<int, array<string, mixed>>
      */
-    private function pastorOptions(): array
+    private function pastorOptions(?User $actor = null): array
     {
         return Pastor::query()
+            ->when($actor?->isAdmin(), function (Builder $query) use ($actor): void {
+                if ($actor?->district_id === null) {
+                    $query->whereRaw('1 = 0');
+
+                    return;
+                }
+
+                $query->whereHas('section', function (Builder $sectionQuery) use ($actor): void {
+                    $sectionQuery->where('district_id', $actor->district_id);
+                });
+            })
             ->with('section:id,name,district_id', 'section.district:id,name')
             ->orderBy('church_name')
             ->get()

@@ -14,7 +14,9 @@ use Illuminate\Support\Facades\Gate;
 
 test('admins can perform all protected actions', function () {
     $context = authorizationContext();
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $context['district']->id,
+    ]);
 
     $gate = Gate::forUser($admin);
 
@@ -24,6 +26,7 @@ test('admins can perform all protected actions', function () {
     expect($gate->allows('create', User::class))->toBeTrue();
     expect($gate->allows('verifyReceipt', $context['districtOnlineRegistration']))->toBeTrue();
     expect($gate->allows('viewAnyVerification', Registration::class))->toBeTrue();
+    expect($gate->allows('viewAnyApprovalQueue', User::class))->toBeFalse();
     expect($gate->allows('viewReports'))->toBeTrue();
     expect($gate->allows('viewSectionReport', $context['section']))->toBeTrue();
     expect($gate->allows('viewPastorReport', $context['pastorOutsideSection']))->toBeTrue();
@@ -51,6 +54,7 @@ test('super admins can perform all protected actions', function () {
 test('managers are limited to their assigned section', function () {
     $context = authorizationContext();
     $manager = User::factory()->manager()->create([
+        'district_id' => $context['district']->id,
         'section_id' => $context['section']->id,
     ]);
 
@@ -65,12 +69,13 @@ test('managers are limited to their assigned section', function () {
     expect($gate->allows('createOnsite', [Registration::class, $context['pastorOutsideSection']]))->toBeFalse();
     expect($gate->allows('update', $context['onlineRegistrationInSection']))->toBeFalse();
     expect($gate->allows('update', $context['onlineRegistrationOutsideSection']))->toBeFalse();
-    expect($gate->allows('update', $context['sectionVerificationRegistration']))->toBeTrue();
+    expect($gate->allows('update', $context['sectionVerificationRegistration']))->toBeFalse();
+    expect($gate->allows('verifyReceipt', $context['onlineRegistrationInSection']))->toBeTrue();
     expect($gate->allows('verifyReceipt', $context['sectionVerificationRegistration']))->toBeTrue();
     expect($gate->allows('verifyReceipt', $context['outsideSectionVerificationRegistration']))->toBeFalse();
     expect($gate->allows('verifyReceipt', $context['districtOnlineRegistration']))->toBeFalse();
     expect($gate->allows('viewAnyVerification', Registration::class))->toBeTrue();
-    expect($gate->allows('create', Event::class))->toBeFalse();
+    expect($gate->allows('create', Event::class))->toBeTrue();
     expect($gate->allows('update', $context['pastorInSection']))->toBeFalse();
     expect($gate->allows('delete', $context['section']))->toBeFalse();
     expect($gate->allows('viewReports'))->toBeTrue();
@@ -82,8 +87,12 @@ test('managers are limited to their assigned section', function () {
 
 test('registration staff can encode onsite registrations without master data access', function () {
     $context = authorizationContext();
-    $staff = User::factory()->registrationStaff()->create();
-    $otherStaff = User::factory()->registrationStaff()->create();
+    $staff = User::factory()->registrationStaff()->create([
+        'district_id' => $context['district']->id,
+    ]);
+    $otherStaff = User::factory()->registrationStaff()->create([
+        'district_id' => $context['district']->id,
+    ]);
     $ownOnsiteRegistration = Registration::factory()
         ->for($context['event'])
         ->for($context['pastorOutsideSection'])
@@ -101,7 +110,7 @@ test('registration staff can encode onsite registrations without master data acc
 
     $gate = Gate::forUser($staff);
 
-    expect($gate->allows('viewAny', Event::class))->toBeTrue();
+    expect($gate->allows('viewAny', Event::class))->toBeFalse();
     expect($gate->allows('viewAny', EventFeeCategory::class))->toBeTrue();
     expect($gate->allows('viewAny', Pastor::class))->toBeTrue();
     expect($gate->allows('view', $context['pastorInSection']))->toBeTrue();
@@ -120,12 +129,24 @@ test('registration staff can encode onsite registrations without master data acc
     expect($gate->allows('create', User::class))->toBeFalse();
 });
 
+test('registration staff without an assigned district cannot post onsite registrations', function () {
+    $context = authorizationContext();
+    $staff = User::factory()->registrationStaff()->create();
+
+    $gate = Gate::forUser($staff);
+
+    expect($gate->allows('viewAnyOnsite', Registration::class))->toBeFalse();
+    expect($gate->allows('createOnsite', [Registration::class, $context['pastorInSection']]))->toBeFalse();
+});
+
 test('department-scoped reviewers are limited to matching departments during verification', function () {
     $context = authorizationContext();
     $departmentAdmin = User::factory()->admin()->create([
+        'district_id' => $context['district']->id,
         'department_id' => $context['youthDepartment']->id,
     ]);
     $departmentManager = User::factory()->manager()->create([
+        'district_id' => $context['district']->id,
         'section_id' => $context['section']->id,
         'department_id' => $context['youthDepartment']->id,
     ]);
@@ -137,9 +158,29 @@ test('department-scoped reviewers are limited to matching departments during ver
     expect($adminGate->allows('verifyReceipt', $context['otherDepartmentDistrictRegistration']))->toBeFalse();
     expect($adminGate->allows('verifyReceipt', $context['sectionVerificationRegistration']))->toBeFalse();
 
+    expect($managerGate->allows('verifyReceipt', $context['departmentDistrictRegistration']))->toBeTrue();
     expect($managerGate->allows('verifyReceipt', $context['departmentSectionVerificationRegistration']))->toBeTrue();
     expect($managerGate->allows('verifyReceipt', $context['otherDepartmentSectionVerificationRegistration']))->toBeFalse();
     expect($managerGate->allows('verifyReceipt', $context['districtOnlineRegistration']))->toBeFalse();
+});
+
+test('general no-department reviewers only match general no-department events', function () {
+    $context = authorizationContext();
+    $generalAdmin = User::factory()->admin()->create([
+        'district_id' => $context['district']->id,
+    ]);
+    $generalManager = User::factory()->manager()->create([
+        'district_id' => $context['district']->id,
+        'section_id' => $context['section']->id,
+    ]);
+
+    $adminGate = Gate::forUser($generalAdmin);
+    $managerGate = Gate::forUser($generalManager);
+
+    expect($adminGate->allows('verifyReceipt', $context['districtOnlineRegistration']))->toBeTrue();
+    expect($adminGate->allows('verifyReceipt', $context['departmentDistrictRegistration']))->toBeFalse();
+    expect($managerGate->allows('verifyReceipt', $context['onlineRegistrationInSection']))->toBeTrue();
+    expect($managerGate->allows('verifyReceipt', $context['departmentDistrictRegistration']))->toBeFalse();
 });
 
 test('department-scoped managers are limited to onsite registration events in their section and department', function () {
@@ -230,7 +271,7 @@ test('online registrants are limited to their assigned pastor', function () {
 
     $gate = Gate::forUser($onlineRegistrant);
 
-    expect($gate->allows('viewAny', Event::class))->toBeTrue();
+    expect($gate->allows('viewAny', Event::class))->toBeFalse();
     expect($gate->allows('viewAny', EventFeeCategory::class))->toBeTrue();
     expect($gate->allows('viewAnyOnline', Registration::class))->toBeTrue();
     expect($gate->allows('viewAny', Pastor::class))->toBeFalse();
@@ -296,32 +337,41 @@ function authorizationContext(): array
     $pastorInSection = Pastor::factory()->for($section)->create();
     $pastorOutsideSection = Pastor::factory()->for($otherSection)->create();
     $event = Event::factory()->create();
+    $event->update([
+        'district_id' => $district->id,
+    ]);
     $districtFeeCategory = EventFeeCategory::factory()->for($event)->create();
     $sectionEvent = Event::factory()->create([
+        'district_id' => $district->id,
         'scope_type' => Event::SCOPE_SECTION,
         'section_id' => $section->id,
     ]);
     $sectionFeeCategory = EventFeeCategory::factory()->for($sectionEvent)->create();
     $otherSectionEvent = Event::factory()->create([
+        'district_id' => $district->id,
         'scope_type' => Event::SCOPE_SECTION,
         'section_id' => $otherSection->id,
     ]);
     $otherSectionFeeCategory = EventFeeCategory::factory()->for($otherSectionEvent)->create();
     $departmentDistrictEvent = Event::factory()->create([
+        'district_id' => $district->id,
         'department_id' => $youthDepartment->id,
     ]);
     $departmentDistrictFeeCategory = EventFeeCategory::factory()->for($departmentDistrictEvent)->create();
     $otherDepartmentDistrictEvent = Event::factory()->create([
+        'district_id' => $district->id,
         'department_id' => $ladiesDepartment->id,
     ]);
     $otherDepartmentDistrictFeeCategory = EventFeeCategory::factory()->for($otherDepartmentDistrictEvent)->create();
     $departmentSectionEvent = Event::factory()->create([
+        'district_id' => $district->id,
         'scope_type' => Event::SCOPE_SECTION,
         'section_id' => $section->id,
         'department_id' => $youthDepartment->id,
     ]);
     $departmentSectionFeeCategory = EventFeeCategory::factory()->for($departmentSectionEvent)->create();
     $otherDepartmentSectionEvent = Event::factory()->create([
+        'district_id' => $district->id,
         'scope_type' => Event::SCOPE_SECTION,
         'section_id' => $section->id,
         'department_id' => $ladiesDepartment->id,

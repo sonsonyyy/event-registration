@@ -11,7 +11,7 @@ use App\Models\Section;
 use App\Models\User;
 use App\Support\NotificationRecipientResolver;
 
-test('resolver returns active approval reviewers within the request geography regardless of department', function () {
+test('resolver returns account request reviewers for the matching section and super admins only', function () {
     $district = District::factory()->create();
     $section = Section::factory()->for($district)->create();
     $otherSection = Section::factory()->for($district)->create();
@@ -32,13 +32,6 @@ test('resolver returns active approval reviewers within the request geography re
         ]);
 
     $eligibleSuperAdmin = User::factory()->superAdmin()->create();
-    $eligibleAdmin = User::factory()->admin()->create([
-        'district_id' => $district->id,
-    ]);
-    $eligibleDepartmentAdmin = User::factory()->admin()->create([
-        'district_id' => $district->id,
-        'department_id' => Department::factory()->create()->id,
-    ]);
     $eligibleManager = User::factory()->manager()->create([
         'district_id' => $district->id,
         'section_id' => $section->id,
@@ -73,8 +66,6 @@ test('resolver returns active approval reviewers within the request geography re
 
     expect($reviewerIds)->toBe([
         $eligibleSuperAdmin->id,
-        $eligibleAdmin->id,
-        $eligibleDepartmentAdmin->id,
         $eligibleManager->id,
         $eligibleDepartmentManager->id,
     ]);
@@ -118,11 +109,13 @@ test('resolver returns verification reviewers for district departmental registra
         ->create();
 
     $eligibleSuperAdmin = User::factory()->superAdmin()->create();
-    $eligibleGeneralAdmin = User::factory()->admin()->create([
-        'district_id' => $district->id,
-    ]);
     $eligibleDepartmentAdmin = User::factory()->admin()->create([
         'district_id' => $district->id,
+        'department_id' => $department->id,
+    ]);
+    $eligibleDepartmentManager = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
         'department_id' => $department->id,
     ]);
 
@@ -147,8 +140,8 @@ test('resolver returns verification reviewers for district departmental registra
 
     expect($reviewerIds)->toBe([
         $eligibleSuperAdmin->id,
-        $eligibleGeneralAdmin->id,
         $eligibleDepartmentAdmin->id,
+        $eligibleDepartmentManager->id,
     ]);
 });
 

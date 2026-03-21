@@ -77,8 +77,13 @@ class UpdateOnsiteRegistrationRequest extends FormRequest
                 }
 
                 $event = $this->selectedEvent();
+                $pastor = $this->selectedPastor();
 
-                if ($event !== null && ! DepartmentScopeAccess::canAccessEvent($this->user(), $event)) {
+                if (
+                    $event !== null
+                    && $pastor !== null
+                    && ! DepartmentScopeAccess::canPostOnsiteRegistration($this->user(), $pastor, $event)
+                ) {
                     $validator->errors()->add(
                         'event_id',
                         'The selected event is not available to your account.',
@@ -117,8 +122,6 @@ class UpdateOnsiteRegistrationRequest extends FormRequest
                         }
                     }
                 }
-
-                $pastor = $this->selectedPastor();
 
                 if ($pastor !== null && $pastor->status !== 'active') {
                     $validator->errors()->add(

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Department;
+use App\Models\District;
 use App\Models\Event;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -19,6 +20,9 @@ class EventSeeder extends Seeder
         $youthDepartmentId = Department::query()
             ->where('name', 'Youth Ministries')
             ->value('id');
+        $districtId = District::query()
+            ->where('name', 'Central Luzon')
+            ->value('id');
 
         $event = Event::query()->updateOrCreate(
             ['name' => 'CLD Youth Conference 2026'],
@@ -32,6 +36,7 @@ class EventSeeder extends Seeder
                 'total_capacity' => 1200,
                 'status' => Event::STATUS_OPEN,
                 'scope_type' => Event::SCOPE_DISTRICT,
+                'district_id' => $districtId,
                 'section_id' => null,
                 'department_id' => $youthDepartmentId,
             ],

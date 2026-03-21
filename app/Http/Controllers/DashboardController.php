@@ -67,14 +67,14 @@ class DashboardController extends Controller
                 'eyebrow' => 'Admin overview',
                 'title' => 'District registration command center',
                 'description' => $user->department_id === null
-                    ? 'Monitor district-wide events, active accounts, and registration activity across all departments.'
+                    ? 'Monitor general district events, active accounts, and registration activity for the no-department lane.'
                     : 'Monitor registration activity, active accounts, and events assigned to your department.',
             ],
             $user->isManager() => [
                 'eyebrow' => 'Section overview',
                 'title' => 'Section registration dashboard',
                 'description' => $user->department_id === null
-                    ? 'Track registrations, assigned churches, and current event availability within your section.'
+                    ? 'Track registrations, assigned churches, and no-department event activity within your section.'
                     : 'Track registrations and current event availability for your assigned section and department.',
             ],
             $user->isRegistrationStaff() => [
@@ -263,15 +263,15 @@ class DashboardController extends Controller
         }
 
         if ($user->isAdmin()) {
-            $departmentLabel = $user->department?->name ?? 'All departments';
+            $departmentLabel = $user->department?->name ?? 'No department';
 
             return [
                 'title' => 'Access scope',
                 'summary' => $user->department_id === null
-                    ? 'District-wide events and registration activity'
+                    ? 'General district events and registration activity'
                     : $departmentLabel.' district events',
                 'description' => $user->department_id === null
-                    ? 'You can manage users, events, and registration activity across the full district workspace.'
+                    ? 'You can manage district-wide general events and registration activity for the no-department lane.'
                     : 'You can manage district events and registration activity assigned to your department while still handling district administration tasks.',
                 'items' => [
                     ['label' => 'Role', 'value' => Role::ADMIN],
@@ -285,7 +285,7 @@ class DashboardController extends Controller
         if ($user->isManager()) {
             $sectionName = $user->section?->name ?? 'No section assigned';
             $districtName = $user->section?->district?->name ?? $user->district?->name ?? 'No district assigned';
-            $departmentLabel = $user->department?->name ?? 'All departments';
+            $departmentLabel = $user->department?->name ?? 'No department';
 
             return [
                 'title' => 'Access scope',
@@ -344,6 +344,8 @@ class DashboardController extends Controller
         $pendingVerificationCount = (clone $registrationQuery)
             ->where('registration_status', Registration::STATUS_PENDING_VERIFICATION)
             ->count();
+        $activeUsersCount = $this->activeUsersCount($user);
+        $activeChurchesCount = $this->activeChurchesCount($user);
 
         if ($user->isSuperAdmin()) {
             return [
@@ -359,12 +361,12 @@ class DashboardController extends Controller
                 ],
                 [
                     'label' => 'Active users',
-                    'value' => User::query()->where('status', 'active')->count(),
+                    'value' => $activeUsersCount,
                     'description' => 'Accounts with active workspace access',
                 ],
                 [
                     'label' => 'Active churches',
-                    'value' => Pastor::query()->where('status', 'active')->count(),
+                    'value' => $activeChurchesCount,
                     'description' => 'Church records ready for registration use',
                 ],
             ];
@@ -384,12 +386,12 @@ class DashboardController extends Controller
                 ],
                 [
                     'label' => 'Active users',
-                    'value' => User::query()->where('status', 'active')->count(),
+                    'value' => $activeUsersCount,
                     'description' => 'Accounts with active workspace access',
                 ],
                 [
                     'label' => 'Active churches',
-                    'value' => Pastor::query()->where('status', 'active')->count(),
+                    'value' => $activeChurchesCount,
                     'description' => 'Church records ready for registration use',
                 ],
             ];
@@ -583,10 +585,22 @@ class DashboardController extends Controller
     {
         $query = Registration::query();
 
-        if ($user->hasAdminAccess()) {
-            return $query->whereHas('event', function (Builder $eventQuery) use ($user): void {
-                DepartmentScopeAccess::scopeAccessibleEvents($eventQuery, $user);
-            });
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+
+        if ($user->isAdmin()) {
+            if ($user->district_id === null) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query
+                ->whereHas('event', function (Builder $eventQuery) use ($user): void {
+                    DepartmentScopeAccess::scopeAccessibleEvents($eventQuery, $user);
+                })
+                ->whereHas('pastor.section', function (Builder $sectionQuery) use ($user): void {
+                    $sectionQuery->where('district_id', $user->district_id);
+                });
         }
 
         if ($user->isManager()) {
@@ -594,9 +608,13 @@ class DashboardController extends Controller
                 return $query->whereRaw('1 = 0');
             }
 
-            return $query->whereHas('event', function (Builder $eventQuery) use ($user): void {
-                DepartmentScopeAccess::scopeAccessibleEvents($eventQuery, $user);
-            });
+            return $query
+                ->whereHas('event', function (Builder $eventQuery) use ($user): void {
+                    DepartmentScopeAccess::scopeAccessibleEvents($eventQuery, $user);
+                })
+                ->whereHas('pastor', function (Builder $pastorQuery) use ($user): void {
+                    $pastorQuery->where('section_id', $user->section_id);
+                });
         }
 
         if ($user->isRegistrationStaff()) {
@@ -608,5 +626,50 @@ class DashboardController extends Controller
         }
 
         return $query->whereRaw('1 = 0');
+    }
+
+    private function activeUsersCount(User $user): int
+    {
+        $query = User::query()->where('status', User::STATUS_ACTIVE);
+
+        if ($user->isSuperAdmin()) {
+            return $query->count();
+        }
+
+        if (! $user->isAdmin() || $user->district_id === null) {
+            return 0;
+        }
+
+        return $query
+            ->where(function (Builder $scopeQuery) use ($user): void {
+                $scopeQuery
+                    ->where('district_id', $user->district_id)
+                    ->orWhereHas('section', function (Builder $sectionQuery) use ($user): void {
+                        $sectionQuery->where('district_id', $user->district_id);
+                    })
+                    ->orWhereHas('pastor.section', function (Builder $sectionQuery) use ($user): void {
+                        $sectionQuery->where('district_id', $user->district_id);
+                    });
+            })
+            ->count();
+    }
+
+    private function activeChurchesCount(User $user): int
+    {
+        $query = Pastor::query()->where('status', 'active');
+
+        if ($user->isSuperAdmin()) {
+            return $query->count();
+        }
+
+        if (! $user->isAdmin() || $user->district_id === null) {
+            return 0;
+        }
+
+        return $query
+            ->whereHas('section', function (Builder $sectionQuery) use ($user): void {
+                $sectionQuery->where('district_id', $user->district_id);
+            })
+            ->count();
     }
 }

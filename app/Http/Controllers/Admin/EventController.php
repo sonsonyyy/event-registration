@@ -7,9 +7,12 @@ use App\Http\Requests\Admin\IndexEventRequest;
 use App\Http\Requests\Admin\StoreEventRequest;
 use App\Http\Requests\Admin\UpdateEventRequest;
 use App\Models\Department;
+use App\Models\District;
 use App\Models\Event;
 use App\Models\EventFeeCategory;
 use App\Models\Section;
+use App\Models\User;
+use App\Support\DepartmentScopeAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
@@ -27,7 +30,7 @@ class EventController extends Controller
     {
         $filters = $request->filters();
 
-        $events = Event::query()
+        $events = DepartmentScopeAccess::scopeManageableEvents(Event::query(), $request->user())
             ->when($filters['search'] !== '', function (Builder $query) use ($filters): void {
                 $search = $filters['search'];
 
@@ -39,6 +42,7 @@ class EventController extends Controller
                 });
             })
             ->with([
+                'district:id,name',
                 'section:id,name',
                 'department:id,name',
             ])
@@ -76,11 +80,18 @@ class EventController extends Controller
      */
     public function create(): Response
     {
+        Gate::authorize('create', Event::class);
+
+        /** @var User|null $actor */
+        $actor = auth()->user();
+
         return Inertia::render('admin/events/create', [
             'statusOptions' => $this->eventStatusOptions(),
-            'scopeTypeOptions' => $this->scopeTypeOptions(),
-            'sections' => $this->sectionOptions(),
-            'departments' => $this->departmentOptions(),
+            'scopeTypeOptions' => $this->scopeTypeOptions($actor),
+            'districts' => $this->districtOptions($actor),
+            'sections' => $this->sectionOptions($actor),
+            'departments' => $this->departmentOptions($actor),
+            'formDefaults' => $this->formDefaults($actor),
             'feeCategoryStatusOptions' => $this->feeCategoryStatusOptions(),
         ]);
     }
@@ -90,7 +101,7 @@ class EventController extends Controller
      */
     public function store(StoreEventRequest $request): RedirectResponse
     {
-        $validated = $request->validated();
+        $validated = $request->eventData();
         $feeCategories = collect($validated['fee_categories']);
         unset($validated['fee_categories']);
 
@@ -111,7 +122,11 @@ class EventController extends Controller
     {
         Gate::authorize('update', $event);
 
+        /** @var User|null $actor */
+        $actor = auth()->user();
+
         $event->load([
+            'district:id,name',
             'section:id,name',
             'department:id,name',
             'feeCategories' => fn ($query) => $query
@@ -124,9 +139,11 @@ class EventController extends Controller
         return Inertia::render('admin/events/edit', [
             'event' => $this->eventFormData($event),
             'statusOptions' => $this->eventStatusOptions(),
-            'scopeTypeOptions' => $this->scopeTypeOptions(),
-            'sections' => $this->sectionOptions(),
-            'departments' => $this->departmentOptions(),
+            'scopeTypeOptions' => $this->scopeTypeOptions($actor),
+            'districts' => $this->districtOptions($actor),
+            'sections' => $this->sectionOptions($actor),
+            'departments' => $this->departmentOptions($actor),
+            'formDefaults' => $this->formDefaults($actor),
             'feeCategoryStatusOptions' => $this->feeCategoryStatusOptions(),
         ]);
     }
@@ -136,7 +153,7 @@ class EventController extends Controller
      */
     public function update(UpdateEventRequest $request, Event $event): RedirectResponse
     {
-        $validated = $request->validated();
+        $validated = $request->eventData();
         $feeCategories = collect($validated['fee_categories']);
         unset($validated['fee_categories']);
 
@@ -245,6 +262,7 @@ class EventController extends Controller
             'registration_close_at' => $event->registration_close_at->format('Y-m-d\TH:i'),
             'status' => $event->status,
             'scope_type' => $event->scope_type,
+            'district_id' => $event->district_id,
             'section_id' => $event->section_id,
             'department_id' => $event->department_id,
             'total_capacity' => $event->total_capacity,
@@ -285,8 +303,20 @@ class EventController extends Controller
     /**
      * @return array<int, array<string, string>>
      */
-    private function scopeTypeOptions(): array
+    private function scopeTypeOptions($user): array
     {
+        if ($user?->isAdmin()) {
+            return [
+                ['value' => Event::SCOPE_DISTRICT, 'label' => 'District-wide'],
+            ];
+        }
+
+        if ($user?->isManager()) {
+            return [
+                ['value' => Event::SCOPE_SECTION, 'label' => 'Sectional'],
+            ];
+        }
+
         return [
             ['value' => Event::SCOPE_DISTRICT, 'label' => 'District-wide'],
             ['value' => Event::SCOPE_SECTION, 'label' => 'Sectional'],
@@ -296,15 +326,55 @@ class EventController extends Controller
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function sectionOptions(): array
+    private function districtOptions($user): array
     {
-        return Section::query()
+        $query = District::query()
+            ->orderBy('name');
+
+        if ($user?->isAdmin() && $user->district_id !== null) {
+            $query->whereKey($user->district_id);
+        } elseif ($user?->isManager()) {
+            $districtId = $user->district_id ?? $user->section?->district_id ?? $user->section()->value('district_id');
+
+            if ($districtId === null) {
+                return [];
+            }
+
+            $query->whereKey($districtId);
+        }
+
+        return $query
+            ->get()
+            ->map(fn (District $district): array => [
+                'id' => $district->id,
+                'name' => $district->name,
+                'status' => $district->status,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function sectionOptions($user): array
+    {
+        $query = Section::query()
             ->with('district:id,name')
-            ->orderBy('name')
+            ->orderBy('name');
+
+        if ($user?->isManager() && $user->section_id !== null) {
+            $query->whereKey($user->section_id);
+        } elseif ($user?->isAdmin() && $user->district_id !== null) {
+            $query->where('district_id', $user->district_id);
+        }
+
+        return $query
             ->get()
             ->map(fn (Section $section): array => [
                 'id' => $section->id,
                 'name' => $section->name,
+                'district_id' => $section->district_id,
                 'district_name' => $section->district->name,
                 'status' => $section->status,
             ])
@@ -315,10 +385,20 @@ class EventController extends Controller
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function departmentOptions(): array
+    private function departmentOptions($user): array
     {
-        return Department::query()
+        $query = Department::query()
             ->orderBy('name')
+            ->when(
+                $user !== null && ! $user->isSuperAdmin() && $user->department_id !== null,
+                fn (Builder $query) => $query->whereKey($user->department_id),
+            );
+
+        if ($user !== null && ! $user->isSuperAdmin() && $user->department_id === null) {
+            return [];
+        }
+
+        return $query
             ->get()
             ->map(fn (Department $department): array => [
                 'id' => $department->id,
@@ -332,13 +412,41 @@ class EventController extends Controller
     private function eventScopeSummary(Event $event): string
     {
         $scopeParts = [
+            $event->district?->name ?? 'Unassigned district',
             $event->scope_type === Event::SCOPE_SECTION
                 ? $event->section?->name ?? 'Sectional'
                 : 'District-wide',
-            $event->department?->name ?? 'General',
+            $event->department?->name ?? 'No department',
         ];
 
         return implode(' · ', $scopeParts);
+    }
+
+    /**
+     * @return array{scope_type: string, district_id: int|null, section_id: int|null, department_id: int|null}
+     */
+    private function formDefaults($user): array
+    {
+        $districtId = null;
+        $sectionId = null;
+
+        if ($user?->isAdmin()) {
+            $districtId = $user->district_id;
+        }
+
+        if ($user?->isManager()) {
+            $sectionId = $user->section_id;
+            $districtId = $user->district_id
+                ?? $user->section?->district_id
+                ?? $user->section()->value('district_id');
+        }
+
+        return [
+            'scope_type' => $this->scopeTypeOptions($user)[0]['value'] ?? Event::SCOPE_DISTRICT,
+            'district_id' => $districtId,
+            'section_id' => $sectionId,
+            'department_id' => $user?->isSuperAdmin() ? null : $user?->department_id,
+        ];
     }
 
     /**

@@ -3,8 +3,10 @@
 namespace App\Http\Requests\Admin;
 
 use App\Models\Department;
+use App\Models\District;
 use App\Models\Event;
 use App\Models\Section;
+use App\Support\DepartmentScopeAccess;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -38,6 +40,11 @@ class StoreEventRequest extends FormRequest
             'total_capacity' => ['required', 'integer', 'min:1'],
             'status' => ['required', Rule::in(Event::statuses())],
             'scope_type' => ['required', Rule::in(Event::scopeTypes())],
+            'district_id' => [
+                'required',
+                'integer',
+                Rule::exists(District::class, 'id')->whereNull('deleted_at'),
+            ],
             'section_id' => [
                 'nullable',
                 'integer',
@@ -79,8 +86,34 @@ class StoreEventRequest extends FormRequest
                     $validator->errors()->add('section_id', 'Choose the section that owns this sectional event.');
                 }
 
+                if ($this->input('scope_type') === Event::SCOPE_DISTRICT && ! $this->filled('district_id')) {
+                    $validator->errors()->add('district_id', 'Choose the district that owns this district-wide event.');
+                }
+
                 if ($this->input('scope_type') === Event::SCOPE_DISTRICT && $this->filled('section_id')) {
                     $validator->errors()->add('section_id', 'District-wide events cannot be assigned to a section.');
+                }
+
+                $district = $this->selectedDistrict();
+                $section = $this->selectedSection();
+
+                if (
+                    $this->input('scope_type') === Event::SCOPE_SECTION
+                    && $section !== null
+                    && $district !== null
+                    && $section->district_id !== $district->getKey()
+                ) {
+                    $validator->errors()->add('district_id', 'The selected district must match the owning section.');
+                }
+
+                if (! DepartmentScopeAccess::canManageProposedEvent(
+                    $this->user(),
+                    (string) $this->input('scope_type'),
+                    $district?->getKey(),
+                    $section,
+                    $this->filled('department_id') ? (int) $this->input('department_id') : null,
+                )) {
+                    $validator->errors()->add('scope_type', 'You are not allowed to manage an event in the selected scope.');
                 }
 
                 $totalCapacity = (int) $this->input('total_capacity', 0);
@@ -126,6 +159,8 @@ class StoreEventRequest extends FormRequest
             'status.in' => 'Choose a valid event status.',
             'scope_type.required' => 'Choose an event scope.',
             'scope_type.in' => 'Choose a valid event scope.',
+            'district_id.required' => 'Choose the district that owns this event.',
+            'district_id.exists' => 'Choose a valid district.',
             'section_id.exists' => 'Choose a valid section.',
             'department_id.exists' => 'Choose a valid department.',
             'fee_categories.required' => 'Add at least one fee category.',
@@ -137,5 +172,54 @@ class StoreEventRequest extends FormRequest
             'fee_categories.*.status.required' => 'Choose a fee category status.',
             'fee_categories.*.status.in' => 'Choose a valid fee category status.',
         ];
+    }
+
+    /**
+     * Build the validated event payload with normalized territorial scope fields.
+     *
+     * @return array<string, mixed>
+     */
+    public function eventData(): array
+    {
+        $validated = $this->validated();
+        $district = $this->selectedDistrict();
+        $section = $this->selectedSection();
+
+        $validated['district_id'] = $district?->getKey();
+        $validated['section_id'] = $section?->getKey();
+
+        if (($validated['scope_type'] ?? null) === Event::SCOPE_SECTION && $section !== null) {
+            $validated['district_id'] = $section->district_id;
+        }
+
+        if (($validated['scope_type'] ?? null) === Event::SCOPE_DISTRICT) {
+            $validated['section_id'] = null;
+        }
+
+        return $validated;
+    }
+
+    private function selectedDistrict(): ?District
+    {
+        $districtId = $this->input('district_id');
+
+        if ($districtId === null || $districtId === '') {
+            return null;
+        }
+
+        return District::query()->find($districtId);
+    }
+
+    private function selectedSection(): ?Section
+    {
+        $sectionId = $this->input('section_id');
+
+        if ($sectionId === null || $sectionId === '') {
+            return null;
+        }
+
+        return Section::query()
+            ->with('district:id,name')
+            ->find($sectionId);
     }
 }
