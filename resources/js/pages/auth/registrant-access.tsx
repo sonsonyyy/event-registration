@@ -20,8 +20,9 @@ import { login } from '@/routes';
 type SectionOption = {
     id: number;
     name: string;
-    district_id: number;
-    district_name: string | null;
+    description: string | null;
+    district_id: number; // will be hidden in the UI but included here for ease of access when building the options
+    district_name: string | null; // will be hidden in the UI but included here for ease of access when building the options
 };
 
 type PastorOption = {
@@ -168,8 +169,8 @@ export default function RegistrantAccess({
                             emptyLabel="Select section"
                             options={sections.map((section) => ({
                                 value: section.id.toString(),
-                                label: section.district_name
-                                    ? `${section.name} (${section.district_name})`
+                                label: section.description
+                                    ? `${section.name} (${section.description ?? 'No description'})`
                                     : section.name,
                             }))}
                         />
