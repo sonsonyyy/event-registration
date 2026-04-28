@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { Download } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import ReportsController from '@/actions/App/Http/Controllers/ReportsController';
 import DataTablePagination from '@/components/data-table-pagination';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
@@ -9,7 +9,6 @@ import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { formatSystemDateRange } from '@/lib/date-time';
 import {
     Select,
     SelectContent,
@@ -61,6 +60,49 @@ type FeeCategoryReport = {
     registered_amount: string;
 };
 
+type FeeCategoryTotals = {
+    registered_quantity: number;
+    registered_amount: string;
+};
+
+type SectionSummaryReport = {
+    id: number | null;
+    name: string;
+    district_name: string | null;
+    active_churches: number;
+    registered_churches: number;
+    registration_count: number;
+    total_registered_quantity: number;
+    total_registered_amount: string;
+};
+
+type SectionSummaryTotals = {
+    active_churches: number;
+    registered_churches: number;
+    registration_count: number;
+    total_registered_quantity: number;
+    total_registered_amount: string;
+};
+
+type ChurchSummaryReport = {
+    id: number;
+    church_name: string;
+    pastor_name: string;
+    section_name: string | null;
+    district_name: string | null;
+    registration_count: number;
+    total_registered_quantity: number;
+    total_registered_amount: string;
+};
+
+type ChurchSummaryTotals = {
+    church_count: number;
+    registered_churches: number;
+    registration_count: number;
+    total_registered_quantity: number;
+    total_registered_amount: string;
+};
+
 type MissingChurchRecord = {
     id: number;
     church_name: string;
@@ -77,6 +119,7 @@ type Props = {
     filters: {
         event_id: number | null;
         section_id: number | null;
+        tab: ReportTab;
         search: string;
         per_page: number;
     };
@@ -85,14 +128,24 @@ type Props = {
     selectedSection: SelectedSection;
     eventTotalRegistration: {
         total_registered_quantity: number;
+        total_registered_amount: string;
         registration_count: number;
         verified_online_quantity: number;
         pending_online_quantity: number;
         fee_categories: FeeCategoryReport[];
+        fee_category_totals: FeeCategoryTotals;
+        section_summaries: SectionSummaryReport[];
+        section_summary_totals: SectionSummaryTotals;
+        church_summaries: ChurchSummaryReport[];
+        church_summary_totals: ChurchSummaryTotals;
     };
+    churchesWithRegistration: PaginatedData<ChurchSummaryReport>;
+    churchesWithRegistrationExportUrl: string | null;
     churchesWithoutRegistration: PaginatedData<MissingChurchRecord>;
     churchesWithoutRegistrationExportUrl: string | null;
 };
+
+type ReportTab = 'section-summary' | 'church-summary' | 'no-registration';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -110,17 +163,6 @@ const formatCurrency = (value: string): string =>
         style: 'currency',
         currency: 'PHP',
     }).format(Number.parseFloat(value || '0'));
-
-const formatDateRange = (
-    dateFrom: string | null,
-    dateTo: string | null,
-): string => {
-    if (! dateFrom || ! dateTo) {
-        return 'Dates not available';
-    }
-
-    return formatSystemDateRange(dateFrom, dateTo);
-};
 
 const eventStatusVariant = (
     status: string,
@@ -145,20 +187,19 @@ export default function ReportsIndex({
     filters,
     perPageOptions,
     selectedEvent,
-    selectedSection,
     eventTotalRegistration,
+    churchesWithRegistration,
+    churchesWithRegistrationExportUrl,
     churchesWithoutRegistration,
     churchesWithoutRegistrationExportUrl,
 }: Props) {
     const [search, setSearch] = useState(filters.search);
-
-    useEffect(() => {
-        setSearch(filters.search);
-    }, [filters.search]);
+    const activeReportTab = filters.tab;
 
     const visitReport = (query: {
         event_id?: number;
         section_id?: number;
+        tab: ReportTab;
         search?: string;
         per_page: number;
         page?: number;
@@ -170,7 +211,7 @@ export default function ReportsIndex({
             {},
             {
                 preserveScroll: true,
-                preserveState: true,
+                preserveState: false,
                 replace: true,
             },
         );
@@ -180,10 +221,13 @@ export default function ReportsIndex({
         const normalizedSearch = search.trim();
 
         visitReport({
-            ...(filters.event_id !== null ? { event_id: filters.event_id } : {}),
+            ...(filters.event_id !== null
+                ? { event_id: filters.event_id }
+                : {}),
             ...(filters.section_id !== null
                 ? { section_id: filters.section_id }
                 : {}),
+            tab: activeReportTab,
             ...(normalizedSearch !== '' ? { search: normalizedSearch } : {}),
             per_page: filters.per_page,
         });
@@ -191,10 +235,13 @@ export default function ReportsIndex({
 
     const updatePerPage = (value: number): void => {
         visitReport({
-            ...(filters.event_id !== null ? { event_id: filters.event_id } : {}),
+            ...(filters.event_id !== null
+                ? { event_id: filters.event_id }
+                : {}),
             ...(filters.section_id !== null
                 ? { section_id: filters.section_id }
                 : {}),
+            tab: activeReportTab,
             ...(filters.search !== '' ? { search: filters.search } : {}),
             per_page: value,
         });
@@ -202,20 +249,21 @@ export default function ReportsIndex({
 
     const changePage = (pageNumber: number): void => {
         visitReport({
-            ...(filters.event_id !== null ? { event_id: filters.event_id } : {}),
+            ...(filters.event_id !== null
+                ? { event_id: filters.event_id }
+                : {}),
             ...(filters.section_id !== null
                 ? { section_id: filters.section_id }
                 : {}),
+            tab: activeReportTab,
             ...(filters.search !== '' ? { search: filters.search } : {}),
             per_page: filters.per_page,
             ...(pageNumber > 1 ? { page: pageNumber } : {}),
         });
     };
 
-    const sectionFilterValue = filters.section_id !== null
-        ? String(filters.section_id)
-        : 'all';
-
+    const sectionFilterValue =
+        filters.section_id !== null ? String(filters.section_id) : 'all';
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Reports" />
@@ -227,19 +275,36 @@ export default function ReportsIndex({
                     className="mb-4"
                 />
 
-                <Card className="overflow-hidden border border-[#d3ddd8] border-t-4 border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-emerald-500 dark:bg-slate-950 dark:shadow-black/20">
+                <Card className="overflow-hidden border border-t-4 border-[#d3ddd8] border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-emerald-500 dark:bg-slate-950 dark:shadow-black/20">
                     <CardContent className="p-6">
                         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-                            <div className="space-y-2">
-                                <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
-                                    Reporting scope
+                            <div className="space-y-5">
+                                <div className="flex flex-wrap items-center gap-3">
+                                    {selectedEvent !== null && (
+                                        <Badge
+                                            variant={eventStatusVariant(
+                                                selectedEvent.status,
+                                            )}
+                                            className="capitalize"
+                                        >
+                                            {selectedEvent.status}
+                                        </Badge>
+                                    )}
+                                    <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                                        Reporting scope
+                                    </div>
                                 </div>
-                                <div className="text-2xl font-bold tracking-[-0.03em] text-slate-900 dark:text-slate-100">
-                                    {selectedEvent?.name ?? 'Select an event'}
+
+                                <div className="space-y-2">
+                                    <div className="text-2xl font-bold tracking-[-0.03em] text-slate-900 dark:text-slate-100">
+                                        {selectedEvent?.name ??
+                                            'Select an event'}
+                                    </div>
+                                    <p className="max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400">
+                                        {selectedEvent?.description ??
+                                            'Filter the event and section scope to review registration volume, section and church summaries, fee-category totals, and churches that have not submitted registrations yet.'}
+                                    </p>
                                 </div>
-                                <p className="max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400">
-                                    Filter the event and section scope to review registration volume, fee-category totals, and churches that have not submitted registrations yet.
-                                </p>
                             </div>
 
                             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
@@ -256,7 +321,10 @@ export default function ReportsIndex({
                                         onValueChange={(value) =>
                                             visitReport({
                                                 ...(value !== ''
-                                                    ? { event_id: Number(value) }
+                                                    ? {
+                                                          event_id:
+                                                              Number(value),
+                                                      }
                                                     : {}),
                                                 ...(filters.section_id !== null
                                                     ? {
@@ -264,6 +332,7 @@ export default function ReportsIndex({
                                                               filters.section_id,
                                                       }
                                                     : {}),
+                                                tab: activeReportTab,
                                                 ...(filters.search !== ''
                                                     ? { search: filters.search }
                                                     : {}),
@@ -301,7 +370,10 @@ export default function ReportsIndex({
                                         onValueChange={(value) =>
                                             visitReport({
                                                 ...(filters.event_id !== null
-                                                    ? { event_id: filters.event_id }
+                                                    ? {
+                                                          event_id:
+                                                              filters.event_id,
+                                                      }
                                                     : {}),
                                                 ...(value !== 'all'
                                                     ? {
@@ -309,13 +381,14 @@ export default function ReportsIndex({
                                                               Number(value),
                                                       }
                                                     : {}),
+                                                tab: activeReportTab,
                                                 ...(filters.search !== ''
                                                     ? { search: filters.search }
                                                     : {}),
                                                 per_page: filters.per_page,
                                             })
                                         }
-                                        disabled={! canFilterBySection}
+                                        disabled={!canFilterBySection}
                                     >
                                         <SelectTrigger className="h-11 w-full border-slate-200 bg-white shadow-none dark:border-slate-800 dark:bg-slate-950">
                                             <SelectValue />
@@ -356,150 +429,67 @@ export default function ReportsIndex({
                                 No events available for reporting.
                             </div>
                             <p className="text-sm text-slate-600 dark:text-slate-400">
-                                Create an event first so reporting can be generated.
+                                Create an event first so reporting can be
+                                generated.
                             </p>
                         </CardContent>
                     </Card>
                 ) : (
                     <>
-                        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_360px]">
-                            <Card className="overflow-hidden border border-[#d6e2de] border-t-4 border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-emerald-500 dark:bg-slate-950 dark:shadow-black/20">
-                                <CardContent className="p-6">
-                                    <div className="space-y-5">
-                                        <div className="flex flex-wrap items-center gap-3">
-                                            <Badge
-                                                variant={eventStatusVariant(
-                                                    selectedEvent.status,
-                                                )}
-                                                className="capitalize"
-                                            >
-                                                {selectedEvent.status}
-                                            </Badge>
-                                            <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
-                                                {scopeSummary}
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            <div className="text-3xl font-extrabold tracking-[-0.04em] text-slate-900 dark:text-slate-100">
-                                                {selectedEvent.name}
-                                            </div>
-                                            <div className="text-sm leading-7 text-slate-600 dark:text-slate-400">
-                                                {selectedEvent.description ||
-                                                    'No event description provided.'}
-                                            </div>
-                                        </div>
-
-                                        <div className="grid gap-4 sm:grid-cols-2">
-                                            <div className="rounded-md border border-[#e2ebe6] bg-[#f8fbfa] px-4 py-4 dark:border-slate-800 dark:bg-slate-900/50">
-                                                <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
-                                                    Venue
-                                                </div>
-                                                <div className="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">
-                                                    {selectedEvent.venue}
-                                                </div>
-                                            </div>
-                                            <div className="rounded-md border border-[#e2ebe6] bg-[#f8fbfa] px-4 py-4 dark:border-slate-800 dark:bg-slate-900/50">
-                                                <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
-                                                    Event dates
-                                                </div>
-                                                <div className="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">
-                                                    {formatDateRange(
-                                                        selectedEvent.date_from,
-                                                        selectedEvent.date_to,
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="overflow-hidden border border-[#d3ddd8] border-t-4 border-t-slate-900 bg-white py-0 shadow-xl shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-slate-200 dark:bg-slate-950 dark:shadow-black/20">
-                                <CardContent className="p-6">
-                                    <div className="space-y-5">
-                                        <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
-                                            Filter summary
-                                        </div>
-
-                                        <div className="divide-y divide-[#e2ebe6] dark:divide-slate-800">
-                                            <div className="flex items-start justify-between gap-4 py-3 first:pt-0">
-                                                <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
-                                                    Section scope
-                                                </div>
-                                                <div className="text-right text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                    {selectedSection
-                                                        ? `${selectedSection.name}, ${selectedSection.district_name ?? 'District'}`
-                                                        : 'All sections'}
-                                                </div>
-                                            </div>
-                                            <div className="flex items-start justify-between gap-4 py-3">
-                                                <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
-                                                    Transactions
-                                                </div>
-                                                <div className="text-right text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                    {eventTotalRegistration.registration_count}
-                                                </div>
-                                            </div>
-                                            <div className="flex items-start justify-between gap-4 py-3 last:pb-0">
-                                                <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
-                                                    Missing churches
-                                                </div>
-                                                <div className="text-right text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                                    {churchesWithoutRegistration.meta.total}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-
                         <div className="grid gap-4 md:grid-cols-3">
-                            <Card className="overflow-hidden rounded-md border border-[#d6e2de] border-t-4 border-t-[#184d47] bg-[linear-gradient(145deg,_rgba(24,77,71,0.10),_rgba(255,255,255,0.98))] py-0 shadow-sm shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-emerald-500 dark:bg-slate-950">
+                            <Card className="overflow-hidden rounded-md border border-t-4 border-[#d6e2de] border-t-[#184d47] bg-[linear-gradient(145deg,_rgba(24,77,71,0.10),_rgba(255,255,255,0.98))] py-0 shadow-sm shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-emerald-500 dark:bg-slate-950">
                                 <CardContent className="p-5">
                                     <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
                                         Total registered quantity
                                     </div>
                                     <div className="mt-5 text-3xl font-semibold text-slate-900 dark:text-slate-100">
-                                        {eventTotalRegistration.total_registered_quantity}
+                                        {
+                                            eventTotalRegistration.total_registered_quantity
+                                        }
                                     </div>
                                     <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                                        All reserved or confirmed quantities for the selected event and section scope.
+                                        All reserved or confirmed quantities for
+                                        the selected event and section scope.
                                     </div>
                                 </CardContent>
                             </Card>
 
-                            <Card className="overflow-hidden rounded-md border border-[#d9e2de] border-t-4 border-t-slate-900 bg-white py-0 shadow-sm shadow-[#184d47]/6 dark:border-slate-800 dark:border-t-slate-200 dark:bg-slate-950">
+                            <Card className="overflow-hidden rounded-md border border-t-4 border-[#d9e2de] border-t-slate-900 bg-white py-0 shadow-sm shadow-[#184d47]/6 dark:border-slate-800 dark:border-t-slate-200 dark:bg-slate-950">
                                 <CardContent className="p-5">
                                     <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
                                         Verified online quantity
                                     </div>
                                     <div className="mt-5 text-3xl font-semibold text-slate-900 dark:text-slate-100">
-                                        {eventTotalRegistration.verified_online_quantity}
+                                        {
+                                            eventTotalRegistration.verified_online_quantity
+                                        }
                                     </div>
                                     <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                                        Submitted online quantities that have already passed receipt verification.
+                                        Submitted online quantities that have
+                                        already passed receipt verification.
                                     </div>
                                 </CardContent>
                             </Card>
 
-                            <Card className="overflow-hidden rounded-md border border-[#ecd7d8] border-t-4 border-t-[#be4b56] bg-white py-0 shadow-sm shadow-[#be4b56]/8 dark:border-slate-800 dark:border-t-rose-500 dark:bg-slate-950">
+                            <Card className="overflow-hidden rounded-md border border-t-4 border-[#ecd7d8] border-t-[#be4b56] bg-white py-0 shadow-sm shadow-[#be4b56]/8 dark:border-slate-800 dark:border-t-rose-500 dark:bg-slate-950">
                                 <CardContent className="p-5">
                                     <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
                                         Pending online quantity
                                     </div>
                                     <div className="mt-5 text-3xl font-semibold text-slate-900 dark:text-slate-100">
-                                        {eventTotalRegistration.pending_online_quantity}
+                                        {
+                                            eventTotalRegistration.pending_online_quantity
+                                        }
                                     </div>
                                     <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                                        Online quantities still waiting for receipt verification review.
+                                        Online quantities still waiting for
+                                        receipt verification review.
                                     </div>
                                 </CardContent>
                             </Card>
                         </div>
 
-                        <Card className="overflow-hidden border border-[#d3ddd8] border-t-4 border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-emerald-500 dark:bg-slate-950 dark:shadow-black/20">
+                        <Card className="overflow-hidden border border-t-4 border-[#d3ddd8] border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-emerald-500 dark:bg-slate-950 dark:shadow-black/20">
                             <CardContent className="p-0">
                                 <div className="border-b border-[#e2ebe6] px-6 py-6 dark:border-slate-800">
                                     <div className="space-y-2">
@@ -510,41 +500,45 @@ export default function ReportsIndex({
                                             Fee category totals
                                         </div>
                                         <p className="text-sm leading-6 text-slate-600 dark:text-slate-400">
-                                            Registered quantities and submitted value per fee category for the current event and section filter.
+                                            Registered quantities and submitted
+                                            value per fee category for the
+                                            current event and section filter.
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className="overflow-x-auto">
-                                    <table className="min-w-[44rem] w-full divide-y divide-[#e2ebe6] text-[0.8125rem] sm:min-w-full sm:text-sm dark:divide-slate-800">
+                                    <table className="w-full min-w-[44rem] divide-y divide-[#e2ebe6] text-[0.8125rem] sm:min-w-full sm:text-sm dark:divide-slate-800">
                                         <thead className="bg-slate-50/80 dark:bg-slate-900/60">
-                                            <tr className="text-left text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                                            <tr className="text-left text-xs tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
                                                 <th className="px-6 py-3 font-medium">
                                                     Fee category
                                                 </th>
                                                 <th className="px-6 py-3 font-medium">
+                                                    Slot limit
+                                                </th>
+                                                <th className="px-6 py-3 text-right font-medium">
                                                     Base amount
                                                 </th>
-                                                <th className="px-6 py-3 font-medium">
+                                                <th className="px-6 py-3 text-right font-medium">
                                                     Registered quantity
                                                 </th>
-                                                <th className="px-6 py-3 font-medium">
+                                                <th className="px-6 py-3 text-right font-medium">
                                                     Registered value
-                                                </th>
-                                                <th className="px-6 py-3 font-medium">
-                                                    Slot limit
                                                 </th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-[#eef3f0] dark:divide-slate-800">
-                                            {eventTotalRegistration.fee_categories.length ===
-                                            0 ? (
+                                            {eventTotalRegistration
+                                                .fee_categories.length === 0 ? (
                                                 <tr>
                                                     <td
                                                         colSpan={5}
                                                         className="px-6 py-14 text-center text-sm text-slate-500 dark:text-slate-400"
                                                     >
-                                                        No fee categories are configured for this event yet.
+                                                        No fee categories are
+                                                        configured for this
+                                                        event yet.
                                                     </td>
                                                 </tr>
                                             ) : (
@@ -562,23 +556,811 @@ export default function ReportsIndex({
                                                                 </div>
                                                             </td>
                                                             <td className="px-6 py-4 align-middle text-slate-600 dark:text-slate-400">
+                                                                {feeCategory.slot_limit ??
+                                                                    'Unlimited'}
+                                                            </td>
+                                                            <td className="px-6 py-4 text-right align-middle text-slate-600 dark:text-slate-400">
                                                                 {formatCurrency(
                                                                     feeCategory.amount,
                                                                 )}
                                                             </td>
-                                                            <td className="px-6 py-4 align-middle font-semibold text-slate-900 dark:text-slate-100">
+                                                            <td className="px-6 py-4 text-right align-middle font-semibold text-slate-900 dark:text-slate-100">
                                                                 {
                                                                     feeCategory.registered_quantity
                                                                 }
                                                             </td>
-                                                            <td className="px-6 py-4 align-middle text-slate-600 dark:text-slate-400">
+                                                            <td className="px-6 py-4 text-right align-middle text-slate-600 dark:text-slate-400">
                                                                 {formatCurrency(
                                                                     feeCategory.registered_amount,
                                                                 )}
                                                             </td>
-                                                            <td className="px-6 py-4 align-middle text-slate-600 dark:text-slate-400">
-                                                                {feeCategory.slot_limit ??
-                                                                    'Unlimited'}
+                                                        </tr>
+                                                    ),
+                                                )
+                                            )}
+                                        </tbody>
+                                        {eventTotalRegistration.fee_categories
+                                            .length > 0 && (
+                                            <tfoot className="bg-[#f4f8f6] dark:bg-slate-900/70">
+                                                <tr className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                    <td
+                                                        colSpan={2}
+                                                        className="px-6 py-4"
+                                                    >
+                                                        Totals
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right" />
+                                                    <td className="px-6 py-4 text-right">
+                                                        {
+                                                            eventTotalRegistration
+                                                                .fee_category_totals
+                                                                .registered_quantity
+                                                        }
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        {formatCurrency(
+                                                            eventTotalRegistration
+                                                                .fee_category_totals
+                                                                .registered_amount,
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        )}
+                                    </table>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <div className="flex flex-col gap-4 rounded-md border border-[#d3ddd8] bg-white px-5 py-5 shadow-sm shadow-[#184d47]/6 dark:border-slate-800 dark:bg-slate-950">
+                            <div className="space-y-1">
+                                <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                                    Detailed reports
+                                </div>
+                                <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                                    Registration breakdown
+                                </div>
+                            </div>
+
+                            <div
+                                role="tablist"
+                                aria-label="Registration breakdown reports"
+                                className="flex flex-wrap gap-2"
+                            >
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={
+                                        activeReportTab === 'section-summary'
+                                            ? 'default'
+                                            : 'outline'
+                                    }
+                                    role="tab"
+                                    aria-selected={
+                                        activeReportTab === 'section-summary'
+                                    }
+                                    onClick={() =>
+                                        visitReport({
+                                            ...(filters.event_id !== null
+                                                ? {
+                                                      event_id:
+                                                          filters.event_id,
+                                                  }
+                                                : {}),
+                                            ...(filters.section_id !== null
+                                                ? {
+                                                      section_id:
+                                                          filters.section_id,
+                                                  }
+                                                : {}),
+                                            tab: 'section-summary',
+                                            ...(filters.search !== ''
+                                                ? { search: filters.search }
+                                                : {}),
+                                            per_page: filters.per_page,
+                                        })
+                                    }
+                                    className="rounded-full px-4"
+                                >
+                                    By section
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={
+                                        activeReportTab === 'church-summary'
+                                            ? 'default'
+                                            : 'outline'
+                                    }
+                                    role="tab"
+                                    aria-selected={
+                                        activeReportTab === 'church-summary'
+                                    }
+                                    onClick={() =>
+                                        visitReport({
+                                            ...(filters.event_id !== null
+                                                ? {
+                                                      event_id:
+                                                          filters.event_id,
+                                                  }
+                                                : {}),
+                                            ...(filters.section_id !== null
+                                                ? {
+                                                      section_id:
+                                                          filters.section_id,
+                                                  }
+                                                : {}),
+                                            tab: 'church-summary',
+                                            ...(filters.search !== ''
+                                                ? { search: filters.search }
+                                                : {}),
+                                            per_page: filters.per_page,
+                                        })
+                                    }
+                                    className="rounded-full px-4"
+                                >
+                                    By church
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={
+                                        activeReportTab === 'no-registration'
+                                            ? 'default'
+                                            : 'outline'
+                                    }
+                                    role="tab"
+                                    aria-selected={
+                                        activeReportTab === 'no-registration'
+                                    }
+                                    onClick={() =>
+                                        visitReport({
+                                            ...(filters.event_id !== null
+                                                ? {
+                                                      event_id:
+                                                          filters.event_id,
+                                                  }
+                                                : {}),
+                                            ...(filters.section_id !== null
+                                                ? {
+                                                      section_id:
+                                                          filters.section_id,
+                                                  }
+                                                : {}),
+                                            tab: 'no-registration',
+                                            ...(filters.search !== ''
+                                                ? { search: filters.search }
+                                                : {}),
+                                            per_page: filters.per_page,
+                                        })
+                                    }
+                                    className="rounded-full px-4"
+                                >
+                                    No registration
+                                </Button>
+                            </div>
+                        </div>
+
+                        {activeReportTab === 'section-summary' && (
+                            <Card className="overflow-hidden border border-t-4 border-[#d3ddd8] border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-emerald-500 dark:bg-slate-950 dark:shadow-black/20">
+                                <CardContent className="p-0">
+                                    <div className="border-b border-[#e2ebe6] px-6 py-6 dark:border-slate-800">
+                                        <div className="space-y-2">
+                                            <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                                                Registration Summary
+                                            </div>
+                                            <div className="text-2xl font-bold tracking-[-0.03em] text-slate-900 dark:text-slate-100">
+                                                By section
+                                            </div>
+                                            <p className="text-sm leading-6 text-slate-600 dark:text-slate-400">
+                                                Active churches, submitted
+                                                transactions, and registered
+                                                value grouped by section for the
+                                                current report scope.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full min-w-[56rem] divide-y divide-[#e2ebe6] text-[0.8125rem] sm:min-w-full sm:text-sm dark:divide-slate-800">
+                                            <thead className="bg-slate-50/80 dark:bg-slate-900/60">
+                                                <tr className="text-left text-xs tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                                                    <th className="px-6 py-3 font-medium">
+                                                        Section
+                                                    </th>
+                                                    <th className="px-6 py-3 text-right font-medium">
+                                                        Churches with
+                                                        registrations
+                                                    </th>
+                                                    <th className="px-6 py-3 text-right font-medium">
+                                                        Registered quantity
+                                                    </th>
+                                                    <th className="px-6 py-3 text-right font-medium">
+                                                        Registered value
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-[#eef3f0] dark:divide-slate-800">
+                                                {eventTotalRegistration
+                                                    .section_summaries
+                                                    .length === 0 ? (
+                                                    <tr>
+                                                        <td
+                                                            colSpan={4}
+                                                            className="px-6 py-14 text-center text-sm text-slate-500 dark:text-slate-400"
+                                                        >
+                                                            No section summary
+                                                            is available for the
+                                                            current event scope.
+                                                        </td>
+                                                    </tr>
+                                                ) : (
+                                                    eventTotalRegistration.section_summaries.map(
+                                                        (sectionSummary) => (
+                                                            <tr
+                                                                key={
+                                                                    sectionSummary.id ??
+                                                                    sectionSummary.name
+                                                                }
+                                                                className="bg-white transition-colors even:bg-slate-50/50 hover:bg-[#f4f8f6] dark:bg-slate-950 dark:even:bg-slate-900/40 dark:hover:bg-slate-900"
+                                                            >
+                                                                <td className="px-6 py-4 align-middle">
+                                                                    <div className="font-medium text-slate-900 dark:text-slate-100">
+                                                                        {
+                                                                            sectionSummary.name
+                                                                        }
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-right align-middle font-semibold text-slate-900 dark:text-slate-100">
+                                                                    {
+                                                                        sectionSummary.registered_churches
+                                                                    }
+                                                                </td>
+                                                                <td className="px-6 py-4 text-right align-middle text-slate-600 dark:text-slate-400">
+                                                                    {
+                                                                        sectionSummary.total_registered_quantity
+                                                                    }
+                                                                </td>
+                                                                <td className="px-6 py-4 text-right align-middle text-slate-600 dark:text-slate-400">
+                                                                    {formatCurrency(
+                                                                        sectionSummary.total_registered_amount,
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        ),
+                                                    )
+                                                )}
+                                            </tbody>
+                                            {eventTotalRegistration
+                                                .section_summaries.length >
+                                                0 && (
+                                                <tfoot className="bg-[#f4f8f6] dark:bg-slate-900/70">
+                                                    <tr className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                        <td
+                                                            colSpan={1}
+                                                            className="px-6 py-4"
+                                                        >
+                                                            Totals
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            {
+                                                                eventTotalRegistration
+                                                                    .section_summary_totals
+                                                                    .registered_churches
+                                                            }
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            {
+                                                                eventTotalRegistration
+                                                                    .section_summary_totals
+                                                                    .total_registered_quantity
+                                                            }
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            {formatCurrency(
+                                                                eventTotalRegistration
+                                                                    .section_summary_totals
+                                                                    .total_registered_amount,
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                </tfoot>
+                                            )}
+                                        </table>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {activeReportTab === 'church-summary' && (
+                            <div className={elevatedIndexTableStyles.shell}>
+                                <div className={elevatedIndexTableStyles.band}>
+                                    <div className="space-y-5">
+                                        <div className="space-y-2">
+                                            <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                                                Registration Summary
+                                            </div>
+                                            <div className="text-2xl font-bold tracking-[-0.03em] text-slate-900 dark:text-slate-100">
+                                                By church
+                                            </div>
+                                            <p className="text-sm leading-6 text-slate-600 dark:text-slate-400">
+                                                Search and export churches with
+                                                submitted registrations for the
+                                                selected event and section
+                                                scope.
+                                            </p>
+                                        </div>
+
+                                        <DataTableToolbar
+                                            searchValue={search}
+                                            onSearchValueChange={setSearch}
+                                            onSubmit={submitSearch}
+                                            placeholder="Search pastor, church, or section"
+                                            className={
+                                                elevatedIndexTableStyles.toolbar
+                                            }
+                                            searchWrapperClassName={
+                                                elevatedIndexTableStyles.searchWrapper
+                                            }
+                                            inputClassName={
+                                                elevatedIndexTableStyles.input
+                                            }
+                                            actionClassName={
+                                                elevatedIndexTableStyles.action
+                                            }
+                                            action={
+                                                churchesWithRegistrationExportUrl !==
+                                                    null &&
+                                                churchesWithRegistration.meta
+                                                    .total > 0 ? (
+                                                    <Button
+                                                        asChild
+                                                        className={
+                                                            elevatedIndexTableStyles.primaryButton
+                                                        }
+                                                    >
+                                                        <a
+                                                            href={
+                                                                churchesWithRegistrationExportUrl
+                                                            }
+                                                        >
+                                                            <Download className="size-4" />
+                                                            Download Excel
+                                                        </a>
+                                                    </Button>
+                                                ) : (
+                                                    <Button
+                                                        type="button"
+                                                        disabled
+                                                        className={
+                                                            elevatedIndexTableStyles.primaryButton
+                                                        }
+                                                    >
+                                                        <Download className="size-4" />
+                                                        Download Excel
+                                                    </Button>
+                                                )
+                                            }
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="overflow-x-auto">
+                                    <table
+                                        className={
+                                            elevatedIndexTableStyles.table
+                                        }
+                                    >
+                                        <thead
+                                            className={
+                                                elevatedIndexTableStyles.thead
+                                            }
+                                        >
+                                            <tr
+                                                className={
+                                                    elevatedIndexTableStyles.headerRow
+                                                }
+                                            >
+                                                <th
+                                                    className={
+                                                        elevatedIndexTableStyles.firstHeaderCell
+                                                    }
+                                                >
+                                                    Church name
+                                                </th>
+                                                <th
+                                                    className={
+                                                        elevatedIndexTableStyles.headerCell
+                                                    }
+                                                >
+                                                    Pastor name
+                                                </th>
+                                                <th
+                                                    className={
+                                                        elevatedIndexTableStyles.headerCell
+                                                    }
+                                                >
+                                                    Section
+                                                </th>
+                                                <th
+                                                    className={`${elevatedIndexTableStyles.headerCell} text-right`}
+                                                >
+                                                    Registered quantity
+                                                </th>
+                                                <th
+                                                    className={`${elevatedIndexTableStyles.headerCell} text-right`}
+                                                >
+                                                    Registered value
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody
+                                            className={
+                                                elevatedIndexTableStyles.tbody
+                                            }
+                                        >
+                                            {churchesWithRegistration.data
+                                                .length === 0 ? (
+                                                <tr>
+                                                    <td
+                                                        colSpan={5}
+                                                        className={
+                                                            elevatedIndexTableStyles.emptyCell
+                                                        }
+                                                    >
+                                                        <div className="space-y-2">
+                                                            <div
+                                                                className={
+                                                                    elevatedIndexTableStyles.emptyTitle
+                                                                }
+                                                            >
+                                                                {filters.search ===
+                                                                ''
+                                                                    ? 'No churches with registrations are available for the current event scope.'
+                                                                    : `No registered churches matched "${filters.search}".`}
+                                                            </div>
+                                                            <div
+                                                                className={
+                                                                    elevatedIndexTableStyles.emptyDescription
+                                                                }
+                                                            >
+                                                                {filters.search ===
+                                                                ''
+                                                                    ? 'Registrations will appear here once churches start submitting for the selected event and section scope.'
+                                                                    : 'Try another pastor name, church name, or section keyword.'}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                churchesWithRegistration.data.map(
+                                                    (churchSummary) => (
+                                                        <tr
+                                                            key={
+                                                                churchSummary.id
+                                                            }
+                                                            className={
+                                                                elevatedIndexTableStyles.row
+                                                            }
+                                                        >
+                                                            <td
+                                                                className={
+                                                                    elevatedIndexTableStyles.firstCell
+                                                                }
+                                                            >
+                                                                <div className="font-medium text-foreground">
+                                                                    {
+                                                                        churchSummary.church_name
+                                                                    }
+                                                                </div>
+                                                            </td>
+                                                            <td
+                                                                className={
+                                                                    elevatedIndexTableStyles.cell
+                                                                }
+                                                            >
+                                                                <div className="font-medium text-foreground">
+                                                                    {
+                                                                        churchSummary.pastor_name
+                                                                    }
+                                                                </div>
+                                                            </td>
+                                                            <td
+                                                                className={`${elevatedIndexTableStyles.cell} text-sm text-muted-foreground`}
+                                                            >
+                                                                <div className="font-medium text-foreground/90">
+                                                                    {churchSummary.section_name ??
+                                                                        'Unassigned'}
+                                                                </div>
+                                                            </td>
+                                                            <td
+                                                                className={`${elevatedIndexTableStyles.cell} text-right font-medium text-foreground`}
+                                                            >
+                                                                {
+                                                                    churchSummary.total_registered_quantity
+                                                                }
+                                                            </td>
+                                                            <td
+                                                                className={`${elevatedIndexTableStyles.cell} text-right font-medium text-foreground`}
+                                                            >
+                                                                {formatCurrency(
+                                                                    churchSummary.total_registered_amount,
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ),
+                                                )
+                                            )}
+                                        </tbody>
+                                        {churchesWithRegistration.data.length >
+                                            0 &&
+                                            filters.search === '' && (
+                                                <tfoot className="bg-slate-50/90 dark:bg-slate-900/70">
+                                                    <tr className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                                        <td
+                                                            colSpan={3}
+                                                            className="px-4 py-3 sm:px-6 sm:py-4"
+                                                        >
+                                                            Totals
+                                                        </td>
+                                                        <td className="py-3 pr-3 text-right sm:py-4 sm:pr-4">
+                                                            {
+                                                                eventTotalRegistration
+                                                                    .church_summary_totals
+                                                                    .total_registered_quantity
+                                                            }
+                                                        </td>
+                                                        <td className="py-3 pr-4 text-right sm:py-4 sm:pr-6">
+                                                            {formatCurrency(
+                                                                eventTotalRegistration
+                                                                    .church_summary_totals
+                                                                    .total_registered_amount,
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                </tfoot>
+                                            )}
+                                    </table>
+                                </div>
+
+                                <div
+                                    className={
+                                        elevatedIndexTableStyles.paginationWrapper
+                                    }
+                                >
+                                    <DataTablePagination
+                                        meta={churchesWithRegistration.meta}
+                                        onPageChange={changePage}
+                                        rowsPerPage={filters.per_page}
+                                        rowOptions={perPageOptions}
+                                        onRowsPerPageChange={updatePerPage}
+                                        className={
+                                            elevatedIndexTableStyles.pagination
+                                        }
+                                        topRowClassName={
+                                            elevatedIndexTableStyles.paginationTopRow
+                                        }
+                                        rowsTriggerClassName={
+                                            elevatedIndexTableStyles.rowsTrigger
+                                        }
+                                        summaryClassName={
+                                            elevatedIndexTableStyles.summary
+                                        }
+                                        navigationWrapperClassName={
+                                            elevatedIndexTableStyles.navigationWrapper
+                                        }
+                                        previousButtonClassName={
+                                            elevatedIndexTableStyles.previousButton
+                                        }
+                                        nextButtonClassName={
+                                            elevatedIndexTableStyles.nextButton
+                                        }
+                                        activePageButtonClassName={
+                                            elevatedIndexTableStyles.activePageButton
+                                        }
+                                        inactivePageButtonClassName={
+                                            elevatedIndexTableStyles.inactivePageButton
+                                        }
+                                        ellipsisClassName={
+                                            elevatedIndexTableStyles.ellipsis
+                                        }
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {activeReportTab === 'no-registration' && (
+                            <div className={elevatedIndexTableStyles.shell}>
+                                <div className={elevatedIndexTableStyles.band}>
+                                    <div className="space-y-5">
+                                        <div className="space-y-2">
+                                            <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                                                No Registration Report
+                                            </div>
+                                            <div className="text-2xl font-bold tracking-[-0.03em] text-slate-900 dark:text-slate-100">
+                                                Churches with no registration
+                                            </div>
+                                            <p className="text-sm leading-6 text-slate-600 dark:text-slate-400">
+                                                Search and export the churches
+                                                that still have no submitted
+                                                registration for the selected
+                                                event and section scope.
+                                            </p>
+                                        </div>
+
+                                        <DataTableToolbar
+                                            searchValue={search}
+                                            onSearchValueChange={setSearch}
+                                            onSubmit={submitSearch}
+                                            placeholder="Search pastor, church, or section"
+                                            className={
+                                                elevatedIndexTableStyles.toolbar
+                                            }
+                                            searchWrapperClassName={
+                                                elevatedIndexTableStyles.searchWrapper
+                                            }
+                                            inputClassName={
+                                                elevatedIndexTableStyles.input
+                                            }
+                                            actionClassName={
+                                                elevatedIndexTableStyles.action
+                                            }
+                                            action={
+                                                churchesWithoutRegistrationExportUrl !==
+                                                    null &&
+                                                churchesWithoutRegistration.meta
+                                                    .total > 0 ? (
+                                                    <Button
+                                                        asChild
+                                                        className={
+                                                            elevatedIndexTableStyles.primaryButton
+                                                        }
+                                                    >
+                                                        <a
+                                                            href={
+                                                                churchesWithoutRegistrationExportUrl
+                                                            }
+                                                        >
+                                                            <Download className="size-4" />
+                                                            Download Excel
+                                                        </a>
+                                                    </Button>
+                                                ) : (
+                                                    <Button
+                                                        type="button"
+                                                        disabled
+                                                        className={
+                                                            elevatedIndexTableStyles.primaryButton
+                                                        }
+                                                    >
+                                                        <Download className="size-4" />
+                                                        Download Excel
+                                                    </Button>
+                                                )
+                                            }
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="overflow-x-auto">
+                                    <table
+                                        className={
+                                            elevatedIndexTableStyles.table
+                                        }
+                                    >
+                                        <thead
+                                            className={
+                                                elevatedIndexTableStyles.thead
+                                            }
+                                        >
+                                            <tr
+                                                className={
+                                                    elevatedIndexTableStyles.headerRow
+                                                }
+                                            >
+                                                <th
+                                                    className={
+                                                        elevatedIndexTableStyles.firstHeaderCell
+                                                    }
+                                                >
+                                                    Pastor name
+                                                </th>
+                                                <th
+                                                    className={
+                                                        elevatedIndexTableStyles.headerCell
+                                                    }
+                                                >
+                                                    Church name
+                                                </th>
+                                                <th
+                                                    className={
+                                                        elevatedIndexTableStyles.headerCell
+                                                    }
+                                                >
+                                                    Section
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody
+                                            className={
+                                                elevatedIndexTableStyles.tbody
+                                            }
+                                        >
+                                            {churchesWithoutRegistration.data
+                                                .length === 0 ? (
+                                                <tr>
+                                                    <td
+                                                        colSpan={3}
+                                                        className={
+                                                            elevatedIndexTableStyles.emptyCell
+                                                        }
+                                                    >
+                                                        <div className="space-y-2">
+                                                            <div
+                                                                className={
+                                                                    elevatedIndexTableStyles.emptyTitle
+                                                                }
+                                                            >
+                                                                {filters.search ===
+                                                                ''
+                                                                    ? 'All visible churches have submitted registrations.'
+                                                                    : `No churches matched "${filters.search}".`}
+                                                            </div>
+                                                            <div
+                                                                className={
+                                                                    elevatedIndexTableStyles.emptyDescription
+                                                                }
+                                                            >
+                                                                {filters.search ===
+                                                                ''
+                                                                    ? 'There are no missing church registrations for the current event and section scope.'
+                                                                    : 'Try another pastor name, church name, or section keyword.'}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                churchesWithoutRegistration.data.map(
+                                                    (church) => (
+                                                        <tr
+                                                            key={church.id}
+                                                            className={
+                                                                elevatedIndexTableStyles.row
+                                                            }
+                                                        >
+                                                            <td
+                                                                className={
+                                                                    elevatedIndexTableStyles.firstCell
+                                                                }
+                                                            >
+                                                                <div className="font-medium text-foreground">
+                                                                    {
+                                                                        church.pastor_name
+                                                                    }
+                                                                </div>
+                                                            </td>
+                                                            <td
+                                                                className={
+                                                                    elevatedIndexTableStyles.cell
+                                                                }
+                                                            >
+                                                                <div className="font-medium text-foreground">
+                                                                    {
+                                                                        church.church_name
+                                                                    }
+                                                                </div>
+                                                            </td>
+                                                            <td
+                                                                className={`${elevatedIndexTableStyles.cell} text-sm text-muted-foreground`}
+                                                            >
+                                                                <div className="font-medium text-foreground/90">
+                                                                    {church.section_name ??
+                                                                        'Unassigned'}
+                                                                </div>
+                                                                <div className="mt-2">
+                                                                    {church.district_name ??
+                                                                        'No district assigned'}
+                                                                </div>
                                                             </td>
                                                         </tr>
                                                     ),
@@ -587,226 +1369,52 @@ export default function ReportsIndex({
                                         </tbody>
                                     </table>
                                 </div>
-                            </CardContent>
-                        </Card>
 
-                        <div className={elevatedIndexTableStyles.shell}>
-                            <div className={elevatedIndexTableStyles.band}>
-                                <div className="space-y-5">
-                                    <div className="space-y-2">
-                                        <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
-                                            No Registration Report
-                                        </div>
-                                        <div className="text-2xl font-bold tracking-[-0.03em] text-slate-900 dark:text-slate-100">
-                                            Churches with no registration
-                                        </div>
-                                        <p className="text-sm leading-6 text-slate-600 dark:text-slate-400">
-                                            Search and export the churches that still have no submitted registration for the selected event and section scope.
-                                        </p>
-                                    </div>
-
-                                    <DataTableToolbar
-                                        searchValue={search}
-                                        onSearchValueChange={setSearch}
-                                        onSubmit={submitSearch}
-                                        placeholder="Search pastor, church, or section"
-                                        className={elevatedIndexTableStyles.toolbar}
-                                        searchWrapperClassName={
-                                            elevatedIndexTableStyles.searchWrapper
+                                <div
+                                    className={
+                                        elevatedIndexTableStyles.paginationWrapper
+                                    }
+                                >
+                                    <DataTablePagination
+                                        meta={churchesWithoutRegistration.meta}
+                                        onPageChange={changePage}
+                                        rowsPerPage={filters.per_page}
+                                        rowOptions={perPageOptions}
+                                        onRowsPerPageChange={updatePerPage}
+                                        className={
+                                            elevatedIndexTableStyles.pagination
                                         }
-                                        inputClassName={
-                                            elevatedIndexTableStyles.input
+                                        topRowClassName={
+                                            elevatedIndexTableStyles.paginationTopRow
                                         }
-                                        actionClassName={
-                                            elevatedIndexTableStyles.action
+                                        rowsTriggerClassName={
+                                            elevatedIndexTableStyles.rowsTrigger
                                         }
-                                        action={(
-                                            churchesWithoutRegistrationExportUrl !==
-                                                null &&
-                                            churchesWithoutRegistration.meta.total >
-                                                0 ? (
-                                                <Button
-                                                    asChild
-                                                    className={
-                                                        elevatedIndexTableStyles.primaryButton
-                                                    }
-                                                >
-                                                    <a
-                                                        href={
-                                                            churchesWithoutRegistrationExportUrl
-                                                        }
-                                                    >
-                                                        <Download className="size-4" />
-                                                        Download Excel
-                                                    </a>
-                                                </Button>
-                                            ) : (
-                                                <Button
-                                                    type="button"
-                                                    disabled
-                                                    className={
-                                                        elevatedIndexTableStyles.primaryButton
-                                                    }
-                                                >
-                                                    <Download className="size-4" />
-                                                    Download Excel
-                                                </Button>
-                                            )
-                                        )}
+                                        summaryClassName={
+                                            elevatedIndexTableStyles.summary
+                                        }
+                                        navigationWrapperClassName={
+                                            elevatedIndexTableStyles.navigationWrapper
+                                        }
+                                        previousButtonClassName={
+                                            elevatedIndexTableStyles.previousButton
+                                        }
+                                        nextButtonClassName={
+                                            elevatedIndexTableStyles.nextButton
+                                        }
+                                        activePageButtonClassName={
+                                            elevatedIndexTableStyles.activePageButton
+                                        }
+                                        inactivePageButtonClassName={
+                                            elevatedIndexTableStyles.inactivePageButton
+                                        }
+                                        ellipsisClassName={
+                                            elevatedIndexTableStyles.ellipsis
+                                        }
                                     />
                                 </div>
                             </div>
-
-                            <div className="overflow-x-auto">
-                                <table className={elevatedIndexTableStyles.table}>
-                                    <thead className={elevatedIndexTableStyles.thead}>
-                                        <tr className={elevatedIndexTableStyles.headerRow}>
-                                            <th
-                                                className={
-                                                    elevatedIndexTableStyles.firstHeaderCell
-                                                }
-                                            >
-                                                Pastor name
-                                            </th>
-                                            <th
-                                                className={
-                                                    elevatedIndexTableStyles.headerCell
-                                                }
-                                            >
-                                                Church name
-                                            </th>
-                                            <th
-                                                className={
-                                                    elevatedIndexTableStyles.headerCell
-                                                }
-                                            >
-                                                Section
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className={elevatedIndexTableStyles.tbody}>
-                                        {churchesWithoutRegistration.data.length ===
-                                        0 ? (
-                                            <tr>
-                                                <td
-                                                    colSpan={3}
-                                                    className={
-                                                        elevatedIndexTableStyles.emptyCell
-                                                    }
-                                                >
-                                                    <div className="space-y-2">
-                                                        <div
-                                                            className={
-                                                                elevatedIndexTableStyles.emptyTitle
-                                                            }
-                                                        >
-                                                            {filters.search === ''
-                                                                ? 'All visible churches have submitted registrations.'
-                                                                : `No churches matched "${filters.search}".`}
-                                                        </div>
-                                                        <div
-                                                            className={
-                                                                elevatedIndexTableStyles.emptyDescription
-                                                            }
-                                                        >
-                                                            {filters.search === ''
-                                                                ? 'There are no missing church registrations for the current event and section scope.'
-                                                                : 'Try another pastor name, church name, or section keyword.'}
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            churchesWithoutRegistration.data.map(
-                                                (church) => (
-                                                    <tr
-                                                        key={church.id}
-                                                        className={
-                                                            elevatedIndexTableStyles.row
-                                                        }
-                                                    >
-                                                        <td
-                                                            className={
-                                                                elevatedIndexTableStyles.firstCell
-                                                            }
-                                                        >
-                                                            <div className="font-medium text-foreground">
-                                                                {
-                                                                    church.pastor_name
-                                                                }
-                                                            </div>
-                                                        </td>
-                                                        <td
-                                                            className={
-                                                                elevatedIndexTableStyles.cell
-                                                            }
-                                                        >
-                                                            <div className="font-medium text-foreground">
-                                                                {
-                                                                    church.church_name
-                                                                }
-                                                            </div>
-                                                        </td>
-                                                        <td
-                                                            className={`${elevatedIndexTableStyles.cell} text-sm text-muted-foreground`}
-                                                        >
-                                                            <div className="font-medium text-foreground/90">
-                                                                {church.section_name ??
-                                                                    'Unassigned'}
-                                                            </div>
-                                                            <div className="mt-2">
-                                                                {church.district_name ??
-                                                                    'No district assigned'}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ),
-                                            )
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div className={elevatedIndexTableStyles.paginationWrapper}>
-                                <DataTablePagination
-                                    meta={churchesWithoutRegistration.meta}
-                                    onPageChange={changePage}
-                                    rowsPerPage={filters.per_page}
-                                    rowOptions={perPageOptions}
-                                    onRowsPerPageChange={updatePerPage}
-                                    className={
-                                        elevatedIndexTableStyles.pagination
-                                    }
-                                    topRowClassName={
-                                        elevatedIndexTableStyles.paginationTopRow
-                                    }
-                                    rowsTriggerClassName={
-                                        elevatedIndexTableStyles.rowsTrigger
-                                    }
-                                    summaryClassName={
-                                        elevatedIndexTableStyles.summary
-                                    }
-                                    navigationWrapperClassName={
-                                        elevatedIndexTableStyles.navigationWrapper
-                                    }
-                                    previousButtonClassName={
-                                        elevatedIndexTableStyles.previousButton
-                                    }
-                                    nextButtonClassName={
-                                        elevatedIndexTableStyles.nextButton
-                                    }
-                                    activePageButtonClassName={
-                                        elevatedIndexTableStyles.activePageButton
-                                    }
-                                    inactivePageButtonClassName={
-                                        elevatedIndexTableStyles.inactivePageButton
-                                    }
-                                    ellipsisClassName={
-                                        elevatedIndexTableStyles.ellipsis
-                                    }
-                                />
-                            </div>
-                        </div>
+                        )}
                     </>
                 )}
             </div>

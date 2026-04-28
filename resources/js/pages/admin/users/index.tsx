@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
 import ConfirmActionDialog from '@/components/confirm-action-dialog';
 import {
@@ -116,15 +116,6 @@ export default function UserIndex({
     const [userToDelete, setUserToDelete] = useState<UserRecord | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    useEffect(() => {
-        setSearch(filters.search);
-        setSectionId(
-            filters.section_id !== null ? String(filters.section_id) : 'all',
-        );
-        setRoleId(filters.role_id !== null ? String(filters.role_id) : 'all');
-        setStatus(filters.status ?? 'all');
-    }, [filters.search, filters.role_id, filters.section_id, filters.status]);
-
     const destroyUser = (): void => {
         if (userToDelete === null) {
             return;
@@ -171,11 +162,15 @@ export default function UserIndex({
     };
 
     const visitIndex = (query: UserIndexQuery): void => {
-        router.get(UserController.index.url({ query }), {}, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        router.get(
+            UserController.index.url({ query }),
+            {},
+            {
+                preserveScroll: true,
+                preserveState: false,
+                replace: true,
+            },
+        );
     };
 
     const submitSearch = (): void => {
@@ -253,7 +248,7 @@ export default function UserIndex({
                             }
                             inputClassName={elevatedIndexTableStyles.input}
                             actionClassName={elevatedIndexTableStyles.action}
-                            action={(
+                            action={
                                 <div className="flex w-full flex-col gap-3 xl:flex-row xl:items-center xl:justify-end">
                                     <Select
                                         value={sectionId}
@@ -299,8 +294,7 @@ export default function UserIndex({
                                                         elevatedIndexTableStyles.selectItem
                                                     }
                                                 >
-                                                    {section.name} ·{' '}
-                                                    {section.district_name}
+                                                    {section.name}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -417,36 +411,52 @@ export default function UserIndex({
                                         </Link>
                                     </Button>
                                 </div>
-                            )}
+                            }
                         />
                     </div>
 
                     <div className="overflow-x-auto">
                         <table className={elevatedIndexTableStyles.table}>
                             <thead className={elevatedIndexTableStyles.thead}>
-                                <tr className={elevatedIndexTableStyles.headerRow}>
+                                <tr
+                                    className={
+                                        elevatedIndexTableStyles.headerRow
+                                    }
+                                >
                                     <th
                                         className={
                                             elevatedIndexTableStyles.firstHeaderCell
                                         }
                                     >
-                                    User
+                                        User
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Role
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Role
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Scope
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Scope
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Status
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Status
                                     </th>
                                     <th
                                         className={
                                             elevatedIndexTableStyles.lastHeaderCellRight
                                         }
                                     >
-                                    Actions
+                                        Actions
                                     </th>
                                 </tr>
                             </thead>
@@ -465,8 +475,8 @@ export default function UserIndex({
                                                         elevatedIndexTableStyles.emptyTitle
                                                     }
                                                 >
-                                                    {filters.search === ''
-                                                        && !hasActiveFilters
+                                                    {filters.search === '' &&
+                                                    !hasActiveFilters
                                                         ? 'No user accounts yet.'
                                                         : 'No users matched the current filters.'}
                                                 </div>
@@ -486,124 +496,177 @@ export default function UserIndex({
                                     users.data.map((user) => (
                                         <tr
                                             key={user.id}
-                                            className={elevatedIndexTableStyles.row}
+                                            className={
+                                                elevatedIndexTableStyles.row
+                                            }
                                         >
-                                            <td className={elevatedIndexTableStyles.firstCell}>
-                                            <div className={elevatedIndexTableStyles.primaryText}>
-                                                {user.name}
-                                            </div>
-                                            <div className={elevatedIndexTableStyles.secondaryText}>
-                                                {user.email}
-                                            </div>
-                                            {user.is_current_user && (
-                                                <div className="mt-2">
-                                                    <DataTableBadge
-                                                        tone="slate"
-                                                        capitalize={false}
-                                                    >
-                                                        Current account
-                                                    </DataTableBadge>
-                                                </div>
-                                            )}
-                                            </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <DataTableBadge
-                                                tone={resolveDataTableTone(
-                                                    user.role.name,
-                                                    {
-                                                        Admin: 'slate',
-                                                        Manager: 'emerald',
-                                                        'Registration Staff':
-                                                            'blue',
-                                                        'Online Registrant':
-                                                            'violet',
-                                                    },
-                                                    'slate',
-                                                )}
-                                                capitalize={false}
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.firstCell
+                                                }
                                             >
-                                                {user.role.name ?? 'No role'}
-                                            </DataTableBadge>
-                                            </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <div className={elevatedIndexTableStyles.primaryText}>
-                                                {user.scope_summary}
-                                            </div>
-                                            {user.pastor && (
-                                                <div className={elevatedIndexTableStyles.metaText}>
-                                                    {user.pastor.district_name}
-                                                </div>
-                                            )}
-                                            {! user.pastor && user.section && (
-                                                <div className={elevatedIndexTableStyles.metaText}>
-                                                    {user.section.district_name}
-                                                </div>
-                                            )}
-                                            {user.pastor && (
                                                 <div
                                                     className={
-                                                        elevatedIndexTableStyles.subMetaText
+                                                        elevatedIndexTableStyles.primaryText
                                                     }
                                                 >
-                                                    {user.pastor.section_name}
+                                                    {user.name}
                                                 </div>
-                                            )}
-                                            </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <DataTableBadge
-                                                tone={resolveDataTableTone(
-                                                    user.status,
-                                                    {
-                                                        active: 'emerald',
-                                                        inactive: 'rose',
-                                                    },
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.secondaryText
+                                                    }
+                                                >
+                                                    {user.email}
+                                                </div>
+                                                {user.is_current_user && (
+                                                    <div className="mt-2">
+                                                        <DataTableBadge
+                                                            tone="slate"
+                                                            capitalize={false}
+                                                        >
+                                                            Current account
+                                                        </DataTableBadge>
+                                                    </div>
                                                 )}
+                                            </td>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
                                             >
-                                                {user.status}
-                                            </DataTableBadge>
+                                                <DataTableBadge
+                                                    tone={resolveDataTableTone(
+                                                        user.role.name,
+                                                        {
+                                                            Admin: 'slate',
+                                                            Manager: 'emerald',
+                                                            'Registration Staff':
+                                                                'blue',
+                                                            'Online Registrant':
+                                                                'violet',
+                                                        },
+                                                        'slate',
+                                                    )}
+                                                    capitalize={false}
+                                                >
+                                                    {user.role.name ??
+                                                        'No role'}
+                                                </DataTableBadge>
+                                            </td>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                >
+                                                    {user.scope_summary}
+                                                </div>
+                                                {user.pastor && (
+                                                    <div
+                                                        className={
+                                                            elevatedIndexTableStyles.metaText
+                                                        }
+                                                    >
+                                                        {
+                                                            user.pastor
+                                                                .district_name
+                                                        }
+                                                    </div>
+                                                )}
+                                                {!user.pastor &&
+                                                    user.section && (
+                                                        <div
+                                                            className={
+                                                                elevatedIndexTableStyles.metaText
+                                                            }
+                                                        >
+                                                            {
+                                                                user.section
+                                                                    .district_name
+                                                            }
+                                                        </div>
+                                                    )}
+                                                {user.pastor && (
+                                                    <div
+                                                        className={
+                                                            elevatedIndexTableStyles.subMetaText
+                                                        }
+                                                    >
+                                                        {
+                                                            user.pastor
+                                                                .section_name
+                                                        }
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <DataTableBadge
+                                                    tone={resolveDataTableTone(
+                                                        user.status,
+                                                        {
+                                                            active: 'emerald',
+                                                            inactive: 'rose',
+                                                        },
+                                                    )}
+                                                >
+                                                    {user.status}
+                                                </DataTableBadge>
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
                                             >
-                                            <div className={elevatedIndexTableStyles.actionGroup}>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="rounded-md"
-                                                    asChild
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.actionGroup
+                                                    }
                                                 >
-                                                    <Link
-                                                        href={UserController.edit(
-                                                            user.id,
-                                                        )}
-                                                    >
-                                                        Edit
-                                                    </Link>
-                                                </Button>
-                                                {user.can_delete ? (
-                                                    <Button
-                                                        variant="destructive"
-                                                        size="sm"
-                                                        className="rounded-md"
-                                                        onClick={() =>
-                                                            setUserToDelete(
-                                                                user,
-                                                            )
-                                                        }
-                                                    >
-                                                        Archive
-                                                    </Button>
-                                                ) : (
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
                                                         className="rounded-md"
-                                                        disabled
+                                                        asChild
                                                     >
-                                                        Current account
+                                                        <Link
+                                                            href={UserController.edit(
+                                                                user.id,
+                                                            )}
+                                                        >
+                                                            Edit
+                                                        </Link>
                                                     </Button>
-                                                )}
-                                            </div>
+                                                    {user.can_delete ? (
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            className="rounded-md"
+                                                            onClick={() =>
+                                                                setUserToDelete(
+                                                                    user,
+                                                                )
+                                                            }
+                                                        >
+                                                            Archive
+                                                        </Button>
+                                                    ) : (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="rounded-md"
+                                                            disabled
+                                                        >
+                                                            Current account
+                                                        </Button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -642,7 +705,9 @@ export default function UserIndex({
                             inactivePageButtonClassName={
                                 elevatedIndexTableStyles.inactivePageButton
                             }
-                            ellipsisClassName={elevatedIndexTableStyles.ellipsis}
+                            ellipsisClassName={
+                                elevatedIndexTableStyles.ellipsis
+                            }
                         />
                     </div>
                 </div>

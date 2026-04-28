@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\Pastor;
 use App\Models\Registration;
-use App\Models\Role;
 use App\Models\User;
 use App\Support\DepartmentScopeAccess;
 use App\Support\EventCapacity;
@@ -37,57 +36,14 @@ class DashboardController extends Controller
 
         return Inertia::render('dashboard', [
             'dashboard' => [
-                'role_name' => $user->roleName(),
-                'hero' => $this->hero($user),
                 'account_notice' => $this->accountNotice($user),
                 'actions' => $this->actions($user),
                 'links' => $this->links($user),
-                'scope' => $this->scope($user),
                 'metrics' => $this->metrics($user, count($allOpenEvents), $registrationQuery),
                 'open_events' => array_slice($allOpenEvents, 0, 3),
                 'recent_registrations' => $this->recentRegistrations($user, 3),
             ],
         ]);
-    }
-
-    /**
-     * Build the hero content for the current user.
-     *
-     * @return array{eyebrow: string, title: string, description: string}
-     */
-    private function hero(User $user): array
-    {
-        return match (true) {
-            $user->isSuperAdmin() => [
-                'eyebrow' => 'Super admin overview',
-                'title' => 'Platform operations dashboard',
-                'description' => 'See cross-district activity, account access, and event operations with full administrative control.',
-            ],
-            $user->isAdmin() => [
-                'eyebrow' => 'Admin overview',
-                'title' => 'District registration command center',
-                'description' => $user->department_id === null
-                    ? 'Monitor general district events, active accounts, and registration activity for the no-department lane.'
-                    : 'Monitor registration activity, active accounts, and events assigned to your department.',
-            ],
-            $user->isManager() => [
-                'eyebrow' => 'Section overview',
-                'title' => 'Section registration dashboard',
-                'description' => $user->department_id === null
-                    ? 'Track registrations, assigned churches, and no-department event activity within your section.'
-                    : 'Track registrations and current event availability for your assigned section and department.',
-            ],
-            $user->isRegistrationStaff() => [
-                'eyebrow' => 'Onsite overview',
-                'title' => 'Onsite registration workspace',
-                'description' => 'Review your encoded transactions, payment mix, and open events before recording the next onsite entry.',
-            ],
-            default => [
-                'eyebrow' => 'Church overview',
-                'title' => 'Church registration dashboard',
-                'description' => 'See open events, track recent submissions, and monitor verification progress for your assigned church account.',
-            ],
-        };
     }
 
     /**
@@ -234,102 +190,6 @@ class DashboardController extends Controller
             'status' => User::APPROVAL_PENDING,
             'title' => 'Registrant access is pending approval',
             'description' => 'You can sign in and review your assigned church scope now, but online registration will stay locked until an admin or manager approves this account request.',
-        ];
-    }
-
-    /**
-     * Build the scope summary shown on the dashboard.
-     *
-     * @return array{
-     *     title: string,
-     *     summary: string,
-     *     description: string,
-     *     items: array<int, array{label: string, value: string}>
-     * }
-     */
-    private function scope(User $user): array
-    {
-        if ($user->isSuperAdmin()) {
-            return [
-                'title' => 'Access scope',
-                'summary' => 'All districts, sections, departments, and church records',
-                'description' => 'You can oversee every event lane, approval queue, and registration workflow across the deployment.',
-                'items' => [
-                    ['label' => 'Role', 'value' => Role::SUPER_ADMIN],
-                    ['label' => 'Coverage', 'value' => 'Full platform access'],
-                    ['label' => 'Department scope', 'value' => 'All departments'],
-                ],
-            ];
-        }
-
-        if ($user->isAdmin()) {
-            $departmentLabel = $user->department?->name ?? 'No department';
-
-            return [
-                'title' => 'Access scope',
-                'summary' => $user->department_id === null
-                    ? 'General district events and registration activity'
-                    : $departmentLabel.' district events',
-                'description' => $user->department_id === null
-                    ? 'You can manage district-wide general events and registration activity for the no-department lane.'
-                    : 'You can manage district events and registration activity assigned to your department while still handling district administration tasks.',
-                'items' => [
-                    ['label' => 'Role', 'value' => Role::ADMIN],
-                    ['label' => 'Coverage', 'value' => 'District scope'],
-                    ['label' => 'Department scope', 'value' => $departmentLabel],
-                    ['label' => 'Registrations', 'value' => 'District-owned event activity'],
-                ],
-            ];
-        }
-
-        if ($user->isManager()) {
-            $sectionName = $user->section?->name ?? 'No section assigned';
-            $districtName = $user->section?->district?->name ?? $user->district?->name ?? 'No district assigned';
-            $departmentLabel = $user->department?->name ?? 'No department';
-
-            return [
-                'title' => 'Access scope',
-                'summary' => sprintf('%s, %s', $sectionName, $districtName),
-                'description' => $user->department_id === null
-                    ? 'Your dashboard is limited to registrations and churches within your assigned section.'
-                    : 'Your dashboard is limited to your assigned section and department lane.',
-                'items' => [
-                    ['label' => 'Role', 'value' => Role::MANAGER],
-                    ['label' => 'District', 'value' => $districtName],
-                    ['label' => 'Section', 'value' => $sectionName],
-                    ['label' => 'Department scope', 'value' => $departmentLabel],
-                ],
-            ];
-        }
-
-        if ($user->isRegistrationStaff()) {
-            return [
-                'title' => 'Access scope',
-                'summary' => 'Personal onsite encoding workspace',
-                'description' => 'Your activity blocks focus on the registrations you encoded while keeping current event availability in view.',
-                'items' => [
-                    ['label' => 'Role', 'value' => Role::REGISTRATION_STAFF],
-                    ['label' => 'Registration scope', 'value' => 'Transactions encoded by you'],
-                    ['label' => 'Lookup access', 'value' => 'All pastors and churches'],
-                ],
-            ];
-        }
-
-        $districtName = $user->pastor?->section?->district?->name ?? 'No district assigned';
-        $sectionName = $user->pastor?->section?->name ?? 'No section assigned';
-        $churchName = $user->pastor?->church_name ?? 'No church assigned';
-        $pastorName = $user->pastor?->pastor_name ?? 'No pastor assigned';
-
-        return [
-            'title' => 'Access scope',
-            'summary' => $churchName,
-            'description' => 'Your dashboard is scoped to the church account assigned to your online registrant profile.',
-            'items' => [
-                ['label' => 'Role', 'value' => Role::ONLINE_REGISTRANT],
-                ['label' => 'District', 'value' => $districtName],
-                ['label' => 'Section', 'value' => $sectionName],
-                ['label' => 'Pastor', 'value' => $pastorName],
-            ],
         ];
     }
 

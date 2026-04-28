@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { Plus } from 'lucide-react';
+import { useState } from 'react';
 import EventController from '@/actions/App/Http/Controllers/Admin/EventController';
 import ConfirmActionDialog from '@/components/confirm-action-dialog';
 import {
@@ -7,16 +8,16 @@ import {
     resolveDataTableTone,
 } from '@/components/data-table-badge';
 import DataTablePagination from '@/components/data-table-pagination';
-import { elevatedIndexTableStyles } from '@/components/data-table-presets';
+import {
+    elevatedIndexTableStyles,
+    reviewWorkspaceStyles,
+} from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import EntityRecordDialog from '@/components/entity-record-dialog';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
-import {
-    formatSystemDateOnly,
-    formatSystemDateTime,
-} from '@/lib/date-time';
 import AppLayout from '@/layouts/app-layout';
+import { formatSystemDateOnly, formatSystemDateTime } from '@/lib/date-time';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
 
@@ -61,21 +62,15 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function EventIndex({
-    events,
-    filters,
-    perPageOptions,
-}: Props) {
+export default function EventIndex({ events, filters, perPageOptions }: Props) {
     const [search, setSearch] = useState(filters.search);
-    const [selectedEvent, setSelectedEvent] = useState<EventRecord | null>(null);
+    const [selectedEvent, setSelectedEvent] = useState<EventRecord | null>(
+        null,
+    );
     const [eventToDelete, setEventToDelete] = useState<EventRecord | null>(
         null,
     );
     const [isDeleting, setIsDeleting] = useState(false);
-
-    useEffect(() => {
-        setSearch(filters.search);
-    }, [filters.search]);
 
     const destroyEvent = (): void => {
         if (eventToDelete === null) {
@@ -98,11 +93,15 @@ export default function EventIndex({
         per_page: number;
         page?: number;
     }): void => {
-        router.get(EventController.index.url({ query }), {}, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        router.get(
+            EventController.index.url({ query }),
+            {},
+            {
+                preserveScroll: true,
+                preserveState: false,
+                replace: true,
+            },
+        );
     };
 
     const submitSearch = (): void => {
@@ -133,11 +132,11 @@ export default function EventIndex({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Events" />
 
-            <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+            <div className="flex flex-1 flex-col gap-5 p-4 md:p-5">
                 <Heading
                     title="Events"
                     description="Manage event schedules, fee categories, and registration capacity in one place."
-                    className="mb-4"
+                    className="mb-3"
                 />
 
                 <div className={elevatedIndexTableStyles.shell}>
@@ -153,7 +152,7 @@ export default function EventIndex({
                             }
                             inputClassName={elevatedIndexTableStyles.input}
                             actionClassName={elevatedIndexTableStyles.action}
-                            action={(
+                            action={
                                 <Button
                                     asChild
                                     className={
@@ -161,42 +160,63 @@ export default function EventIndex({
                                     }
                                 >
                                     <Link href={EventController.create()}>
+                                        <Plus className="size-4" />
                                         New event
                                     </Link>
                                 </Button>
-                            )}
+                            }
                         />
                     </div>
 
                     <div className="overflow-x-auto">
                         <table className={elevatedIndexTableStyles.table}>
                             <thead className={elevatedIndexTableStyles.thead}>
-                                <tr className={elevatedIndexTableStyles.headerRow}>
+                                <tr
+                                    className={
+                                        elevatedIndexTableStyles.headerRow
+                                    }
+                                >
                                     <th
                                         className={
                                             elevatedIndexTableStyles.firstHeaderCell
                                         }
                                     >
-                                    Event
+                                        Event
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Schedule
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Schedule
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Registration
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Registration
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Capacity
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Capacity
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Fees
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Fees
                                     </th>
                                     <th
                                         className={
                                             elevatedIndexTableStyles.lastHeaderCellRight
                                         }
                                     >
-                                    Actions
+                                        Actions
                                     </th>
                                 </tr>
                             </thead>
@@ -235,131 +255,198 @@ export default function EventIndex({
                                     events.data.map((event) => (
                                         <tr
                                             key={event.id}
-                                            className={elevatedIndexTableStyles.row}
+                                            className={
+                                                elevatedIndexTableStyles.row
+                                            }
                                         >
-                                            <td className={elevatedIndexTableStyles.firstCell}>
-                                            <div className={elevatedIndexTableStyles.primaryText}>
-                                                {event.name}
-                                            </div>
-                                            <div className={elevatedIndexTableStyles.secondaryText}>
-                                                {event.venue}
-                                            </div>
-                                            <div className={elevatedIndexTableStyles.secondaryText}>
-                                                {event.scope_summary}
-                                            </div>
-                                            <div className={elevatedIndexTableStyles.detailText}>
-                                                {event.description ||
-                                                    'No description provided.'}
-                                            </div>
-                                            </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <div className={elevatedIndexTableStyles.strongText}>
-                                                {formatSystemDateOnly(event.date_from)} to{' '}
-                                                {formatSystemDateOnly(event.date_to)}
-                                            </div>
-                                            <div className={elevatedIndexTableStyles.secondaryText}>
-                                                Opens{' '}
-                                                {formatSystemDateTime(
-                                                    event.registration_open_at,
-                                                )}
-                                            </div>
-                                            <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                                Closes{' '}
-                                                {formatSystemDateTime(
-                                                    event.registration_close_at,
-                                                )}
-                                            </div>
-                                            </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <DataTableBadge
-                                                    tone={resolveDataTableTone(
-                                                        event.status,
-                                                        {
-                                                            open: 'emerald',
-                                                            draft: 'slate',
-                                                            closed: 'amber',
-                                                            completed: 'blue',
-                                                            cancelled: 'rose',
-                                                        },
-                                                    )}
-                                                >
-                                                    {event.status}
-                                                </DataTableBadge>
-                                                <DataTableBadge
-                                                    tone={
-                                                        event.accepting_registrations
-                                                            ? 'emerald'
-                                                            : 'slate'
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.firstCell
+                                                }
+                                            >
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
                                                     }
-                                                    capitalize={false}
                                                 >
-                                                    {event.accepting_registrations
-                                                        ? 'Accepting'
-                                                        : 'Not accepting'}
-                                                </DataTableBadge>
-                                            </div>
-                                            <div className={elevatedIndexTableStyles.detailText}>
-                                                {event.status_reason ||
-                                                    'Registration rules are satisfied.'}
-                                            </div>
+                                                    {event.name}
+                                                </div>
+                                                <div
+                                                    className={`${elevatedIndexTableStyles.secondaryText} line-clamp-1`}
+                                                >
+                                                    {event.venue} •{' '}
+                                                    {event.scope_summary}
+                                                </div>
+                                                <div
+                                                    className={`${elevatedIndexTableStyles.metricText} line-clamp-1`}
+                                                >
+                                                    {event.description ||
+                                                        'No description provided.'}
+                                                </div>
                                             </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <div className={elevatedIndexTableStyles.strongText}>
-                                                {event.remaining_slots} of{' '}
-                                                {event.total_capacity} remaining
-                                            </div>
-                                            <div className={elevatedIndexTableStyles.secondaryText}>
-                                                Reserved {event.reserved_quantity}
-                                            </div>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.strongText
+                                                    }
+                                                >
+                                                    {formatSystemDateOnly(
+                                                        event.date_from,
+                                                    )}{' '}
+                                                    to{' '}
+                                                    {formatSystemDateOnly(
+                                                        event.date_to,
+                                                    )}
+                                                </div>
+                                                <div
+                                                    className={`${elevatedIndexTableStyles.secondaryText} line-clamp-2`}
+                                                >
+                                                    Opens{' '}
+                                                    {formatSystemDateTime(
+                                                        event.registration_open_at,
+                                                    )}
+                                                    {' • '}Closes{' '}
+                                                    {formatSystemDateTime(
+                                                        event.registration_close_at,
+                                                    )}
+                                                </div>
                                             </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <div className={elevatedIndexTableStyles.primaryText}>
-                                                {event.fee_categories_count}
-                                            </div>
-                                            <div className={elevatedIndexTableStyles.secondaryText}>
-                                                fee categories
-                                            </div>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <DataTableBadge
+                                                        tone={resolveDataTableTone(
+                                                            event.status,
+                                                            {
+                                                                open: 'emerald',
+                                                                draft: 'slate',
+                                                                closed: 'amber',
+                                                                completed:
+                                                                    'blue',
+                                                                cancelled:
+                                                                    'rose',
+                                                            },
+                                                        )}
+                                                    >
+                                                        {event.status}
+                                                    </DataTableBadge>
+                                                    <DataTableBadge
+                                                        tone={
+                                                            event.accepting_registrations
+                                                                ? 'emerald'
+                                                                : 'slate'
+                                                        }
+                                                        capitalize={false}
+                                                    >
+                                                        {event.accepting_registrations
+                                                            ? 'Accepting'
+                                                            : 'Not accepting'}
+                                                    </DataTableBadge>
+                                                </div>
+                                                <div
+                                                    className={`${elevatedIndexTableStyles.metricText} line-clamp-1`}
+                                                >
+                                                    {event.status_reason ||
+                                                        'Registration rules are satisfied.'}
+                                                </div>
+                                            </td>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.strongText
+                                                    }
+                                                >
+                                                    {event.remaining_slots} /{' '}
+                                                    {event.total_capacity}{' '}
+                                                    remaining
+                                                </div>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.secondaryText
+                                                    }
+                                                >
+                                                    Reserved{' '}
+                                                    {event.reserved_quantity}
+                                                </div>
+                                            </td>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                >
+                                                    {event.fee_categories_count}{' '}
+                                                    fee
+                                                    {event.fee_categories_count ===
+                                                    1
+                                                        ? ' category'
+                                                        : ' categories'}
+                                                </div>
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
                                             >
-                                            <div className={elevatedIndexTableStyles.actionGroup}>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="rounded-md"
-                                                    onClick={() =>
-                                                        setSelectedEvent(event)
-                                                    }
-                                                >
-                                                    View
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="rounded-md"
-                                                    asChild
-                                                >
-                                                    <Link
-                                                        href={EventController.edit(
-                                                            event.id,
-                                                        )}
+                                                <div className="flex flex-wrap justify-end gap-1.5">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className={
+                                                            reviewWorkspaceStyles.surfaceButton
+                                                        }
+                                                        onClick={() =>
+                                                            setSelectedEvent(
+                                                                event,
+                                                            )
+                                                        }
                                                     >
-                                                        Edit
-                                                    </Link>
-                                                </Button>
-                                                <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    className="rounded-md"
-                                                    onClick={() =>
-                                                        setEventToDelete(event)
-                                                    }
-                                                >
-                                                    Archive
-                                                </Button>
-                                            </div>
+                                                        View
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className={
+                                                            reviewWorkspaceStyles.surfaceButton
+                                                        }
+                                                        asChild
+                                                    >
+                                                        <Link
+                                                            href={EventController.edit(
+                                                                event.id,
+                                                            )}
+                                                        >
+                                                            Edit
+                                                        </Link>
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className={
+                                                            reviewWorkspaceStyles.dangerButton
+                                                        }
+                                                        onClick={() =>
+                                                            setEventToDelete(
+                                                                event,
+                                                            )
+                                                        }
+                                                    >
+                                                        Archive
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -398,7 +485,9 @@ export default function EventIndex({
                             inactivePageButtonClassName={
                                 elevatedIndexTableStyles.inactivePageButton
                             }
-                            ellipsisClassName={elevatedIndexTableStyles.ellipsis}
+                            ellipsisClassName={
+                                elevatedIndexTableStyles.ellipsis
+                            }
                         />
                     </div>
                 </div>
@@ -411,9 +500,7 @@ export default function EventIndex({
                         }
                     }}
                     title={
-                        selectedEvent
-                            ? `Event: ${selectedEvent.name}`
-                            : 'Event'
+                        selectedEvent ? `Event: ${selectedEvent.name}` : 'Event'
                     }
                     description="Review the event schedule, operational status, capacity, and registration window."
                     badges={
@@ -569,12 +656,14 @@ export default function EventIndex({
                                     {eventToDelete.name}
                                 </div>
                                 <div>
-                                    {formatSystemDateOnly(eventToDelete.date_from)} at{' '}
-                                    {eventToDelete.venue}
+                                    {formatSystemDateOnly(
+                                        eventToDelete.date_from,
+                                    )}{' '}
+                                    at {eventToDelete.venue}
                                 </div>
                                 <div>
-                                    {eventToDelete.registrations_count} recorded
-                                    {' '}registrations will be retained
+                                    {eventToDelete.registrations_count} recorded{' '}
+                                    registrations will be retained
                                 </div>
                             </>
                         ) : undefined

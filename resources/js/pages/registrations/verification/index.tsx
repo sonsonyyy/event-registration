@@ -6,7 +6,7 @@ import {
     Clock3,
     FileSearch,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import RegistrationVerificationController from '@/actions/App/Http/Controllers/RegistrationVerificationController';
 import {
     DataTableBadge,
@@ -31,16 +31,22 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import AppLayout from '@/layouts/app-layout';
 import { formatSystemDateTime } from '@/lib/date-time';
 import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import { formTextareaClassName } from '@/lib/ui-styles';
-import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
 
 type StatusOption = {
     value: string;
     label: string;
+};
+
+type SectionOption = {
+    id: number;
+    name: string;
+    district_name: string | null;
 };
 
 type ReviewRecord = {
@@ -112,10 +118,12 @@ type Props = {
     };
     registrations: PaginatedData<RegistrationRecord>;
     filters: {
+        section_id: number | null;
         search: string;
         status: string;
         per_page: number;
     };
+    sections: SectionOption[];
     statusOptions: StatusOption[];
     perPageOptions: number[];
 };
@@ -126,6 +134,14 @@ type ReviewFormData = {
     decision: ReviewDecision;
     review_reason: string;
     review_notes: string;
+};
+
+type VerificationIndexQuery = {
+    section_id?: number;
+    search?: string;
+    status: string;
+    per_page: number;
+    page?: number;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -145,8 +161,10 @@ const formatCurrency = (value: string): string =>
         currency: 'PHP',
     }).format(Number.parseFloat(value || '0'));
 
-const formatDateTime = (value: string | null, fallback = 'Not available'): string =>
-    value ? formatSystemDateTime(value) : fallback;
+const formatDateTime = (
+    value: string | null,
+    fallback = 'Not available',
+): string => (value ? formatSystemDateTime(value) : fallback);
 
 const decisionContent: Record<
     ReviewDecision,
@@ -181,10 +199,14 @@ export default function RegistrationVerificationIndex({
     summary,
     registrations,
     filters,
+    sections,
     statusOptions,
     perPageOptions,
 }: Props) {
     const [search, setSearch] = useState(filters.search);
+    const [sectionId, setSectionId] = useState(
+        filters.section_id !== null ? String(filters.section_id) : 'all',
+    );
     const [status, setStatus] = useState(filters.status);
     const [selectedRegistration, setSelectedRegistration] =
         useState<RegistrationRecord | null>(null);
@@ -193,14 +215,6 @@ export default function RegistrationVerificationIndex({
         review_reason: '',
         review_notes: '',
     });
-
-    useEffect(() => {
-        setSearch(filters.search);
-    }, [filters.search]);
-
-    useEffect(() => {
-        setStatus(filters.status);
-    }, [filters.status]);
 
     const activeDecision = form.data.decision;
     const activeDecisionContent = decisionContent[activeDecision];
@@ -242,17 +256,42 @@ export default function RegistrationVerificationIndex({
         },
     ] as const;
 
-    const visitIndex = (query: {
-        search?: string;
-        status: string;
-        per_page: number;
+    const buildQuery = ({
+        searchValue,
+        sectionValue,
+        statusValue,
+        perPage,
+        page,
+    }: {
+        searchValue: string;
+        sectionValue: string;
+        statusValue: string;
+        perPage: number;
         page?: number;
-    }): void => {
-        router.get(RegistrationVerificationController.index.url({ query }), {}, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+    }): VerificationIndexQuery => {
+        const normalizedSearch = searchValue.trim();
+
+        return {
+            ...(sectionValue !== 'all'
+                ? { section_id: Number(sectionValue) }
+                : {}),
+            ...(normalizedSearch !== '' ? { search: normalizedSearch } : {}),
+            status: statusValue,
+            per_page: perPage,
+            ...(page !== undefined && page > 1 ? { page } : {}),
+        };
+    };
+
+    const visitIndex = (query: VerificationIndexQuery): void => {
+        router.get(
+            RegistrationVerificationController.index.url({ query }),
+            {},
+            {
+                preserveScroll: true,
+                preserveState: false,
+                replace: true,
+            },
+        );
     };
 
     const closeDialog = (): void => {
@@ -291,14 +330,14 @@ export default function RegistrationVerificationIndex({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Verification" />
 
-            <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+            <div className="flex flex-1 flex-col gap-5 p-4 md:p-5">
                 <Heading
                     title="Registration verification"
                     description={`Review uploaded receipts and resolve registrations within ${scopeSummary}.`}
                 />
 
                 <SummaryStatCards
-                    gridClassName="grid gap-4 xl:grid-cols-4"
+                    gridClassName="grid gap-3 xl:grid-cols-4"
                     items={summaryCards}
                 />
 
@@ -308,12 +347,14 @@ export default function RegistrationVerificationIndex({
                             searchValue={search}
                             onSearchValueChange={setSearch}
                             onSubmit={() =>
-                                visitIndex({
-                                    search: search.trim() || undefined,
-                                    status,
-                                    per_page: filters.per_page,
-                                    page: 1,
-                                })
+                                visitIndex(
+                                    buildQuery({
+                                        searchValue: search,
+                                        sectionValue: sectionId,
+                                        statusValue: status,
+                                        perPage: filters.per_page,
+                                    }),
+                                )
                             }
                             placeholder="Search event, church, pastor, reference, or submitter"
                             className={reviewWorkspaceStyles.toolbar}
@@ -323,18 +364,73 @@ export default function RegistrationVerificationIndex({
                             inputClassName={reviewWorkspaceStyles.input}
                             actionClassName={reviewWorkspaceStyles.action}
                             action={
-                                <div className="flex w-full sm:w-auto">
+                                <div className="flex w-full flex-col gap-3 xl:flex-row xl:items-center xl:justify-end">
+                                    {sections.length > 0 && (
+                                        <Select
+                                            value={sectionId}
+                                            onValueChange={(value) => {
+                                                setSectionId(value);
+                                                visitIndex(
+                                                    buildQuery({
+                                                        searchValue: search,
+                                                        sectionValue: value,
+                                                        statusValue: status,
+                                                        perPage:
+                                                            filters.per_page,
+                                                    }),
+                                                );
+                                            }}
+                                        >
+                                            <SelectTrigger
+                                                className={
+                                                    reviewWorkspaceStyles.selectTrigger
+                                                }
+                                            >
+                                                <SelectValue placeholder="All sections" />
+                                            </SelectTrigger>
+                                            <SelectContent
+                                                align="end"
+                                                className={
+                                                    reviewWorkspaceStyles.selectContent
+                                                }
+                                            >
+                                                <SelectItem
+                                                    value="all"
+                                                    className={
+                                                        reviewWorkspaceStyles.selectItem
+                                                    }
+                                                >
+                                                    All sections
+                                                </SelectItem>
+                                                {sections.map((section) => (
+                                                    <SelectItem
+                                                        key={section.id}
+                                                        value={String(
+                                                            section.id,
+                                                        )}
+                                                        className={
+                                                            reviewWorkspaceStyles.selectItem
+                                                        }
+                                                    >
+                                                        {section.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+
                                     <Select
                                         value={status}
                                         onValueChange={(nextStatus) => {
                                             setStatus(nextStatus);
-                                            visitIndex({
-                                                search:
-                                                    search.trim() || undefined,
-                                                status: nextStatus,
-                                                per_page: filters.per_page,
-                                                page: 1,
-                                            });
+                                            visitIndex(
+                                                buildQuery({
+                                                    searchValue: search,
+                                                    sectionValue: sectionId,
+                                                    statusValue: nextStatus,
+                                                    perPage: filters.per_page,
+                                                }),
+                                            );
                                         }}
                                     >
                                         <SelectTrigger
@@ -371,7 +467,11 @@ export default function RegistrationVerificationIndex({
                     <div className="overflow-x-auto">
                         <table className={elevatedIndexTableStyles.table}>
                             <thead className={elevatedIndexTableStyles.thead}>
-                                <tr className={elevatedIndexTableStyles.headerRow}>
+                                <tr
+                                    className={
+                                        elevatedIndexTableStyles.headerRow
+                                    }
+                                >
                                     <th
                                         className={
                                             elevatedIndexTableStyles.firstHeaderCell
@@ -379,16 +479,32 @@ export default function RegistrationVerificationIndex({
                                     >
                                         Registration
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
                                         Church
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
                                         Items
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
                                         Receipt
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
                                         Status
                                     </th>
                                     <th
@@ -424,7 +540,10 @@ export default function RegistrationVerificationIndex({
                                                         elevatedIndexTableStyles.emptyDescription
                                                     }
                                                 >
-                                                    Adjust the search term or switch the queue filter to review another set of registrations.
+                                                    Adjust the search term or
+                                                    switch the queue filter to
+                                                    review another set of
+                                                    registrations.
                                                 </div>
                                             </div>
                                         </td>
@@ -433,9 +552,15 @@ export default function RegistrationVerificationIndex({
                                     registrations.data.map((registration) => (
                                         <tr
                                             key={registration.id}
-                                            className={elevatedIndexTableStyles.row}
+                                            className={
+                                                elevatedIndexTableStyles.row
+                                            }
                                         >
-                                            <td className={elevatedIndexTableStyles.firstCell}>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.firstCell
+                                                }
+                                            >
                                                 <div
                                                     className={
                                                         elevatedIndexTableStyles.primaryText
@@ -455,33 +580,27 @@ export default function RegistrationVerificationIndex({
                                                 </div>
                                                 {registration.submitted_by && (
                                                     <div
-                                                        className={
-                                                            elevatedIndexTableStyles.detailText
-                                                        }
+                                                        className={`${elevatedIndexTableStyles.metricText} line-clamp-1`}
                                                     >
-                                                        Submitted by{' '}
-                                                        <span
-                                                            className={
-                                                                elevatedIndexTableStyles.strongText
-                                                            }
-                                                        >
-                                                            {
-                                                                registration
-                                                                    .submitted_by
-                                                                    .name
-                                                            }
-                                                        </span>
-                                                        <span className="block text-xs leading-6 text-slate-500 dark:text-slate-400">
-                                                            {
-                                                                registration
-                                                                    .submitted_by
-                                                                    .email
-                                                            }
-                                                        </span>
+                                                        {
+                                                            registration
+                                                                .submitted_by
+                                                                .name
+                                                        }
+                                                        {' • '}
+                                                        {
+                                                            registration
+                                                                .submitted_by
+                                                                .email
+                                                        }
                                                     </div>
                                                 )}
                                             </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
                                                 <div
                                                     className={
                                                         elevatedIndexTableStyles.primaryText
@@ -501,17 +620,12 @@ export default function RegistrationVerificationIndex({
                                                         registration.pastor
                                                             .pastor_name
                                                     }
-                                                </div>
-                                                <div
-                                                    className={
-                                                        elevatedIndexTableStyles.metaText
-                                                    }
-                                                >
+                                                    {' • '}
                                                     {
                                                         registration.pastor
                                                             .section_name
-                                                    }{' '}
-                                                    •{' '}
+                                                    }
+                                                    {' • '}
                                                     {
                                                         registration.pastor
                                                             .district_name
@@ -519,23 +633,23 @@ export default function RegistrationVerificationIndex({
                                                 </div>
                                                 {registration.remarks && (
                                                     <div
-                                                        className={
-                                                            elevatedIndexTableStyles.detailText
-                                                        }
+                                                        className={`${elevatedIndexTableStyles.metricText} line-clamp-1`}
                                                     >
                                                         {registration.remarks}
                                                     </div>
                                                 )}
                                             </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                                <div className="space-y-3">
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <div className="space-y-1.5">
                                                     {registration.items.map(
                                                         (item) => (
                                                             <div
                                                                 key={item.id}
-                                                                className={
-                                                                    elevatedIndexTableStyles.subtleSurface
-                                                                }
+                                                                className="space-y-0.5"
                                                             >
                                                                 <div
                                                                     className={
@@ -546,11 +660,7 @@ export default function RegistrationVerificationIndex({
                                                                         item.category_name
                                                                     }
                                                                 </div>
-                                                                <div
-                                                                    className={
-                                                                        elevatedIndexTableStyles.secondaryText
-                                                                    }
-                                                                >
+                                                                <div className="text-[12px] text-muted-foreground sm:text-[13px]">
                                                                     {
                                                                         item.quantity
                                                                     }{' '}
@@ -568,7 +678,7 @@ export default function RegistrationVerificationIndex({
                                                     )}
                                                     <div
                                                         className={
-                                                            elevatedIndexTableStyles.metaText
+                                                            elevatedIndexTableStyles.metricText
                                                         }
                                                     >
                                                         {
@@ -581,7 +691,11 @@ export default function RegistrationVerificationIndex({
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
                                                 <div
                                                     className={
                                                         elevatedIndexTableStyles.primaryText
@@ -592,29 +706,17 @@ export default function RegistrationVerificationIndex({
                                                         'No receipt uploaded'}
                                                 </div>
                                                 <div
-                                                    className={
-                                                        elevatedIndexTableStyles.secondaryText
-                                                    }
+                                                    className={`${elevatedIndexTableStyles.secondaryText} line-clamp-1`}
                                                 >
                                                     {formatDateTime(
                                                         registration.receipt
                                                             .uploaded_at,
                                                         'Not uploaded',
                                                     )}
+                                                    {registration.payment_reference &&
+                                                        ` • Ref. ${registration.payment_reference}`}
                                                 </div>
-                                                {registration.payment_reference && (
-                                                    <div
-                                                        className={
-                                                            reviewWorkspaceStyles.referenceTag
-                                                        }
-                                                    >
-                                                        Ref.{' '}
-                                                        {
-                                                            registration.payment_reference
-                                                        }
-                                                    </div>
-                                                )}
-                                                <div className="mt-3">
+                                                <div className="mt-2">
                                                     <Button
                                                         asChild
                                                         size="sm"
@@ -626,8 +728,7 @@ export default function RegistrationVerificationIndex({
                                                         <a
                                                             href={
                                                                 registration
-                                                                    .receipt
-                                                                    .url
+                                                                    .receipt.url
                                                             }
                                                             target="_blank"
                                                             rel="noreferrer"
@@ -638,29 +739,29 @@ export default function RegistrationVerificationIndex({
                                                     </Button>
                                                 </div>
                                             </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                                <div className="space-y-3">
-                                                    <DataTableBadge
-                                                        tone={resolveDataTableTone(
-                                                            registration.registration_status,
-                                                            {
-                                                                'pending verification':
-                                                                    'amber',
-                                                                'needs correction':
-                                                                    'amber',
-                                                                verified:
-                                                                    'emerald',
-                                                                rejected:
-                                                                    'rose',
-                                                            },
-                                                            'slate',
-                                                        )}
-                                                    >
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <DataTableBadge
+                                                    tone={resolveDataTableTone(
+                                                        registration.registration_status,
                                                         {
-                                                            registration.registration_status
-                                                        }
-                                                    </DataTableBadge>
-                                                </div>
+                                                            'pending verification':
+                                                                'amber',
+                                                            'needs correction':
+                                                                'amber',
+                                                            verified: 'emerald',
+                                                            rejected: 'rose',
+                                                        },
+                                                        'slate',
+                                                    )}
+                                                >
+                                                    {
+                                                        registration.registration_status
+                                                    }
+                                                </DataTableBadge>
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
@@ -694,22 +795,31 @@ export default function RegistrationVerificationIndex({
                             rowsPerPage={filters.per_page}
                             rowOptions={perPageOptions}
                             onRowsPerPageChange={(value) =>
-                                visitIndex({
-                                    search: filters.search || undefined,
-                                    status,
-                                    per_page: value,
-                                    page: 1,
-                                })
+                                visitIndex(
+                                    buildQuery({
+                                        searchValue: filters.search,
+                                        sectionValue:
+                                            filters.section_id !== null
+                                                ? String(filters.section_id)
+                                                : 'all',
+                                        statusValue: filters.status,
+                                        perPage: value,
+                                    }),
+                                )
                             }
                             onPageChange={(pageNumber) =>
-                                visitIndex({
-                                    search: filters.search || undefined,
-                                    status,
-                                    per_page: filters.per_page,
-                                    ...(pageNumber > 1
-                                        ? { page: pageNumber }
-                                        : {}),
-                                })
+                                visitIndex(
+                                    buildQuery({
+                                        searchValue: filters.search,
+                                        sectionValue:
+                                            filters.section_id !== null
+                                                ? String(filters.section_id)
+                                                : 'all',
+                                        statusValue: filters.status,
+                                        perPage: filters.per_page,
+                                        page: pageNumber,
+                                    }),
+                                )
                             }
                             className={reviewWorkspaceStyles.pagination}
                             topRowClassName={
@@ -734,9 +844,7 @@ export default function RegistrationVerificationIndex({
                             inactivePageButtonClassName={
                                 reviewWorkspaceStyles.inactivePageButton
                             }
-                            ellipsisClassName={
-                                reviewWorkspaceStyles.ellipsis
-                            }
+                            ellipsisClassName={reviewWorkspaceStyles.ellipsis}
                         />
                     </div>
                 </div>
@@ -778,7 +886,8 @@ export default function RegistrationVerificationIndex({
                         selectedRegistration?.submitted_by
                             ? {
                                   name: selectedRegistration.submitted_by.name,
-                                  email: selectedRegistration.submitted_by.email,
+                                  email: selectedRegistration.submitted_by
+                                      .email,
                               }
                             : null
                     }
@@ -817,10 +926,7 @@ export default function RegistrationVerificationIndex({
                                                 : 'outline'
                                         }
                                         onClick={() =>
-                                            form.setData(
-                                                'decision',
-                                                'verified',
-                                            )
+                                            form.setData('decision', 'verified')
                                         }
                                         className={
                                             activeDecision === 'verified'
@@ -863,10 +969,7 @@ export default function RegistrationVerificationIndex({
                                                 : 'outline'
                                         }
                                         onClick={() =>
-                                            form.setData(
-                                                'decision',
-                                                'rejected',
-                                            )
+                                            form.setData('decision', 'rejected')
                                         }
                                         className={
                                             activeDecision === 'rejected'

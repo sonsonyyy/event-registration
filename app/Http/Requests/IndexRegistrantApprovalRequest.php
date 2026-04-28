@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Section;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -25,6 +26,11 @@ class IndexRegistrantApprovalRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'section_id' => [
+                'nullable',
+                'integer',
+                Rule::exists(Section::class, 'id')->whereNull('deleted_at'),
+            ],
             'search' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'string', Rule::in([...User::approvalStatuses(), 'all'])],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
@@ -35,13 +41,16 @@ class IndexRegistrantApprovalRequest extends FormRequest
     /**
      * Get the normalized filter payload.
      *
-     * @return array{search: string, status: string, per_page: int}
+     * @return array{section_id: int|null, search: string, status: string, per_page: int}
      */
     public function filters(): array
     {
         return [
+            'section_id' => $this->filled('section_id')
+                ? (int) $this->validated('section_id')
+                : null,
             'search' => trim((string) $this->validated('search', '')),
-            'status' => (string) $this->validated('status', User::APPROVAL_PENDING),
+            'status' => (string) $this->validated('status', 'all'),
             'per_page' => (int) $this->validated('per_page', 10),
         ];
     }
@@ -54,6 +63,7 @@ class IndexRegistrantApprovalRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'section_id.exists' => 'Choose a valid section filter.',
             'search.max' => 'Search terms must be 255 characters or fewer.',
             'status.in' => 'Choose a valid approval status filter.',
             'per_page.min' => 'Rows per page must be at least 1.',

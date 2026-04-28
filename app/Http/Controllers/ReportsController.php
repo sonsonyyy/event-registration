@@ -37,6 +37,16 @@ class ReportsController extends Controller
         $sections = $this->sectionOptions($user);
         $selectedEvent = $this->selectedEvent($events, $filters['event_id']);
         $selectedSection = $this->selectedSection($user, $selectedEvent, $sections, $filters['section_id']);
+        $churchesWithRegistration = $selectedEvent !== null
+            ? $this->churchesWithRegistrationQuery(
+                $user,
+                $selectedEvent,
+                $selectedSection,
+                $filters['search'],
+            )
+                ->paginate($filters['per_page'])
+                ->withQueryString()
+            : null;
         $churchesWithoutRegistration = $selectedEvent !== null
             ? $this->churchesWithoutRegistrationQuery(
                 $user,
@@ -44,9 +54,6 @@ class ReportsController extends Controller
                 $selectedSection,
                 $filters['search'],
             )
-                ->orderBy('church_name')
-                ->orderBy('pastor_name')
-                ->orderBy('id')
                 ->paginate($filters['per_page'])
                 ->withQueryString()
             : null;
@@ -76,6 +83,7 @@ class ReportsController extends Controller
             'filters' => [
                 'event_id' => $selectedEvent?->getKey(),
                 'section_id' => $selectedSection?->getKey(),
+                'tab' => $filters['tab'],
                 'search' => $filters['search'],
                 'per_page' => $filters['per_page'],
             ],
@@ -97,6 +105,22 @@ class ReportsController extends Controller
             'eventTotalRegistration' => $selectedEvent
                 ? $this->eventTotalRegistrationReport($user, $selectedEvent, $selectedSection)
                 : $this->emptyEventTotalRegistrationReport(),
+            'churchesWithRegistration' => $selectedEvent !== null && $churchesWithRegistration instanceof LengthAwarePaginator
+                ? [
+                    'data' => $churchesWithRegistration->getCollection()
+                        ->map(fn (Pastor $pastor): array => $this->churchWithRegistrationData($pastor))
+                        ->values()
+                        ->all(),
+                    'meta' => $this->paginationMeta($churchesWithRegistration),
+                ]
+                : $this->emptyChurchesWithRegistrationReport($filters['per_page']),
+            'churchesWithRegistrationExportUrl' => $selectedEvent !== null
+                ? route('reports.churches-with-registration.export', $this->reportQuery(
+                    $selectedEvent,
+                    $selectedSection,
+                    $filters['search'],
+                ))
+                : null,
             'churchesWithoutRegistration' => $selectedEvent !== null && $churchesWithoutRegistration instanceof LengthAwarePaginator
                 ? [
                     'data' => $churchesWithoutRegistration->getCollection()
@@ -114,6 +138,48 @@ class ReportsController extends Controller
                 ))
                 : null,
         ]);
+    }
+
+    public function exportChurchesWithRegistration(IndexReportRequest $request): StreamedResponse
+    {
+        Gate::authorize('viewReports');
+
+        $user = $request->user();
+
+        abort_unless($user instanceof User, 403);
+
+        $filters = $request->filters();
+        $events = $this->eventOptions($user);
+        $sections = $this->sectionOptions($user);
+        $selectedEvent = $this->selectedEvent($events, $filters['event_id']);
+
+        abort_if($selectedEvent === null, 404);
+
+        $selectedSection = $this->selectedSection($user, $selectedEvent, $sections, $filters['section_id']);
+        $churches = $this->churchesWithRegistrationQuery(
+            $user,
+            $selectedEvent,
+            $selectedSection,
+            $filters['search'],
+        )->get();
+
+        $filename = $this->churchesWithRegistrationFilename($selectedEvent, $selectedSection);
+
+        return response()->streamDownload(
+            function () use ($selectedEvent, $selectedSection, $filters, $churches): void {
+                echo $this->churchesWithRegistrationSpreadsheet(
+                    $selectedEvent,
+                    $selectedSection,
+                    $filters['search'],
+                    $churches,
+                );
+            },
+            $filename,
+            [
+                'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
+                'Cache-Control' => 'max-age=0',
+            ],
+        );
     }
 
     public function exportChurchesWithoutRegistration(IndexReportRequest $request): StreamedResponse
@@ -137,11 +203,7 @@ class ReportsController extends Controller
             $selectedEvent,
             $selectedSection,
             $filters['search'],
-        )
-            ->orderBy('church_name')
-            ->orderBy('pastor_name')
-            ->orderBy('id')
-            ->get();
+        )->get();
 
         $filename = $this->churchesWithoutRegistrationFilename($selectedEvent, $selectedSection);
 
@@ -263,13 +325,19 @@ class ReportsController extends Controller
         $registrations = $this->scopedRegistrationsQuery($user, $event, $section)
             ->with([
                 'items.feeCategory',
+                'pastor.section.district',
             ])
             ->get();
+        $visiblePastors = $this->scopedPastorsQuery($user, $event, $section)->get();
 
         $items = $registrations->flatMap->items;
+        $registrationsByPastor = $registrations->groupBy('pastor_id');
         $feeCategories = $event->feeCategories
             ->sortBy('id')
             ->values();
+        $totalRegisteredAmount = $this->formatAmount($items->sum(
+            fn (RegistrationItem $item): float => (float) $item->subtotal_amount
+        ));
 
         $verifiedOnlineQuantity = $this->quantityForStatus(
             $registrations,
@@ -285,6 +353,7 @@ class ReportsController extends Controller
 
         return [
             'total_registered_quantity' => (int) $items->sum('quantity'),
+            'total_registered_amount' => $totalRegisteredAmount,
             'registration_count' => $registrations->count(),
             'verified_online_quantity' => $verifiedOnlineQuantity,
             'pending_online_quantity' => $pendingOnlineQuantity,
@@ -305,34 +374,67 @@ class ReportsController extends Controller
                 })
                 ->values()
                 ->all(),
+            'fee_category_totals' => [
+                'registered_quantity' => (int) $items->sum('quantity'),
+                'registered_amount' => $totalRegisteredAmount,
+            ],
+            'section_summaries' => $this->sectionSummaries($visiblePastors, $registrationsByPastor),
+            'section_summary_totals' => [
+                'active_churches' => $visiblePastors->count(),
+                'registered_churches' => $visiblePastors
+                    ->filter(fn (Pastor $pastor): bool => ($registrationsByPastor->get($pastor->getKey())?->isNotEmpty() ?? false))
+                    ->count(),
+                'registration_count' => $registrations->count(),
+                'total_registered_quantity' => (int) $items->sum('quantity'),
+                'total_registered_amount' => $totalRegisteredAmount,
+            ],
+            'church_summaries' => $this->churchSummaries($visiblePastors, $registrationsByPastor),
+            'church_summary_totals' => [
+                'church_count' => $visiblePastors->count(),
+                'registered_churches' => $visiblePastors
+                    ->filter(fn (Pastor $pastor): bool => ($registrationsByPastor->get($pastor->getKey())?->isNotEmpty() ?? false))
+                    ->count(),
+                'registration_count' => $registrations->count(),
+                'total_registered_quantity' => (int) $items->sum('quantity'),
+                'total_registered_amount' => $totalRegisteredAmount,
+            ],
         ];
     }
 
-    /**
-     * Build the no-registration report for the selected event.
-     *
-     * @return array<string, mixed>
-     */
+    private function churchesWithRegistrationQuery(
+        User $user,
+        Event $event,
+        ?Section $section,
+        string $search,
+    ): Builder {
+        $pastorsQuery = $this->scopedPastorsQuery($user, $event, $section);
+        $pastorsQuery
+            ->with([
+                'registrations' => function ($query) use ($event): void {
+                    $query
+                        ->where('event_id', $event->getKey())
+                        ->whereIn('registration_status', Registration::capacityReservedStatuses())
+                        ->with('items');
+                },
+            ])
+            ->whereHas('registrations', function (Builder $query) use ($event): void {
+                $query
+                    ->where('event_id', $event->getKey())
+                    ->whereIn('registration_status', Registration::capacityReservedStatuses());
+            });
+
+        $this->applyChurchSearch($pastorsQuery, $search);
+
+        return $pastorsQuery;
+    }
+
     private function churchesWithoutRegistrationQuery(
         User $user,
         Event $event,
         ?Section $section,
         string $search,
     ): Builder {
-        $pastorsQuery = Pastor::query()
-            ->with('section.district')
-            ->where('status', 'active');
-
-        $sectionId = $event->isSectionScoped()
-            ? $event->section_id
-            : ($user->isManager()
-                ? $user->section_id
-                : $section?->getKey());
-
-        if ($sectionId !== null) {
-            $pastorsQuery->where('section_id', $sectionId);
-        }
-
+        $pastorsQuery = $this->scopedPastorsQuery($user, $event, $section);
         $pastorsQuery
             ->whereDoesntHave('registrations', function (Builder $query) use ($event): void {
                 $query
@@ -340,28 +442,71 @@ class ReportsController extends Controller
                     ->whereIn('registration_status', Registration::capacityReservedStatuses());
             });
 
-        if ($search !== '') {
-            $pastorsQuery->where(function (Builder $query) use ($search): void {
-                $query
-                    ->where('pastor_name', 'like', "%{$search}%")
-                    ->orWhere('church_name', 'like', "%{$search}%")
-                    ->orWhereHas('section', function (Builder $sectionQuery) use ($search): void {
-                        $sectionQuery->where('name', 'like', "%{$search}%");
-                    });
-            });
-        }
+        $this->applyChurchSearch($pastorsQuery, $search);
 
         return $pastorsQuery;
+    }
+
+    private function applyChurchSearch(Builder $pastorsQuery, string $search): void
+    {
+        if ($search === '') {
+            return;
+        }
+
+        $pastorsQuery->where(function (Builder $query) use ($search): void {
+            $query
+                ->where('pastor_name', 'like', "%{$search}%")
+                ->orWhere('church_name', 'like', "%{$search}%")
+                ->orWhereHas('section', function (Builder $sectionQuery) use ($search): void {
+                    $sectionQuery->where('name', 'like', "%{$search}%");
+                });
+        });
     }
 
     private function emptyEventTotalRegistrationReport(): array
     {
         return [
             'total_registered_quantity' => 0,
+            'total_registered_amount' => '0.00',
             'registration_count' => 0,
             'verified_online_quantity' => 0,
             'pending_online_quantity' => 0,
             'fee_categories' => [],
+            'fee_category_totals' => [
+                'registered_quantity' => 0,
+                'registered_amount' => '0.00',
+            ],
+            'section_summaries' => [],
+            'section_summary_totals' => [
+                'active_churches' => 0,
+                'registered_churches' => 0,
+                'registration_count' => 0,
+                'total_registered_quantity' => 0,
+                'total_registered_amount' => '0.00',
+            ],
+            'church_summaries' => [],
+            'church_summary_totals' => [
+                'church_count' => 0,
+                'registered_churches' => 0,
+                'registration_count' => 0,
+                'total_registered_quantity' => 0,
+                'total_registered_amount' => '0.00',
+            ],
+        ];
+    }
+
+    private function emptyChurchesWithRegistrationReport(int $perPage): array
+    {
+        return [
+            'data' => [],
+            'meta' => [
+                'current_page' => 1,
+                'last_page' => 1,
+                'per_page' => $perPage,
+                'from' => null,
+                'to' => null,
+                'total' => 0,
+            ],
         ];
     }
 
@@ -377,6 +522,26 @@ class ReportsController extends Controller
                 'to' => null,
                 'total' => 0,
             ],
+        ];
+    }
+
+    private function churchWithRegistrationData(Pastor $pastor): array
+    {
+        /** @var Collection<int, Registration> $registrations */
+        $registrations = $pastor->registrations;
+        $items = $registrations->flatMap->items;
+
+        return [
+            'id' => $pastor->getKey(),
+            'church_name' => $pastor->church_name,
+            'pastor_name' => $pastor->pastor_name,
+            'section_name' => $pastor->section?->name,
+            'district_name' => $pastor->section?->district?->name,
+            'registration_count' => $registrations->count(),
+            'total_registered_quantity' => (int) $items->sum('quantity'),
+            'total_registered_amount' => $this->formatAmount($items->sum(
+                fn (RegistrationItem $item): float => (float) $item->subtotal_amount
+            )),
         ];
     }
 
@@ -426,6 +591,20 @@ class ReportsController extends Controller
         return $query;
     }
 
+    private function churchesWithRegistrationFilename(Event $event, ?Section $section): string
+    {
+        $parts = [
+            Str::slug($event->name),
+            'churches-with-registration',
+        ];
+
+        if ($section !== null) {
+            $parts[] = Str::slug($section->name);
+        }
+
+        return implode('-', $parts).'.xls';
+    }
+
     private function churchesWithoutRegistrationFilename(Event $event, ?Section $section): string
     {
         $parts = [
@@ -438,6 +617,73 @@ class ReportsController extends Controller
         }
 
         return implode('-', $parts).'.xls';
+    }
+
+    /**
+     * @param  Collection<int, Pastor>  $churches
+     */
+    private function churchesWithRegistrationSpreadsheet(
+        Event $event,
+        ?Section $section,
+        string $search,
+        Collection $churches,
+    ): string {
+        $rows = $churches
+            ->map(function (Pastor $pastor): string {
+                $church = $this->churchWithRegistrationData($pastor);
+
+                return sprintf(
+                    '<tr><td>%s</td><td>%s</td><td>%s</td><td>%d</td><td>%s</td></tr>',
+                    e($church['pastor_name']),
+                    e($church['church_name']),
+                    e($church['section_name'] ?? 'Unassigned'),
+                    $church['total_registered_quantity'],
+                    e($church['total_registered_amount']),
+                );
+            })
+            ->implode('');
+
+        $eventName = e($event->name);
+        $scope = e($section?->name ?? 'All sections');
+        $searchSummary = $search !== '' ? e($search) : 'All churches with registrations';
+        $rows = $rows !== ''
+            ? $rows
+            : '<tr><td colspan="5">No churches found for the current filter.</td></tr>';
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Churches with Registration</title>
+</head>
+<body>
+    <table border="1">
+        <tr><td colspan="5"><strong>Event</strong></td></tr>
+        <tr><td colspan="5">{$eventName}</td></tr>
+        <tr><td colspan="5"><strong>Section Scope</strong></td></tr>
+        <tr><td colspan="5">{$scope}</td></tr>
+        <tr><td colspan="5"><strong>Search</strong></td></tr>
+        <tr><td colspan="5">{$searchSummary}</td></tr>
+    </table>
+    <br>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Pastor Name</th>
+                <th>Church Name</th>
+                <th>Section</th>
+                <th>Registered Quantity</th>
+                <th>Registered Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            {$rows}
+        </tbody>
+    </table>
+</body>
+</html>
+HTML;
     }
 
     /**
@@ -534,6 +780,90 @@ HTML;
             ->sum(fn (Registration $registration): int => (int) $registration->items->sum('quantity'));
     }
 
+    /**
+     * @param  Collection<int, Pastor>  $visiblePastors
+     * @param  Collection<int|string, Collection<int, Registration>>  $registrationsByPastor
+     * @return array<int, array{
+     *     id: int|null,
+     *     name: string,
+     *     district_name: string|null,
+     *     active_churches: int,
+     *     registered_churches: int,
+     *     registration_count: int,
+     *     total_registered_quantity: int,
+     *     total_registered_amount: string
+     * }>
+     */
+    private function sectionSummaries(Collection $visiblePastors, Collection $registrationsByPastor): array
+    {
+        return $visiblePastors
+            ->groupBy('section_id')
+            ->map(function (Collection $pastorsInSection) use ($registrationsByPastor): array {
+                /** @var Pastor $firstPastor */
+                $firstPastor = $pastorsInSection->first();
+                $sectionRegistrations = $pastorsInSection->flatMap(
+                    fn (Pastor $pastor): Collection => $registrationsByPastor->get($pastor->getKey(), collect())
+                );
+                $sectionItems = $sectionRegistrations->flatMap->items;
+
+                return [
+                    'id' => $firstPastor->section?->getKey() ?? $firstPastor->section_id,
+                    'name' => $firstPastor->section?->name ?? 'Unassigned',
+                    'district_name' => $firstPastor->section?->district?->name,
+                    'active_churches' => $pastorsInSection->count(),
+                    'registered_churches' => $pastorsInSection
+                        ->filter(fn (Pastor $pastor): bool => ($registrationsByPastor->get($pastor->getKey())?->isNotEmpty() ?? false))
+                        ->count(),
+                    'registration_count' => $sectionRegistrations->count(),
+                    'total_registered_quantity' => (int) $sectionItems->sum('quantity'),
+                    'total_registered_amount' => $this->formatAmount($sectionItems->sum(
+                        fn (RegistrationItem $item): float => (float) $item->subtotal_amount
+                    )),
+                ];
+            })
+            ->sortBy('name')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  Collection<int, Pastor>  $visiblePastors
+     * @param  Collection<int|string, Collection<int, Registration>>  $registrationsByPastor
+     * @return array<int, array{
+     *     id: int,
+     *     church_name: string,
+     *     pastor_name: string,
+     *     section_name: string|null,
+     *     district_name: string|null,
+     *     registration_count: int,
+     *     total_registered_quantity: int,
+     *     total_registered_amount: string
+     * }>
+     */
+    private function churchSummaries(Collection $visiblePastors, Collection $registrationsByPastor): array
+    {
+        return $visiblePastors
+            ->values()
+            ->map(function (Pastor $pastor) use ($registrationsByPastor): array {
+                $churchRegistrations = $registrationsByPastor->get($pastor->getKey(), collect());
+                $churchItems = $churchRegistrations->flatMap->items;
+
+                return [
+                    'id' => $pastor->getKey(),
+                    'church_name' => $pastor->church_name,
+                    'pastor_name' => $pastor->pastor_name,
+                    'section_name' => $pastor->section?->name,
+                    'district_name' => $pastor->section?->district?->name,
+                    'registration_count' => $churchRegistrations->count(),
+                    'total_registered_quantity' => (int) $churchItems->sum('quantity'),
+                    'total_registered_amount' => $this->formatAmount($churchItems->sum(
+                        fn (RegistrationItem $item): float => (float) $item->subtotal_amount
+                    )),
+                ];
+            })
+            ->all();
+    }
+
     private function scopedRegistrationsQuery(User $user, Event $event, ?Section $section): Builder
     {
         $query = Registration::query()
@@ -555,6 +885,36 @@ HTML;
         return $query;
     }
 
+    private function scopedPastorsQuery(User $user, Event $event, ?Section $section): Builder
+    {
+        $query = Pastor::query()
+            ->with('section.district')
+            ->where('status', 'active')
+            ->orderBy('church_name')
+            ->orderBy('pastor_name')
+            ->orderBy('id');
+
+        $sectionId = $event->isSectionScoped()
+            ? $event->section_id
+            : ($user->isManager()
+                ? $user->section_id
+                : $section?->getKey());
+
+        if ($sectionId !== null) {
+            return $query->where('section_id', $sectionId);
+        }
+
+        if ($event->district_id !== null) {
+            $query->whereHas('section', function (Builder $sectionQuery) use ($event): void {
+                $sectionQuery->where('district_id', $event->district_id);
+            });
+        } else {
+            $query->whereRaw('1 = 0');
+        }
+
+        return $query;
+    }
+
     private function canFilterBySection(User $user, ?Event $selectedEvent): bool
     {
         if ($user->isManager()) {
@@ -569,5 +929,10 @@ HTML;
         return $user->department?->name
             ?? $user->department()->value('name')
             ?? 'No department';
+    }
+
+    private function formatAmount(float|int $amount): string
+    {
+        return number_format((float) $amount, 2, '.', '');
     }
 }

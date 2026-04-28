@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
 import { Search } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
@@ -33,27 +33,26 @@ export default function DataTableToolbar({
                 onSubmit();
             }}
             className={cn(
-                'flex min-w-0 flex-col gap-4 xl:flex-row xl:items-center xl:justify-between',
+                'flex min-w-0 flex-col gap-3 xl:flex-row xl:items-center xl:justify-between',
                 className,
             )}
         >
             <div
                 className={cn(
-                    'relative min-w-0 max-w-3xl flex-1',
+                    'relative max-w-3xl min-w-0 flex-1',
                     searchWrapperClassName,
                 )}
             >
-                <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="pointer-events-none absolute top-1/2 left-3.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
                 <Input
                     id="directory-search"
                     aria-label={placeholder}
                     value={searchValue}
-                    onChange={(event) => onSearchValueChange(event.target.value)}
+                    onChange={(event) =>
+                        onSearchValueChange(event.target.value)
+                    }
                     placeholder={placeholder}
-                    className={cn(
-                        'pl-11',
-                        inputClassName,
-                    )}
+                    className={cn('pl-10 sm:pl-11', inputClassName)}
                 />
             </div>
 

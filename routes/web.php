@@ -35,6 +35,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('reports', ReportsController::class)
         ->middleware('can:viewReports')
         ->name('reports.index');
+    Route::get('reports/churches-with-registration/export', [ReportsController::class, 'exportChurchesWithRegistration'])
+        ->middleware('can:viewReports')
+        ->name('reports.churches-with-registration.export');
     Route::get('reports/churches-without-registration/export', [ReportsController::class, 'exportChurchesWithoutRegistration'])
         ->middleware('can:viewReports')
         ->name('reports.churches-without-registration.export');

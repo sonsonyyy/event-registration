@@ -119,6 +119,68 @@ test('onsite registrations can be searched and paginated', function () {
             ->where('registrations.meta.last_page', 2));
 });
 
+test('super admins can filter onsite registrations by section', function () {
+    $centralDistrict = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $northernDistrict = District::factory()->create([
+        'name' => 'Northern Luzon',
+    ]);
+    $alphaSection = Section::factory()->for($centralDistrict)->create([
+        'name' => 'Alpha Section',
+    ]);
+    $betaSection = Section::factory()->for($northernDistrict)->create([
+        'name' => 'Beta Section',
+    ]);
+    $alphaPastor = Pastor::factory()->for($alphaSection)->create([
+        'church_name' => 'Alpha Community Church',
+    ]);
+    $betaPastor = Pastor::factory()->for($betaSection)->create([
+        'church_name' => 'Beta Gospel Church',
+    ]);
+    $superAdmin = User::factory()->superAdmin()->create();
+    $encoder = User::factory()->registrationStaff()->create();
+    $centralEvent = onsiteRegistrationEvent([
+        'district_id' => $centralDistrict->id,
+    ]);
+    $northernEvent = onsiteRegistrationEvent([
+        'district_id' => $northernDistrict->id,
+    ]);
+    $centralFeeCategory = EventFeeCategory::factory()->for($centralEvent)->create();
+    $northernFeeCategory = EventFeeCategory::factory()->for($northernEvent)->create();
+
+    createOnsiteRegistration(
+        $centralEvent,
+        $alphaPastor,
+        $encoder,
+        $centralFeeCategory,
+        2,
+    );
+    createOnsiteRegistration(
+        $northernEvent,
+        $betaPastor,
+        $encoder,
+        $northernFeeCategory,
+        3,
+    );
+
+    $this->actingAs($superAdmin)
+        ->get(route('registrations.onsite.index', [
+            'section_id' => $betaSection->id,
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/onsite/index')
+            ->where('filters.section_id', $betaSection->id)
+            ->has('sections', 2)
+            ->where('sections.0.name', 'Alpha Section')
+            ->where('sections.1.name', 'Beta Section')
+            ->where('sections.1.district_name', 'Northern Luzon')
+            ->has('registrations.data', 1)
+            ->where('registrations.data.0.pastor.church_name', 'Beta Gospel Church')
+            ->where('registrations.meta.total', 1));
+});
+
 test('managers are limited to onsite registrations and pastors within their assigned section', function () {
     $district = District::factory()->create();
     $managedSection = Section::factory()->for($district)->create();

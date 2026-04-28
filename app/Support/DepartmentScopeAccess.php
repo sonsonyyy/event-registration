@@ -85,6 +85,7 @@ class DepartmentScopeAccess
     public static function canViewApprovalQueue(User $reviewer): bool
     {
         return $reviewer->isSuperAdmin()
+            || ($reviewer->isAdmin() && $reviewer->district_id !== null)
             || ($reviewer->isManager() && $reviewer->section_id !== null);
     }
 
@@ -102,6 +103,11 @@ class DepartmentScopeAccess
             return true;
         }
 
+        if ($reviewer->isAdmin()) {
+            return $reviewer->district_id !== null
+                && self::approvalDistrictId($accountRequest) === $reviewer->district_id;
+        }
+
         return $reviewer->section_id !== null
             && $accountRequest->section_id !== null
             && $reviewer->section_id === $accountRequest->section_id;
@@ -111,6 +117,10 @@ class DepartmentScopeAccess
     {
         if ($reviewer->isSuperAdmin()) {
             return $query;
+        }
+
+        if ($reviewer->isAdmin() && $reviewer->district_id !== null) {
+            return $query->where('district_id', $reviewer->district_id);
         }
 
         if ($reviewer->isManager() && $reviewer->section_id !== null) {
@@ -126,6 +136,15 @@ class DepartmentScopeAccess
             return 'all districts';
         }
 
+        if ($reviewer->isAdmin()) {
+            $districtName = $reviewer->district?->name
+                ?? $reviewer->district()->value('name');
+
+            return $districtName !== null
+                ? $districtName.' • All sections'
+                : 'your assigned district';
+        }
+
         $section = $reviewer->section()
             ->with('district')
             ->first();
@@ -135,6 +154,15 @@ class DepartmentScopeAccess
         }
 
         return $section->district->name.' • '.$section->name;
+    }
+
+    private static function approvalDistrictId(User $accountRequest): ?int
+    {
+        return $accountRequest->district_id
+            ?? $accountRequest->section?->district_id
+            ?? $accountRequest->section()->value('district_id')
+            ?? $accountRequest->pastor?->section?->district_id
+            ?? $accountRequest->pastor()->with('section:id,district_id')->first()?->section?->district_id;
     }
 
     public static function canViewVerificationQueue(User $reviewer): bool

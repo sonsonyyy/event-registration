@@ -48,10 +48,12 @@ test('admins can view event total registration and churches without registration
     $regular = EventFeeCategory::factory()->for($event)->create([
         'category_name' => 'Regular (Online)',
         'amount' => '800.00',
+        'slot_limit' => 40,
     ]);
     $oneDayPass = EventFeeCategory::factory()->for($event)->create([
         'category_name' => 'One-day Pass',
         'amount' => '600.00',
+        'slot_limit' => 25,
     ]);
 
     createReportedRegistration(
@@ -94,16 +96,49 @@ test('admins can view event total registration and churches without registration
             ->where('scopeSummary', 'District events • No department')
             ->where('filters.event_id', $event->id)
             ->where('filters.section_id', null)
+            ->where('filters.tab', 'section-summary')
             ->where('filters.search', '')
             ->where('filters.per_page', 10)
             ->where('selectedEvent.name', 'CLD Youth Conference 2026')
             ->where('eventTotalRegistration.total_registered_quantity', 10)
+            ->where('eventTotalRegistration.total_registered_amount', '7600.00')
             ->where('eventTotalRegistration.registration_count', 3)
             ->where('eventTotalRegistration.verified_online_quantity', 2)
             ->where('eventTotalRegistration.pending_online_quantity', 3)
             ->where('eventTotalRegistration.fee_categories.0.category_name', 'Regular (Online)')
+            ->where('eventTotalRegistration.fee_categories.0.slot_limit', 40)
+            ->where('eventTotalRegistration.fee_categories.0.amount', '800.00')
             ->where('eventTotalRegistration.fee_categories.0.registered_quantity', 8)
+            ->where('eventTotalRegistration.fee_categories.1.slot_limit', 25)
             ->where('eventTotalRegistration.fee_categories.1.registered_quantity', 2)
+            ->where('eventTotalRegistration.fee_category_totals.registered_quantity', 10)
+            ->where('eventTotalRegistration.fee_category_totals.registered_amount', '7600.00')
+            ->has('eventTotalRegistration.section_summaries', 3)
+            ->where('eventTotalRegistration.section_summaries.0.name', 'Section 1')
+            ->where('eventTotalRegistration.section_summaries.0.active_churches', 2)
+            ->where('eventTotalRegistration.section_summaries.0.registered_churches', 1)
+            ->where('eventTotalRegistration.section_summaries.0.registration_count', 2)
+            ->where('eventTotalRegistration.section_summaries.0.total_registered_quantity', 5)
+            ->where('eventTotalRegistration.section_summaries.0.total_registered_amount', '3600.00')
+            ->where('eventTotalRegistration.section_summaries.1.name', 'Section 2')
+            ->where('eventTotalRegistration.section_summaries.1.total_registered_quantity', 5)
+            ->where('eventTotalRegistration.section_summaries.2.name', 'Section 3')
+            ->where('eventTotalRegistration.section_summary_totals.active_churches', 4)
+            ->where('eventTotalRegistration.section_summary_totals.registered_churches', 2)
+            ->where('eventTotalRegistration.section_summary_totals.registration_count', 3)
+            ->where('eventTotalRegistration.section_summary_totals.total_registered_quantity', 10)
+            ->where('eventTotalRegistration.section_summary_totals.total_registered_amount', '7600.00')
+            ->where('eventTotalRegistration.church_summary_totals.church_count', 4)
+            ->where('eventTotalRegistration.church_summary_totals.registered_churches', 2)
+            ->where('eventTotalRegistration.church_summary_totals.registration_count', 3)
+            ->where('eventTotalRegistration.church_summary_totals.total_registered_quantity', 10)
+            ->where('eventTotalRegistration.church_summary_totals.total_registered_amount', '7600.00')
+            ->has('churchesWithRegistration.data', 2)
+            ->where('churchesWithRegistration.data.0.church_name', 'Grace Community Church')
+            ->where('churchesWithRegistration.data.0.total_registered_quantity', 5)
+            ->where('churchesWithRegistration.data.0.total_registered_amount', '3600.00')
+            ->where('churchesWithRegistration.data.1.church_name', 'River of Life Church')
+            ->where('churchesWithRegistration.meta.total', 2)
             ->has('churchesWithoutRegistration.data', 2)
             ->where('churchesWithoutRegistration.data.0.church_name', 'Faith Harvest Church')
             ->where('churchesWithoutRegistration.data.1.church_name', 'Hope Chapel')
@@ -165,6 +200,7 @@ test('admins can filter and search churches without registration report', functi
         ->assertInertia(fn (Assert $page) => $page
             ->component('reports/index')
             ->where('filters.section_id', $sectionThree->id)
+            ->where('filters.tab', 'no-registration')
             ->where('filters.search', 'hope')
             ->where('filters.per_page', 25)
             ->where('selectedSection.name', 'Section 3')
@@ -174,6 +210,82 @@ test('admins can filter and search churches without registration report', functi
             ->where('churchesWithoutRegistration.data.0.pastor_name', 'Pastor Anne Reyes'));
 
     expect($pastorThree->church_name)->toBe('Hope Chapel');
+});
+
+test('admins can filter and search churches with registration report', function () {
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $sectionOne = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $sectionTwo = Section::factory()->for($district)->create([
+        'name' => 'Section 2',
+    ]);
+    $pastorOne = Pastor::factory()->for($sectionOne)->create([
+        'church_name' => 'Grace Community Church',
+        'pastor_name' => 'Pastor Jane Doe',
+    ]);
+    Pastor::factory()->for($sectionOne)->create([
+        'church_name' => 'Faith Harvest Church',
+        'pastor_name' => 'Pastor Mark Lim',
+    ]);
+    $pastorThree = Pastor::factory()->for($sectionTwo)->create([
+        'church_name' => 'River of Life Church',
+        'pastor_name' => 'Pastor Joel Cruz',
+    ]);
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $encoder = User::factory()->registrationStaff()->create();
+    $event = reportEvent();
+    $regular = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+    ]);
+
+    createReportedRegistration(
+        $event,
+        $pastorOne,
+        $encoder,
+        $regular,
+        Registration::MODE_ONLINE,
+        Registration::STATUS_PENDING_VERIFICATION,
+        3,
+    );
+
+    createReportedRegistration(
+        $event,
+        $pastorThree,
+        $encoder,
+        $regular,
+        Registration::MODE_ONSITE,
+        Registration::STATUS_COMPLETED,
+        5,
+    );
+
+    $this->actingAs($admin)
+        ->get(route('reports.index', [
+            'event_id' => $event->id,
+            'tab' => 'church-summary',
+            'search' => 'river',
+            'per_page' => 25,
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('reports/index')
+            ->where('filters.tab', 'church-summary')
+            ->where('filters.search', 'river')
+            ->where('filters.per_page', 25)
+            ->where('churchesWithRegistration.meta.total', 1)
+            ->has('churchesWithRegistration.data', 1)
+            ->where('churchesWithRegistration.data.0.church_name', 'River of Life Church')
+            ->where('churchesWithRegistration.data.0.pastor_name', 'Pastor Joel Cruz')
+            ->where('churchesWithRegistration.data.0.section_name', 'Section 2')
+            ->where('churchesWithRegistration.data.0.total_registered_quantity', 5)
+            ->where('churchesWithRegistration.data.0.total_registered_amount', '4000.00'));
+
+    expect($pastorThree->church_name)->toBe('River of Life Church');
 });
 
 test('admin report section filters stay inside the assigned district', function () {
@@ -308,6 +420,11 @@ test('managers only see report data inside their assigned section', function () 
             ->where('eventTotalRegistration.registration_count', 2)
             ->where('eventTotalRegistration.verified_online_quantity', 2)
             ->where('eventTotalRegistration.pending_online_quantity', 3)
+            ->has('eventTotalRegistration.section_summaries', 1)
+            ->where('eventTotalRegistration.section_summaries.0.name', 'Section 1')
+            ->where('eventTotalRegistration.section_summaries.0.active_churches', 2)
+            ->where('eventTotalRegistration.section_summary_totals.active_churches', 2)
+            ->where('eventTotalRegistration.church_summary_totals.church_count', 2)
             ->where('eventTotalRegistration.fee_categories.0.registered_quantity', 3)
             ->where('eventTotalRegistration.fee_categories.1.registered_quantity', 2)
             ->where('churchesWithoutRegistration.meta.total', 1)
@@ -514,6 +631,62 @@ test('admins can export churches without registration based on report scope', fu
         ->not->toContain('Faith Harvest Church');
 
     expect($pastorThree->church_name)->toBe('Hope Chapel');
+});
+
+test('admins can export churches with registration based on report scope', function () {
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $sectionOne = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $pastorOne = Pastor::factory()->for($sectionOne)->create([
+        'church_name' => 'Grace Community Church',
+        'pastor_name' => 'Pastor Jane Doe',
+    ]);
+    Pastor::factory()->for($sectionOne)->create([
+        'church_name' => 'Faith Harvest Church',
+        'pastor_name' => 'Pastor Mark Lim',
+    ]);
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $encoder = User::factory()->registrationStaff()->create();
+    $event = reportEvent();
+    $regular = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+    ]);
+
+    createReportedRegistration(
+        $event,
+        $pastorOne,
+        $encoder,
+        $regular,
+        Registration::MODE_ONLINE,
+        Registration::STATUS_PENDING_VERIFICATION,
+        3,
+    );
+
+    $response = $this->actingAs($admin)
+        ->get(route('reports.churches-with-registration.export', [
+            'event_id' => $event->id,
+            'section_id' => $sectionOne->id,
+            'search' => 'grace',
+        ]));
+
+    $response->assertDownload('cld-youth-conference-2026-churches-with-registration-section-1.xls');
+
+    $content = $response->streamedContent();
+
+    expect($content)
+        ->toContain('Pastor Jane Doe')
+        ->toContain('Grace Community Church')
+        ->toContain('Section 1')
+        ->toContain('2400.00')
+        ->not->toContain('Faith Harvest Church');
+
+    expect($pastorOne->church_name)->toBe('Grace Community Church');
 });
 
 test('users without report access cannot open the reports page', function () {

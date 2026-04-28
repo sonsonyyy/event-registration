@@ -9,6 +9,7 @@ use App\Models\EventFeeCategory;
 use App\Models\Registration;
 use App\Models\RegistrationItem;
 use App\Models\RegistrationReview;
+use App\Models\Section;
 use App\Models\User;
 use App\Notifications\RegistrationRejected;
 use App\Notifications\RegistrationReturnedForCorrection;
@@ -19,6 +20,7 @@ use App\Support\NotificationRecipientResolver;
 use App\Support\RegistrationReceiptStorage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
@@ -41,13 +43,23 @@ class RegistrationVerificationController extends Controller
 
         $user = $request->user();
         $filters = $request->filters();
-        $registrations = $this->verificationIndexQuery($user, $filters['search'], $filters['status'])
+        $sections = $this->sectionOptions($user);
+        $filters['section_id'] = $this->selectedSectionId(
+            $sections,
+            $filters['section_id'],
+        );
+        $registrations = $this->verificationIndexQuery(
+            $user,
+            $filters['search'],
+            $filters['status'],
+            $filters['section_id'],
+        )
             ->paginate($filters['per_page'])
             ->withQueryString();
 
         return Inertia::render('registrations/verification/index', [
             'scopeSummary' => $this->scopeSummary($user),
-            'summary' => $this->summaryData($user),
+            'summary' => $this->summaryData($user, $filters['section_id']),
             'registrations' => [
                 'data' => $registrations->getCollection()
                     ->map(fn (Registration $registration): array => $this->registrationData($registration))
@@ -63,6 +75,14 @@ class RegistrationVerificationController extends Controller
                 ],
             ],
             'filters' => $filters,
+            'sections' => $sections
+                ->map(fn (Section $section): array => [
+                    'id' => $section->getKey(),
+                    'name' => $section->name,
+                    'district_name' => $section->district?->name,
+                ])
+                ->values()
+                ->all(),
             'statusOptions' => $this->statusOptions(),
             'perPageOptions' => [10, 25, 50],
         ]);
@@ -166,7 +186,7 @@ class RegistrationVerificationController extends Controller
         );
     }
 
-    private function verificationIndexQuery(User $user, string $search, string $status): Builder
+    private function verificationIndexQuery(User $user, string $search, string $status, ?int $sectionId): Builder
     {
         $query = Registration::query()
             ->where('registration_mode', Registration::MODE_ONLINE)
@@ -194,6 +214,12 @@ class RegistrationVerificationController extends Controller
             ->orderByDesc('id');
 
         DepartmentScopeAccess::scopeVerificationQueue($query, $user);
+
+        if ($sectionId !== null) {
+            $query->whereHas('pastor', function (Builder $pastorQuery) use ($sectionId): void {
+                $pastorQuery->where('section_id', $sectionId);
+            });
+        }
 
         if ($status === 'all') {
             $query->whereIn('registration_status', Registration::verificationStatuses());
@@ -238,12 +264,18 @@ class RegistrationVerificationController extends Controller
      *
      * @return array{pending_verification: int, needs_correction: int, verified: int, rejected: int}
      */
-    private function summaryData(User $user): array
+    private function summaryData(User $user, ?int $sectionId): array
     {
         $query = Registration::query()
             ->where('registration_mode', Registration::MODE_ONLINE);
 
         DepartmentScopeAccess::scopeVerificationQueue($query, $user);
+
+        if ($sectionId !== null) {
+            $query->whereHas('pastor', function (Builder $pastorQuery) use ($sectionId): void {
+                $pastorQuery->where('section_id', $sectionId);
+            });
+        }
 
         return [
             'pending_verification' => (clone $query)
@@ -264,6 +296,49 @@ class RegistrationVerificationController extends Controller
     private function scopeSummary(User $user): string
     {
         return DepartmentScopeAccess::verificationScopeSummary($user);
+    }
+
+    /**
+     * Fetch the section filter options available to the current reviewer.
+     *
+     * @return Collection<int, Section>
+     */
+    private function sectionOptions(User $user): Collection
+    {
+        if (! $user->isAdmin() && ! $user->isSuperAdmin()) {
+            return collect();
+        }
+
+        return Section::query()
+            ->with('district:id,name')
+            ->where('status', 'active')
+            ->when(
+                $user->isAdmin(),
+                function (Builder $query) use ($user): void {
+                    if ($user->district_id === null) {
+                        $query->whereRaw('1 = 0');
+
+                        return;
+                    }
+
+                    $query->where('district_id', $user->district_id);
+                },
+            )
+            ->orderBy('name')
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * Normalize the selected section filter to the current reviewer scope.
+     */
+    private function selectedSectionId(Collection $sections, ?int $sectionId): ?int
+    {
+        if ($sectionId === null || ! $sections->contains('id', $sectionId)) {
+            return null;
+        }
+
+        return $sectionId;
     }
 
     /**

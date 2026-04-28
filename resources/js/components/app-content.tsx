@@ -16,7 +16,7 @@ export function AppContent({
     if (variant === 'sidebar') {
         return (
             <SidebarInset
-                className={cn('text-[0.9375rem] sm:text-base', className)}
+                className={cn('text-[0.875rem] sm:text-[0.9375rem]', className)}
                 {...props}
             >
                 {children}
@@ -27,7 +27,7 @@ export function AppContent({
     return (
         <main
             className={cn(
-                'mx-auto flex h-full w-full max-w-7xl flex-1 flex-col gap-4 rounded-md text-[0.9375rem] sm:text-base',
+                'mx-auto flex h-full w-full max-w-7xl flex-1 flex-col gap-4 rounded-md text-[0.875rem] sm:text-[0.9375rem]',
                 className,
             )}
             {...props}

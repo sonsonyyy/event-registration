@@ -122,7 +122,6 @@ test('managers can view a verification queue scoped to their assigned section', 
 
     $this->actingAs($manager)
         ->get(route('registrations.verification.index', [
-            'status' => 'all',
             'search' => 'Grace Community',
             'per_page' => 10,
         ]))
@@ -196,6 +195,98 @@ test('admins can open uploaded receipts and verify online registrations', functi
         ->and($registration->verified_at)->not->toBeNull();
 
     Notification::assertSentTo($registrant, RegistrationVerified::class);
+});
+
+test('admins can filter the verification queue by section within their district', function () {
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $alphaSection = Section::factory()->for($district)->create([
+        'name' => 'Alpha Section',
+    ]);
+    $betaSection = Section::factory()->for($district)->create([
+        'name' => 'Beta Section',
+    ]);
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $event = verificationEvent([
+        'district_id' => $district->id,
+        'department_id' => null,
+    ]);
+    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+    ]);
+    $alphaPastor = Pastor::factory()->for($alphaSection)->create([
+        'church_name' => 'Alpha Community Church',
+    ]);
+    $betaPastor = Pastor::factory()->for($betaSection)->create([
+        'church_name' => 'Beta Gospel Church',
+    ]);
+    $alphaRegistrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $district->id,
+        'section_id' => $alphaSection->id,
+        'pastor_id' => $alphaPastor->id,
+    ]);
+    $betaRegistrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $district->id,
+        'section_id' => $betaSection->id,
+        'pastor_id' => $betaPastor->id,
+    ]);
+
+    createOnlineRegistrationForVerification(
+        $event,
+        $alphaPastor,
+        $alphaRegistrant,
+        $feeCategory,
+        [
+            'payment_reference' => 'ALPHA-0001',
+        ],
+    );
+    createOnlineRegistrationForVerification(
+        $event,
+        $betaPastor,
+        $betaRegistrant,
+        $feeCategory,
+        [
+            'payment_reference' => 'BETA-0001',
+        ],
+    );
+    createOnlineRegistrationForVerification(
+        $event,
+        $betaPastor,
+        $betaRegistrant,
+        $feeCategory,
+        [
+            'registration_status' => Registration::STATUS_VERIFIED,
+            'verified_at' => now()->subMinutes(30),
+            'verified_by_user_id' => $admin->id,
+            'payment_reference' => 'BETA-0002',
+        ],
+    );
+
+    $this->actingAs($admin)
+        ->get(route('registrations.verification.index', [
+            'section_id' => $betaSection->id,
+            'status' => 'all',
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/verification/index')
+            ->where('filters.section_id', $betaSection->id)
+            ->where('filters.status', 'all')
+            ->has('sections', 2)
+            ->where('sections.0.name', 'Alpha Section')
+            ->where('sections.1.name', 'Beta Section')
+            ->where('summary.pending_verification', 1)
+            ->where('summary.needs_correction', 0)
+            ->where('summary.verified', 1)
+            ->where('summary.rejected', 0)
+            ->has('registrations.data', 2)
+            ->where('registrations.data.0.pastor.section_name', 'Beta Section')
+            ->where('registrations.data.1.pastor.section_name', 'Beta Section')
+            ->where('registrations.meta.total', 2));
 });
 
 test('verification receipt route redirects to a temporary url when receipts are stored on s3', function () {

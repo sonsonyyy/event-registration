@@ -11,7 +11,7 @@ use App\Models\Section;
 use App\Models\User;
 use App\Support\NotificationRecipientResolver;
 
-test('resolver returns account request reviewers for the matching section and super admins only', function () {
+test('resolver returns account request reviewers for the matching district admins, section managers, and super admins', function () {
     $district = District::factory()->create();
     $section = Section::factory()->for($district)->create();
     $otherSection = Section::factory()->for($district)->create();
@@ -32,6 +32,13 @@ test('resolver returns account request reviewers for the matching section and su
         ]);
 
     $eligibleSuperAdmin = User::factory()->superAdmin()->create();
+    $eligibleAdmin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $eligibleDepartmentAdmin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+        'department_id' => Department::factory()->create()->id,
+    ]);
     $eligibleManager = User::factory()->manager()->create([
         'district_id' => $district->id,
         'section_id' => $section->id,
@@ -66,6 +73,8 @@ test('resolver returns account request reviewers for the matching section and su
 
     expect($reviewerIds)->toBe([
         $eligibleSuperAdmin->id,
+        $eligibleAdmin->id,
+        $eligibleDepartmentAdmin->id,
         $eligibleManager->id,
         $eligibleDepartmentManager->id,
     ]);
@@ -88,6 +97,7 @@ test('resolver returns verification reviewers for district departmental registra
     ]);
     $event = Event::factory()->create([
         'scope_type' => Event::SCOPE_DISTRICT,
+        'district_id' => $district->id,
         'department_id' => $department->id,
         'status' => Event::STATUS_OPEN,
         'registration_open_at' => now()->subDay(),
