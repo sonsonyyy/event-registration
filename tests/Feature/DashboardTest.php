@@ -32,9 +32,7 @@ test('authenticated users can visit the dashboard', function () {
             ->where('auth.user.email', $user->email)
             ->where('notifications.unread_count', 0)
             ->has('notifications.recent', 0)
-            ->has('dashboard.hero')
             ->has('dashboard.links')
-            ->has('dashboard.scope')
             ->has('dashboard.metrics', 4)
             ->has('dashboard.open_events')
             ->has('dashboard.recent_registrations')
@@ -139,7 +137,6 @@ test('manager dashboard is limited to the assigned section scope', function () {
 
     $response->assertInertia(fn (Assert $page) => $page
         ->component('dashboard')
-        ->where('dashboard.scope.summary', 'Section 1, Central Luzon')
         ->where('dashboard.links.open_events.href', route('registrations.onsite.create', absolute: false))
         ->where('dashboard.links.recent_activity.href', route('registrations.onsite.index', absolute: false))
         ->where('dashboard.metrics.0.value', 1)
@@ -194,9 +191,6 @@ test('department-scoped admins only see district events and registrations for th
         ->get(route('dashboard'))
         ->assertInertia(fn (Assert $page) => $page
             ->component('dashboard')
-            ->where('dashboard.scope.summary', 'Youth Ministries district events')
-            ->where('dashboard.scope.items.2.value', 'Youth Ministries')
-            ->where('dashboard.scope.items.3.value', 'District-owned event activity')
             ->where('dashboard.metrics.0.value', 1)
             ->where('dashboard.metrics.1.value', 1)
             ->has('dashboard.open_events', 1)
@@ -340,7 +334,6 @@ test('online registrant dashboard is limited to the assigned church scope', func
 
     $response->assertInertia(fn (Assert $page) => $page
         ->component('dashboard')
-        ->where('dashboard.scope.summary', 'Grace Community Church')
         ->where('dashboard.links.open_events.href', route('registrations.online.create', absolute: false))
         ->where('dashboard.links.recent_activity.href', route('registrations.online.index', absolute: false))
         ->where('dashboard.metrics.0.value', 1)

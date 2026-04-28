@@ -1,18 +1,29 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { Plus } from 'lucide-react';
+import { useState } from 'react';
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
 import {
     DataTableBadge,
     resolveDataTableTone,
 } from '@/components/data-table-badge';
 import DataTablePagination from '@/components/data-table-pagination';
-import { elevatedIndexTableStyles } from '@/components/data-table-presets';
+import {
+    elevatedIndexTableStyles,
+    reviewWorkspaceStyles,
+} from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import Heading from '@/components/heading';
 import RegistrationRecordDialog from '@/components/registration-record-dialog';
 import { Button } from '@/components/ui/button';
-import { formatSystemDateTime } from '@/lib/date-time';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
+import { formatSystemDateTime } from '@/lib/date-time';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
 
@@ -52,13 +63,28 @@ type RegistrationRecord = {
     items: RegistrationItemRecord[];
 };
 
+type SectionOption = {
+    id: number;
+    name: string;
+    district_name: string | null;
+};
+
 type Props = {
     registrations: PaginatedData<RegistrationRecord>;
     filters: {
+        section_id: number | null;
         search: string;
         per_page: number;
     };
+    sections: SectionOption[];
     perPageOptions: number[];
+};
+
+type OnsiteIndexQuery = {
+    section_id?: number;
+    search?: string;
+    per_page: number;
+    page?: number;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -79,7 +105,7 @@ const formatCurrency = (value: string): string =>
     }).format(Number.parseFloat(value || '0'));
 
 const formatDate = (value: string | null): string => {
-    if (! value) {
+    if (!value) {
         return 'Not submitted';
     }
 
@@ -89,61 +115,97 @@ const formatDate = (value: string | null): string => {
 export default function OnsiteRegistrationIndex({
     registrations,
     filters,
+    sections,
     perPageOptions,
 }: Props) {
     const [search, setSearch] = useState(filters.search);
+    const [sectionId, setSectionId] = useState(
+        filters.section_id !== null ? String(filters.section_id) : 'all',
+    );
     const [selectedRegistration, setSelectedRegistration] =
         useState<RegistrationRecord | null>(null);
 
-    useEffect(() => {
-        setSearch(filters.search);
-    }, [filters.search]);
-
-    const visitIndex = (query: {
-        search?: string;
-        per_page: number;
+    const buildQuery = ({
+        searchValue,
+        sectionValue,
+        perPage,
+        page,
+    }: {
+        searchValue: string;
+        sectionValue: string;
+        perPage: number;
         page?: number;
-    }): void => {
-        router.get(OnsiteRegistrationController.index.url({ query }), {}, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+    }): OnsiteIndexQuery => {
+        const normalizedSearch = searchValue.trim();
+
+        return {
+            ...(sectionValue !== 'all'
+                ? { section_id: Number(sectionValue) }
+                : {}),
+            ...(normalizedSearch !== '' ? { search: normalizedSearch } : {}),
+            per_page: perPage,
+            ...(page !== undefined && page > 1 ? { page } : {}),
+        };
+    };
+
+    const visitIndex = (query: OnsiteIndexQuery): void => {
+        router.get(
+            OnsiteRegistrationController.index.url({ query }),
+            {},
+            {
+                preserveScroll: true,
+                preserveState: false,
+                replace: true,
+            },
+        );
     };
 
     const submitSearch = (): void => {
-        const normalizedSearch = search.trim();
-
-        visitIndex({
-            ...(normalizedSearch !== '' ? { search: normalizedSearch } : {}),
-            per_page: filters.per_page,
-        });
+        visitIndex(
+            buildQuery({
+                searchValue: search,
+                sectionValue: sectionId,
+                perPage: filters.per_page,
+            }),
+        );
     };
 
     const updatePerPage = (value: number): void => {
-        visitIndex({
-            ...(filters.search !== '' ? { search: filters.search } : {}),
-            per_page: value,
-        });
+        visitIndex(
+            buildQuery({
+                searchValue: filters.search,
+                sectionValue:
+                    filters.section_id !== null
+                        ? String(filters.section_id)
+                        : 'all',
+                perPage: value,
+            }),
+        );
     };
 
     const changePage = (pageNumber: number): void => {
-        visitIndex({
-            ...(filters.search !== '' ? { search: filters.search } : {}),
-            per_page: filters.per_page,
-            ...(pageNumber > 1 ? { page: pageNumber } : {}),
-        });
+        visitIndex(
+            buildQuery({
+                searchValue: filters.search,
+                sectionValue:
+                    filters.section_id !== null
+                        ? String(filters.section_id)
+                        : 'all',
+                perPage: filters.per_page,
+                page: pageNumber,
+            }),
+        );
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Onsite Registration" />
 
-            <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+            <div className="flex flex-1 flex-col gap-5 p-4 md:p-5">
                 <Heading
                     title="Onsite registration"
                     description="Record walk-in quantities with multiple fee-category items in a single transaction."
-                    className="mb-4"
+                    className="mb-3"
                 />
 
                 <div className={elevatedIndexTableStyles.shell}>
@@ -159,53 +221,139 @@ export default function OnsiteRegistrationIndex({
                             }
                             inputClassName={elevatedIndexTableStyles.input}
                             actionClassName={elevatedIndexTableStyles.action}
-                            action={(
-                                <Button
-                                    asChild
+                            action={
+                                <div
                                     className={
-                                        elevatedIndexTableStyles.primaryButton
+                                        elevatedIndexTableStyles.headerActions
                                     }
                                 >
-                                    <Link href={OnsiteRegistrationController.create()}>
-                                        New onsite transaction
-                                    </Link>
-                                </Button>
-                            )}
+                                    {sections.length > 0 && (
+                                        <Select
+                                            value={sectionId}
+                                            onValueChange={(value) => {
+                                                setSectionId(value);
+                                                visitIndex(
+                                                    buildQuery({
+                                                        searchValue: search,
+                                                        sectionValue: value,
+                                                        perPage:
+                                                            filters.per_page,
+                                                    }),
+                                                );
+                                            }}
+                                        >
+                                            <SelectTrigger
+                                                className={
+                                                    elevatedIndexTableStyles.selectTrigger
+                                                }
+                                            >
+                                                <SelectValue placeholder="All sections" />
+                                            </SelectTrigger>
+                                            <SelectContent
+                                                align="end"
+                                                className={
+                                                    elevatedIndexTableStyles.selectContent
+                                                }
+                                            >
+                                                <SelectItem
+                                                    value="all"
+                                                    className={
+                                                        elevatedIndexTableStyles.selectItem
+                                                    }
+                                                >
+                                                    All sections
+                                                </SelectItem>
+                                                {sections.map((section) => (
+                                                    <SelectItem
+                                                        key={section.id}
+                                                        value={String(
+                                                            section.id,
+                                                        )}
+                                                        className={
+                                                            elevatedIndexTableStyles.selectItem
+                                                        }
+                                                    >
+                                                        {section.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+
+                                    <Button
+                                        asChild
+                                        className={
+                                            elevatedIndexTableStyles.primaryButton
+                                        }
+                                    >
+                                        <Link
+                                            href={OnsiteRegistrationController.create()}
+                                        >
+                                            <Plus className="size-4" />
+                                            New onsite transaction
+                                        </Link>
+                                    </Button>
+                                </div>
+                            }
                         />
                     </div>
 
                     <div className="overflow-x-auto">
                         <table className={elevatedIndexTableStyles.table}>
                             <thead className={elevatedIndexTableStyles.thead}>
-                                <tr className={elevatedIndexTableStyles.headerRow}>
+                                <tr
+                                    className={
+                                        elevatedIndexTableStyles.headerRow
+                                    }
+                                >
                                     <th
                                         className={
                                             elevatedIndexTableStyles.firstHeaderCell
                                         }
                                     >
-                                    Transaction
+                                        Transaction
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Church
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Church
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Items
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Items
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Totals
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Totals
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Payment
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Payment
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Encoded by
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Encoded by
                                     </th>
                                     <th
                                         className={
                                             elevatedIndexTableStyles.lastHeaderCellRight
                                         }
                                     >
-                                    Actions
+                                        Actions
                                     </th>
                                 </tr>
                             </thead>
@@ -244,150 +392,177 @@ export default function OnsiteRegistrationIndex({
                                     registrations.data.map((registration) => (
                                         <tr
                                             key={registration.id}
-                                            className={elevatedIndexTableStyles.row}
+                                            className={
+                                                elevatedIndexTableStyles.row
+                                            }
                                         >
-                                            <td className={elevatedIndexTableStyles.firstCell}>
-                                            <div className="font-medium text-foreground">
-                                                {registration.event.name}
-                                            </div>
-                                            <div className="mt-1 text-sm text-muted-foreground">
-                                                {formatDate(
-                                                    registration.submitted_at,
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.firstCell
+                                                }
+                                            >
+                                                <div className="font-medium text-foreground">
+                                                    {registration.event.name}
+                                                </div>
+                                                <div className="mt-1 flex flex-wrap items-center gap-2">
+                                                    <span className="text-[12px] text-muted-foreground sm:text-[13px]">
+                                                        {formatDate(
+                                                            registration.submitted_at,
+                                                        )}
+                                                    </span>
+                                                    <DataTableBadge
+                                                        tone={resolveDataTableTone(
+                                                            registration.registration_status,
+                                                            {
+                                                                completed:
+                                                                    'emerald',
+                                                                verified:
+                                                                    'emerald',
+                                                                cancelled:
+                                                                    'rose',
+                                                            },
+                                                            'amber',
+                                                        )}
+                                                    >
+                                                        {
+                                                            registration.registration_status
+                                                        }
+                                                    </DataTableBadge>
+                                                </div>
+                                            </td>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <div className="font-medium text-foreground">
+                                                    {
+                                                        registration.pastor
+                                                            .church_name
+                                                    }
+                                                </div>
+                                                <div className="mt-1 line-clamp-1 text-[12px] text-muted-foreground sm:text-[13px]">
+                                                    {
+                                                        registration.pastor
+                                                            .pastor_name
+                                                    }
+                                                    {' • '}
+                                                    {
+                                                        registration.pastor
+                                                            .section_name
+                                                    }
+                                                    {' • '}
+                                                    {
+                                                        registration.pastor
+                                                            .district_name
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <div className="space-y-1.5">
+                                                    {registration.items.map(
+                                                        (item) => (
+                                                            <div
+                                                                key={item.id}
+                                                                className="space-y-0.5"
+                                                            >
+                                                                <div className="font-medium text-foreground">
+                                                                    {
+                                                                        item.category_name
+                                                                    }
+                                                                </div>
+                                                                <div className="text-[12px] text-muted-foreground sm:text-[13px]">
+                                                                    {
+                                                                        item.quantity
+                                                                    }{' '}
+                                                                    x{' '}
+                                                                    {formatCurrency(
+                                                                        item.unit_amount,
+                                                                    )}{' '}
+                                                                    ={' '}
+                                                                    {formatCurrency(
+                                                                        item.subtotal_amount,
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ),
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} text-[12px] text-muted-foreground sm:text-[13px]`}
+                                            >
+                                                <div className="font-medium text-foreground">
+                                                    {
+                                                        registration.total_quantity
+                                                    }{' '}
+                                                    delegates •{' '}
+                                                    {formatCurrency(
+                                                        registration.total_amount,
+                                                    )}
+                                                </div>
+                                                {registration.remarks && (
+                                                    <div className="mt-1 line-clamp-1 max-w-sm">
+                                                        {registration.remarks}
+                                                    </div>
                                                 )}
-                                            </div>
-                                            <div className="mt-2">
+                                            </td>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
                                                 <DataTableBadge
                                                     tone={resolveDataTableTone(
-                                                        registration.registration_status,
+                                                        registration.payment_status,
                                                         {
-                                                            completed:
-                                                                'emerald',
-                                                            verified:
-                                                                'emerald',
-                                                            cancelled:
-                                                                'rose',
+                                                            paid: 'emerald',
+                                                            unpaid: 'rose',
+                                                            partial: 'amber',
                                                         },
-                                                        'amber',
                                                     )}
                                                 >
                                                     {
-                                                        registration.registration_status
+                                                        registration.payment_status
                                                     }
                                                 </DataTableBadge>
-                                            </div>
-                                            </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <div className="font-medium text-foreground">
-                                                {
-                                                    registration.pastor
-                                                        .church_name
-                                                }
-                                            </div>
-                                            <div className="mt-1 text-sm text-muted-foreground">
-                                                {
-                                                    registration.pastor
-                                                        .pastor_name
-                                                }
-                                            </div>
-                                            <div className="mt-2 text-xs uppercase tracking-wide text-muted-foreground">
-                                                {
-                                                    registration.pastor
-                                                        .section_name
-                                                }{' '}
-                                                ·{' '}
-                                                {
-                                                    registration.pastor
-                                                        .district_name
-                                                }
-                                            </div>
-                                            </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <div className="space-y-2">
-                                                {registration.items.map(
-                                                    (item) => (
-                                                        <div
-                                                            key={item.id}
-                                                            className="rounded-md border border-sidebar-border/60 bg-background px-3 py-2"
-                                                        >
-                                                            <div className="font-medium text-foreground">
-                                                                {
-                                                                    item.category_name
-                                                                }
-                                                            </div>
-                                                            <div className="mt-1 text-sm text-muted-foreground">
-                                                                {
-                                                                    item.quantity
-                                                                }{' '}
-                                                                x{' '}
-                                                                {formatCurrency(
-                                                                    item.unit_amount,
-                                                                )}{' '}
-                                                                ={' '}
-                                                                {formatCurrency(
-                                                                    item.subtotal_amount,
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    ),
-                                                )}
-                                            </div>
-                                            </td>
-                                            <td
-                                                className={`${elevatedIndexTableStyles.cell} text-sm text-muted-foreground`}
-                                            >
-                                            <div>
-                                                Quantity{' '}
-                                                {registration.total_quantity}
-                                            </div>
-                                            <div className="mt-2 font-medium text-foreground">
-                                                {formatCurrency(
-                                                    registration.total_amount,
-                                                )}
-                                            </div>
-                                            {registration.remarks && (
-                                                <div className="mt-2 max-w-sm text-sm">
-                                                    {registration.remarks}
+                                                <div className="mt-1 line-clamp-1 text-[12px] text-muted-foreground sm:text-[13px]">
+                                                    {registration.payment_reference ??
+                                                        'No receipt reference'}
                                                 </div>
-                                            )}
-                                            </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <DataTableBadge
-                                                tone={resolveDataTableTone(
-                                                    registration.payment_status,
-                                                    {
-                                                        paid: 'emerald',
-                                                        unpaid: 'rose',
-                                                        partial: 'amber',
-                                                    },
-                                                )}
-                                            >
-                                                {registration.payment_status}
-                                            </DataTableBadge>
-                                            <div className="mt-2 text-sm text-muted-foreground">
-                                                {registration.payment_reference ??
-                                                    'No receipt reference'}
-                                            </div>
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.cell} text-muted-foreground`}
                                             >
-                                            <div>{registration.encoded_by.name}</div>
+                                                <div>
+                                                    {
+                                                        registration.encoded_by
+                                                            .name
+                                                    }
+                                                </div>
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
                                             >
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() =>
-                                                    setSelectedRegistration(
-                                                        registration,
-                                                    )
-                                                }
-                                            >
-                                                View
-                                            </Button>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className={
+                                                        reviewWorkspaceStyles.surfaceButton
+                                                    }
+                                                    onClick={() =>
+                                                        setSelectedRegistration(
+                                                            registration,
+                                                        )
+                                                    }
+                                                >
+                                                    View
+                                                </Button>
                                             </td>
                                         </tr>
                                     ))
@@ -426,7 +601,9 @@ export default function OnsiteRegistrationIndex({
                             inactivePageButtonClassName={
                                 elevatedIndexTableStyles.inactivePageButton
                             }
-                            ellipsisClassName={elevatedIndexTableStyles.ellipsis}
+                            ellipsisClassName={
+                                elevatedIndexTableStyles.ellipsis
+                            }
                         />
                     </div>
                 </div>

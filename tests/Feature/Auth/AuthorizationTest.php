@@ -26,7 +26,8 @@ test('admins can perform all protected actions', function () {
     expect($gate->allows('create', User::class))->toBeTrue();
     expect($gate->allows('verifyReceipt', $context['districtOnlineRegistration']))->toBeTrue();
     expect($gate->allows('viewAnyVerification', Registration::class))->toBeTrue();
-    expect($gate->allows('viewAnyApprovalQueue', User::class))->toBeFalse();
+    expect($gate->allows('viewAnyApprovalQueue', User::class))->toBeTrue();
+    expect($gate->allows('reviewRegistrantRequest', $context['pendingRegistrantRequest']))->toBeTrue();
     expect($gate->allows('viewReports'))->toBeTrue();
     expect($gate->allows('viewSectionReport', $context['section']))->toBeTrue();
     expect($gate->allows('viewPastorReport', $context['pastorOutsideSection']))->toBeTrue();

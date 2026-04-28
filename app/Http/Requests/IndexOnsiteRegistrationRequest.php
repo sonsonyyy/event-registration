@@ -3,8 +3,10 @@
 namespace App\Http\Requests;
 
 use App\Models\Registration;
+use App\Models\Section;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class IndexOnsiteRegistrationRequest extends FormRequest
 {
@@ -24,6 +26,11 @@ class IndexOnsiteRegistrationRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'section_id' => [
+                'nullable',
+                'integer',
+                Rule::exists(Section::class, 'id')->whereNull('deleted_at'),
+            ],
             'search' => ['nullable', 'string', 'max:255'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'page' => ['nullable', 'integer', 'min:1'],
@@ -33,11 +40,14 @@ class IndexOnsiteRegistrationRequest extends FormRequest
     /**
      * Get the normalized filter payload.
      *
-     * @return array{search: string, per_page: int}
+     * @return array{section_id: int|null, search: string, per_page: int}
      */
     public function filters(): array
     {
         return [
+            'section_id' => $this->filled('section_id')
+                ? (int) $this->validated('section_id')
+                : null,
             'search' => trim((string) $this->validated('search', '')),
             'per_page' => (int) $this->validated('per_page', 10),
         ];
@@ -51,6 +61,7 @@ class IndexOnsiteRegistrationRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'section_id.exists' => 'Choose a valid section.',
             'search.max' => 'Search terms must be 255 characters or fewer.',
             'per_page.min' => 'Rows per page must be at least 1.',
             'per_page.max' => 'Rows per page may not be greater than 100.',

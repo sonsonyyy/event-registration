@@ -17,8 +17,7 @@ const dataTableBadgeToneClasses: Record<DataTableBadgeTone, string> = {
     amber: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-500/10 dark:text-amber-300',
     rose: 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-500/10 dark:text-rose-300',
     blue: 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-500/10 dark:text-blue-300',
-    violet:
-        'border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-900 dark:bg-violet-500/10 dark:text-violet-300',
+    violet: 'border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-900 dark:bg-violet-500/10 dark:text-violet-300',
 };
 
 type DataTableBadgeProps = {
@@ -38,7 +37,7 @@ export function DataTableBadge({
         <Badge
             variant="outline"
             className={cn(
-                'w-fit rounded-md px-2.5 py-1',
+                'w-fit rounded-md px-2 py-1 text-[11px]',
                 capitalize && 'capitalize',
                 dataTableBadgeToneClasses[tone],
                 className,

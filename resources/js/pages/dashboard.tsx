@@ -11,11 +11,11 @@ import Heading from '@/components/heading';
 import SummaryStatCards from '@/components/summary-stat-cards';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import AppLayout from '@/layouts/app-layout';
 import {
     formatSystemDateRange,
     formatSystemDateTime,
 } from '@/lib/date-time';
-import AppLayout from '@/layouts/app-layout';
 import { dashboard as dashboardRoute } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
@@ -30,11 +30,6 @@ type DashboardMetric = {
     label: string;
     value: number;
     description: string;
-};
-
-type ScopeItem = {
-    label: string;
-    value: string;
 };
 
 type DashboardEvent = {
@@ -61,12 +56,6 @@ type DashboardRegistration = {
 
 type Props = {
     dashboard: {
-        role_name: string | null;
-        hero: {
-            eyebrow: string;
-            title: string;
-            description: string;
-        };
         account_notice: {
             status: string;
             title: string;
@@ -81,12 +70,6 @@ type Props = {
                 label: string;
                 href: string;
             };
-        };
-        scope: {
-            title: string;
-            summary: string;
-            description: string;
-            items: ScopeItem[];
         };
         metrics: DashboardMetric[];
         open_events: DashboardEvent[];
@@ -196,24 +179,24 @@ export default function Dashboard({ dashboard }: Props) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
 
-            <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+            <div className="flex flex-1 flex-col gap-5 p-4 md:p-5">
                 <Heading
                     title="Dashboard"
-                    description="Role-aware overview of event availability, scope, and recent registration activity."
-                    className="mb-4"
+                    description="Event availability, account status, and recent registration activity."
+                    className="mb-3"
                 />
 
                 {dashboard.account_notice && (
                     <Card className={`overflow-hidden py-0 ${noticeClassName}`}>
-                        <CardContent className="p-5">
+                        <CardContent className="p-4 sm:p-5">
                             <div className="space-y-2">
                                 <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
                                     Account status
                                 </div>
-                                <div className="text-xl font-semibold tracking-[-0.03em] text-slate-900 dark:text-slate-100">
+                                <div className="text-lg font-semibold tracking-[-0.03em] text-slate-900 dark:text-slate-100 sm:text-xl">
                                     {dashboard.account_notice.title}
                                 </div>
-                                <p className="max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                                <p className="max-w-3xl text-[13px] leading-5 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-6">
                                     {dashboard.account_notice.description}
                                 </p>
                             </div>
@@ -221,66 +204,7 @@ export default function Dashboard({ dashboard }: Props) {
                     </Card>
                 )}
 
-                <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_360px]">
-                    <Card className="overflow-hidden border border-[#29544e] border-t-4 border-t-[#8bc4b5] bg-[#123630] py-0 text-white shadow-2xl shadow-[#123630]/20">
-                        <CardContent className="p-6 sm:p-8">
-                            <div className="space-y-6">
-                                <div className="space-y-4">
-                                    <Badge className="rounded-full bg-white/10 px-4 py-1.5 text-xs font-semibold tracking-[0.18em] text-white uppercase hover:bg-white/10">
-                                        {dashboard.role_name ?? 'Dashboard'}
-                                    </Badge>
-                                    <div className="space-y-2">
-                                        <div className="text-xs font-semibold tracking-[0.18em] text-[#b6d6cd] uppercase">
-                                            {dashboard.hero.eyebrow}
-                                        </div>
-                                        <h2 className="max-w-3xl text-3xl font-extrabold tracking-[-0.04em] text-balance sm:text-4xl">
-                                            {dashboard.hero.title}
-                                        </h2>
-                                        <p className="max-w-2xl text-sm leading-7 text-[#d3e5df] sm:text-base">
-                                            {dashboard.hero.description}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="overflow-hidden border border-[#d3ddd8] border-t-4 border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8">
-                        <CardContent className="p-6">
-                            <div className="space-y-6">
-                                <div className="space-y-2">
-                                    <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                                        {dashboard.scope.title}
-                                    </div>
-                                    <div className="text-2xl font-bold tracking-[-0.03em] text-slate-900">
-                                        {dashboard.scope.summary}
-                                    </div>
-                                    <p className="text-sm leading-6 text-slate-600">
-                                        {dashboard.scope.description}
-                                    </p>
-                                </div>
-
-                                <div className="divide-y divide-[#e2ebe6]">
-                                    {dashboard.scope.items.map((item) => (
-                                        <div
-                                            key={item.label}
-                                            className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0"
-                                        >
-                                            <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                                                {item.label}
-                                            </div>
-                                            <div className="text-right text-sm font-semibold text-slate-900">
-                                                {item.value}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <SummaryStatCards
                         gridClassName="contents"
                         items={dashboard.metrics.map((metric) => {
@@ -299,26 +223,26 @@ export default function Dashboard({ dashboard }: Props) {
                     />
                 </div>
 
-                <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+                <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
                     <Card className="overflow-hidden border border-[#d3ddd8] border-t-4 border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8">
                         <CardContent className="p-0">
-                            <div className="border-b border-[#e2ebe6] px-6 py-6">
+                            <div className="border-b border-[#e2ebe6] px-5 py-5">
                                 <div className="space-y-2">
                                     <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
                                         Open events
                                     </div>
-                                    <div className="text-2xl font-bold tracking-[-0.03em] text-slate-900">
+                                    <div className="text-xl font-semibold tracking-[-0.03em] text-slate-900 sm:text-[1.375rem]">
                                         Available registrations
                                     </div>
-                                    <p className="text-sm leading-6 text-slate-600">
+                                    <p className="text-[13px] leading-5 text-slate-600 sm:text-sm sm:leading-6">
                                         Current event capacity and registration windows available from your dashboard.
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="px-6 py-2">
+                            <div className="px-5 py-1.5">
                                 {dashboard.open_events.length === 0 ? (
-                                    <div className="py-10 text-sm text-slate-600">
+                                    <div className="py-8 text-[13px] text-slate-600 sm:text-sm">
                                         No open events are currently available.
                                     </div>
                                 ) : (
@@ -326,25 +250,25 @@ export default function Dashboard({ dashboard }: Props) {
                                         {dashboard.open_events.map((event) => (
                                             <div
                                                 key={event.id}
-                                                className="grid gap-4 py-4 md:grid-cols-[minmax(0,1fr)_180px] md:items-start"
+                                                className="grid gap-3 py-3.5 md:grid-cols-[minmax(0,1fr)_170px] md:items-start"
                                             >
-                                                <div className="space-y-2">
-                                                    <div className="text-lg font-semibold text-slate-900">
+                                                <div className="space-y-1.5">
+                                                    <div className="text-[15px] font-semibold text-slate-900 sm:text-base">
                                                         {event.name}
                                                     </div>
-                                                    <div className="text-sm text-slate-600">
+                                                    <div className="text-[13px] text-slate-600">
                                                         {formatSystemDateRange(event.date_from, event.date_to)}
                                                     </div>
-                                                    <div className="text-sm text-slate-500">
+                                                    <div className="text-[12px] text-slate-500 sm:text-[13px]">
                                                         {event.venue}
                                                     </div>
                                                 </div>
 
-                                                <div className="space-y-2 text-left md:text-right">
-                                                    <div className="text-sm font-semibold text-[#184d47]">
+                                                <div className="space-y-1.5 text-left md:text-right">
+                                                    <div className="text-[13px] font-semibold text-[#184d47] sm:text-sm">
                                                         {event.remaining_slots} slots left
                                                     </div>
-                                                    <div className="text-sm text-slate-500">
+                                                    <div className="text-[12px] text-slate-500 sm:text-[13px]">
                                                         Closes {formatDateTime(event.registration_close_at)}
                                                     </div>
                                                 </div>
@@ -358,23 +282,23 @@ export default function Dashboard({ dashboard }: Props) {
 
                     <Card className="overflow-hidden border border-[#d3ddd8] border-t-4 border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8">
                         <CardContent className="p-0">
-                            <div className="border-b border-[#e2ebe6] px-6 py-6">
+                            <div className="border-b border-[#e2ebe6] px-5 py-5">
                                 <div className="space-y-2">
                                     <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
                                         Recent activity
                                     </div>
-                                    <div className="text-2xl font-bold tracking-[-0.03em] text-slate-900">
+                                    <div className="text-xl font-semibold tracking-[-0.03em] text-slate-900 sm:text-[1.375rem]">
                                         Latest registrations
                                     </div>
-                                    <p className="text-sm leading-6 text-slate-600">
+                                    <p className="text-[13px] leading-5 text-slate-600 sm:text-sm sm:leading-6">
                                         Recent registration activity visible within your access scope.
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="px-6 py-2">
+                            <div className="px-5 py-1.5">
                                 {dashboard.recent_registrations.length === 0 ? (
-                                    <div className="py-10 text-sm text-slate-600">
+                                    <div className="py-8 text-[13px] text-slate-600 sm:text-sm">
                                         No recent registrations are available for your current scope.
                                     </div>
                                 ) : (
@@ -382,18 +306,18 @@ export default function Dashboard({ dashboard }: Props) {
                                         {dashboard.recent_registrations.map((registration) => (
                                             <div
                                                 key={registration.id}
-                                                className="space-y-3 py-4"
+                                                className="space-y-2.5 py-3.5"
                                             >
                                                 <div className="flex items-start justify-between gap-4">
                                                     <div className="space-y-1">
-                                                        <div className="font-semibold text-slate-900">
+                                                        <div className="text-[15px] font-semibold text-slate-900 sm:text-base">
                                                             {registration.event_name}
                                                         </div>
-                                                        <div className="text-sm text-slate-600">
+                                                        <div className="text-[13px] text-slate-600">
                                                             {registration.church_name}
                                                         </div>
                                                     </div>
-                                                    <div className="text-sm text-slate-500">
+                                                    <div className="text-[12px] text-slate-500 sm:text-[13px]">
                                                         #{registration.id}
                                                     </div>
                                                 </div>
@@ -420,7 +344,7 @@ export default function Dashboard({ dashboard }: Props) {
                                                     </Badge>
                                                 </div>
 
-                                                <div className="grid gap-2 text-sm text-slate-600">
+                                                <div className="grid gap-1.5 text-[13px] text-slate-600 sm:text-sm">
                                                     <div className="flex items-center justify-between gap-4">
                                                         <span>Submitted</span>
                                                         <span className="font-medium text-slate-900">

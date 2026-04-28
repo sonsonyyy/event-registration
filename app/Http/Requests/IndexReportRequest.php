@@ -25,6 +25,7 @@ class IndexReportRequest extends FormRequest
         return [
             'event_id' => ['nullable', 'integer', 'exists:events,id'],
             'section_id' => ['nullable', 'integer', 'exists:sections,id'],
+            'tab' => ['nullable', 'string', 'in:section-summary,church-summary,no-registration'],
             'search' => ['nullable', 'string', 'max:255'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'page' => ['nullable', 'integer', 'min:1'],
@@ -34,7 +35,13 @@ class IndexReportRequest extends FormRequest
     /**
      * Get the normalized filter payload.
      *
-     * @return array{event_id: int|null, section_id: int|null, search: string, per_page: int}
+     * @return array{
+     *     event_id: int|null,
+     *     section_id: int|null,
+     *     tab: string,
+     *     search: string,
+     *     per_page: int
+     * }
      */
     public function filters(): array
     {
@@ -42,11 +49,14 @@ class IndexReportRequest extends FormRequest
         $sectionId = $this->validated('section_id');
         $search = $this->validated('search', '');
         $perPage = $this->validated('per_page', 10);
+        $normalizedSearch = trim((string) $search);
+        $defaultTab = $normalizedSearch !== '' ? 'no-registration' : 'section-summary';
 
         return [
             'event_id' => $eventId !== null ? (int) $eventId : null,
             'section_id' => $sectionId !== null ? (int) $sectionId : null,
-            'search' => trim((string) $search),
+            'tab' => (string) $this->validated('tab', $defaultTab),
+            'search' => $normalizedSearch,
             'per_page' => (int) $perPage,
         ];
     }
@@ -61,6 +71,7 @@ class IndexReportRequest extends FormRequest
         return [
             'event_id.exists' => 'Choose a valid event for reporting.',
             'section_id.exists' => 'Choose a valid section for reporting.',
+            'tab.in' => 'Choose a valid report tab.',
             'search.max' => 'Search terms must be 255 characters or fewer.',
             'per_page.min' => 'Rows per page must be at least 1.',
             'per_page.max' => 'Rows per page may not be greater than 100.',

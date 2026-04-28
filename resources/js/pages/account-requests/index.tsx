@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { BadgeCheck, CircleX, Clock3 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import RegistrantApprovalController from '@/actions/App/Http/Controllers/RegistrantApprovalController';
 import ConfirmActionDialog from '@/components/confirm-action-dialog';
 import {
@@ -17,7 +17,6 @@ import EntityRecordDialog from '@/components/entity-record-dialog';
 import Heading from '@/components/heading';
 import SummaryStatCards from '@/components/summary-stat-cards';
 import { Button } from '@/components/ui/button';
-import { formatSystemDateTime as formatManilaDateTime } from '@/lib/date-time';
 import {
     Select,
     SelectContent,
@@ -26,12 +25,19 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
+import { formatSystemDateTime as formatManilaDateTime } from '@/lib/date-time';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
 
 type StatusOption = {
     value: string;
     label: string;
+};
+
+type SectionOption = {
+    id: number;
+    name: string;
+    district_name: string | null;
 };
 
 type AccountRequestRecord = {
@@ -64,12 +70,22 @@ type Props = {
     };
     requests: PaginatedData<AccountRequestRecord>;
     filters: {
+        section_id: number | null;
         search: string;
         status: string;
         per_page: number;
     };
+    sections: SectionOption[];
     statusOptions: StatusOption[];
     perPageOptions: number[];
+};
+
+type AccountRequestIndexQuery = {
+    section_id?: number;
+    search?: string;
+    status: string;
+    per_page: number;
+    page?: number;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -84,7 +100,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const formatDateTime = (value: string | null): string => {
-    if (! value) {
+    if (!value) {
         return 'Not reviewed yet';
     }
 
@@ -96,10 +112,14 @@ export default function AccountRequestsIndex({
     summary,
     requests,
     filters,
+    sections,
     statusOptions,
     perPageOptions,
 }: Props) {
     const [search, setSearch] = useState(filters.search);
+    const [sectionId, setSectionId] = useState(
+        filters.section_id !== null ? String(filters.section_id) : 'all',
+    );
     const [status, setStatus] = useState(filters.status);
     const [selectedRequest, setSelectedRequest] =
         useState<AccountRequestRecord | null>(null);
@@ -109,25 +129,42 @@ export default function AccountRequestsIndex({
     } | null>(null);
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
-    useEffect(() => {
-        setSearch(filters.search);
-    }, [filters.search]);
-
-    useEffect(() => {
-        setStatus(filters.status);
-    }, [filters.status]);
-
-    const visitIndex = (query: {
-        search?: string;
-        status: string;
-        per_page: number;
+    const buildQuery = ({
+        searchValue,
+        sectionValue,
+        statusValue,
+        perPage,
+        page,
+    }: {
+        searchValue: string;
+        sectionValue: string;
+        statusValue: string;
+        perPage: number;
         page?: number;
-    }): void => {
-        router.get(RegistrantApprovalController.index.url({ query }), {}, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+    }): AccountRequestIndexQuery => {
+        const normalizedSearch = searchValue.trim();
+
+        return {
+            ...(sectionValue !== 'all'
+                ? { section_id: Number(sectionValue) }
+                : {}),
+            ...(normalizedSearch !== '' ? { search: normalizedSearch } : {}),
+            status: statusValue,
+            per_page: perPage,
+            ...(page !== undefined && page > 1 ? { page } : {}),
+        };
+    };
+
+    const visitIndex = (query: AccountRequestIndexQuery): void => {
+        router.get(
+            RegistrantApprovalController.index.url({ query }),
+            {},
+            {
+                preserveScroll: true,
+                preserveState: false,
+                replace: true,
+            },
+        );
     };
 
     const reviewRequest = (): void => {
@@ -182,14 +219,14 @@ export default function AccountRequestsIndex({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Account Requests" />
 
-            <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+            <div className="flex flex-1 flex-col gap-5 p-4 md:p-5">
                 <Heading
                     title="Registrant account requests"
                     description={`Review church representative account requests within ${scopeSummary}.`}
                 />
 
                 <SummaryStatCards
-                    gridClassName="grid gap-4 xl:grid-cols-3"
+                    gridClassName="grid gap-3 xl:grid-cols-3"
                     items={summaryCards}
                 />
 
@@ -199,12 +236,14 @@ export default function AccountRequestsIndex({
                             searchValue={search}
                             onSearchValueChange={setSearch}
                             onSubmit={() =>
-                                visitIndex({
-                                    search: search.trim() || undefined,
-                                    status,
-                                    per_page: filters.per_page,
-                                    page: 1,
-                                })
+                                visitIndex(
+                                    buildQuery({
+                                        searchValue: search,
+                                        sectionValue: sectionId,
+                                        statusValue: status,
+                                        perPage: filters.per_page,
+                                    }),
+                                )
                             }
                             placeholder="Search representative, email, church, pastor, or section"
                             className={reviewWorkspaceStyles.toolbar}
@@ -214,34 +253,95 @@ export default function AccountRequestsIndex({
                             inputClassName={reviewWorkspaceStyles.input}
                             actionClassName={reviewWorkspaceStyles.action}
                             action={
-                                <div className="flex w-full sm:w-auto">
+                                <div className="flex w-full flex-col gap-3 xl:flex-row xl:items-center xl:justify-end">
+                                    {sections.length > 0 && (
+                                        <Select
+                                            value={sectionId}
+                                            onValueChange={(value) => {
+                                                setSectionId(value);
+                                                visitIndex(
+                                                    buildQuery({
+                                                        searchValue: search,
+                                                        sectionValue: value,
+                                                        statusValue: status,
+                                                        perPage:
+                                                            filters.per_page,
+                                                    }),
+                                                );
+                                            }}
+                                        >
+                                            <SelectTrigger
+                                                className={
+                                                    reviewWorkspaceStyles.selectTrigger
+                                                }
+                                            >
+                                                <SelectValue placeholder="All sections" />
+                                            </SelectTrigger>
+                                            <SelectContent
+                                                align="end"
+                                                className={
+                                                    reviewWorkspaceStyles.selectContent
+                                                }
+                                            >
+                                                <SelectItem
+                                                    value="all"
+                                                    className={
+                                                        reviewWorkspaceStyles.selectItem
+                                                    }
+                                                >
+                                                    All sections
+                                                </SelectItem>
+                                                {sections.map((section) => (
+                                                    <SelectItem
+                                                        key={section.id}
+                                                        value={String(
+                                                            section.id,
+                                                        )}
+                                                        className={
+                                                            reviewWorkspaceStyles.selectItem
+                                                        }
+                                                    >
+                                                        {section.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+
                                     <Select
                                         value={status}
                                         onValueChange={(value) => {
                                             setStatus(value);
-                                            visitIndex({
-                                                search:
-                                                    search.trim() || undefined,
-                                                status: value,
-                                                per_page: filters.per_page,
-                                                page: 1,
-                                            });
+                                            visitIndex(
+                                                buildQuery({
+                                                    searchValue: search,
+                                                    sectionValue: sectionId,
+                                                    statusValue: value,
+                                                    perPage: filters.per_page,
+                                                }),
+                                            );
                                         }}
                                     >
                                         <SelectTrigger
-                                            className={reviewWorkspaceStyles.selectTrigger}
+                                            className={
+                                                reviewWorkspaceStyles.selectTrigger
+                                            }
                                         >
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent
                                             align="end"
-                                            className={reviewWorkspaceStyles.selectContent}
+                                            className={
+                                                reviewWorkspaceStyles.selectContent
+                                            }
                                         >
                                             {statusOptions.map((option) => (
                                                 <SelectItem
                                                     key={option.value}
                                                     value={option.value}
-                                                    className={reviewWorkspaceStyles.selectItem}
+                                                    className={
+                                                        reviewWorkspaceStyles.selectItem
+                                                    }
                                                 >
                                                     {option.label}
                                                 </SelectItem>
@@ -256,7 +356,11 @@ export default function AccountRequestsIndex({
                     <div className="overflow-x-auto">
                         <table className={elevatedIndexTableStyles.table}>
                             <thead className={elevatedIndexTableStyles.thead}>
-                                <tr className={elevatedIndexTableStyles.headerRow}>
+                                <tr
+                                    className={
+                                        elevatedIndexTableStyles.headerRow
+                                    }
+                                >
                                     <th
                                         className={
                                             elevatedIndexTableStyles.firstHeaderCell
@@ -264,13 +368,25 @@ export default function AccountRequestsIndex({
                                     >
                                         Requester
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
                                         Church
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
                                         Requested
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
                                         Status
                                     </th>
                                     <th
@@ -306,7 +422,10 @@ export default function AccountRequestsIndex({
                                                         elevatedIndexTableStyles.emptyDescription
                                                     }
                                                 >
-                                                    Adjust the search term or change the status filter to review a different queue segment.
+                                                    Adjust the search term or
+                                                    change the status filter to
+                                                    review a different queue
+                                                    segment.
                                                 </div>
                                             </div>
                                         </td>
@@ -315,7 +434,9 @@ export default function AccountRequestsIndex({
                                     requests.data.map((accountRequest) => (
                                         <tr
                                             key={accountRequest.id}
-                                            className={elevatedIndexTableStyles.row}
+                                            className={
+                                                elevatedIndexTableStyles.row
+                                            }
                                         >
                                             <td
                                                 className={
@@ -325,7 +446,7 @@ export default function AccountRequestsIndex({
                                                 <div className="font-medium text-slate-900 dark:text-slate-100">
                                                     {accountRequest.name}
                                                 </div>
-                                                <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                                <div className="mt-1 line-clamp-1 text-[12px] text-slate-500 sm:text-[13px] dark:text-slate-400">
                                                     {accountRequest.email}
                                                 </div>
                                             </td>
@@ -339,24 +460,22 @@ export default function AccountRequestsIndex({
                                                         ?.church_name ??
                                                         'No church assigned'}
                                                 </div>
-                                                <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                                <div className="mt-1 line-clamp-1 text-[12px] text-slate-500 sm:text-[13px] dark:text-slate-400">
                                                     {accountRequest.pastor
                                                         ?.pastor_name ??
                                                         'No pastor assigned'}
-                                                </div>
-                                                <div className="mt-3 text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                                                    {' • '}
+                                                    {accountRequest.pastor
+                                                        ?.section_name ??
+                                                        'No section'}
+                                                    {' • '}
                                                     {accountRequest.pastor
                                                         ?.district_name ??
                                                         'No district'}
                                                 </div>
-                                                <div className="mt-1 text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
-                                                    {accountRequest.pastor
-                                                        ?.section_name ??
-                                                        'No section'}
-                                                </div>
                                             </td>
                                             <td
-                                                className={`${elevatedIndexTableStyles.cell} text-sm text-slate-500 dark:text-slate-400`}
+                                                className={`${elevatedIndexTableStyles.cell} text-[12px] text-slate-500 sm:text-[13px] dark:text-slate-400`}
                                             >
                                                 <div>
                                                     Submitted{' '}
@@ -364,26 +483,26 @@ export default function AccountRequestsIndex({
                                                         accountRequest.created_at,
                                                     )}
                                                 </div>
-                                                <div className="mt-3">
+                                                <div className="mt-1.5">
                                                     {accountRequest.approval_reviewer ? (
-                                                        <>
-                                                            <div className="font-medium text-slate-900 dark:text-slate-100">
-                                                                Reviewed by{' '}
+                                                        <div className="line-clamp-2">
+                                                            Reviewed by{' '}
+                                                            <span className="font-medium text-slate-900 dark:text-slate-100">
                                                                 {
                                                                     accountRequest
                                                                         .approval_reviewer
                                                                         .name
                                                                 }
-                                                            </div>
-                                                            <div className="mt-1">
-                                                                {formatDateTime(
-                                                                    accountRequest.approval_reviewed_at,
-                                                                )}
-                                                            </div>
-                                                        </>
+                                                            </span>
+                                                            {' • '}
+                                                            {formatDateTime(
+                                                                accountRequest.approval_reviewed_at,
+                                                            )}
+                                                        </div>
                                                     ) : (
                                                         <div>
-                                                            Waiting for reviewer action
+                                                            Waiting for reviewer
+                                                            action
                                                         </div>
                                                     )}
                                                 </div>
@@ -393,7 +512,7 @@ export default function AccountRequestsIndex({
                                                     elevatedIndexTableStyles.cell
                                                 }
                                             >
-                                                <div className="flex flex-col gap-3">
+                                                <div className="flex flex-wrap gap-1.5">
                                                     <DataTableBadge
                                                         tone={resolveDataTableTone(
                                                             accountRequest.approval_status,
@@ -432,7 +551,9 @@ export default function AccountRequestsIndex({
                                                     type="button"
                                                     size="sm"
                                                     variant="outline"
-                                                    className={reviewWorkspaceStyles.surfaceButton}
+                                                    className={
+                                                        reviewWorkspaceStyles.surfaceButton
+                                                    }
                                                     onClick={() =>
                                                         setSelectedRequest(
                                                             accountRequest,
@@ -479,20 +600,31 @@ export default function AccountRequestsIndex({
                             }
                             ellipsisClassName={reviewWorkspaceStyles.ellipsis}
                             onRowsPerPageChange={(value) =>
-                                visitIndex({
-                                    search: filters.search || undefined,
-                                    status: filters.status,
-                                    per_page: value,
-                                    page: 1,
-                                })
+                                visitIndex(
+                                    buildQuery({
+                                        searchValue: filters.search,
+                                        sectionValue:
+                                            filters.section_id !== null
+                                                ? String(filters.section_id)
+                                                : 'all',
+                                        statusValue: filters.status,
+                                        perPage: value,
+                                    }),
+                                )
                             }
                             onPageChange={(pageNumber) =>
-                                visitIndex({
-                                    search: filters.search || undefined,
-                                    status: filters.status,
-                                    per_page: filters.per_page,
-                                    page: pageNumber,
-                                })
+                                visitIndex(
+                                    buildQuery({
+                                        searchValue: filters.search,
+                                        sectionValue:
+                                            filters.section_id !== null
+                                                ? String(filters.section_id)
+                                                : 'all',
+                                        statusValue: filters.status,
+                                        perPage: filters.per_page,
+                                        page: pageNumber,
+                                    }),
+                                )
                             }
                         />
                     </div>
@@ -635,7 +767,9 @@ export default function AccountRequestsIndex({
                                 </Button>
                                 <Button
                                     type="button"
-                                    className={reviewWorkspaceStyles.primaryButton}
+                                    className={
+                                        reviewWorkspaceStyles.primaryButton
+                                    }
                                     onClick={() => {
                                         const request = selectedRequest;
                                         setSelectedRequest(null);
@@ -654,7 +788,9 @@ export default function AccountRequestsIndex({
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    className={reviewWorkspaceStyles.dangerButton}
+                                    className={
+                                        reviewWorkspaceStyles.dangerButton
+                                    }
                                     onClick={() => {
                                         const request = selectedRequest;
                                         setSelectedRequest(null);

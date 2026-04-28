@@ -26,20 +26,20 @@ export default function SummaryStatCards({ items, gridClassName }: Props) {
                     key={item.title}
                     className={`${reviewWorkspaceStyles.summaryCard} ${item.cardClassName}`}
                 >
-                    <div className="flex items-start justify-between gap-3 sm:gap-4">
-                        <div className="space-y-2 sm:space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1.5 sm:space-y-2">
                             <div
-                                className={`text-[11px] font-semibold tracking-[0.2em] uppercase sm:text-xs sm:tracking-[0.22em] ${reviewWorkspaceStyles.summaryEyebrow}`}
+                                className={`text-[10px] font-semibold tracking-[0.18em] uppercase sm:text-[11px] sm:tracking-[0.2em] ${reviewWorkspaceStyles.summaryEyebrow}`}
                             >
                                 {item.title}
                             </div>
                             <div
-                                className={`text-2xl font-semibold tracking-[-0.04em] sm:text-3xl ${reviewWorkspaceStyles.summaryValue}`}
+                                className={`text-xl font-semibold tracking-[-0.04em] sm:text-2xl ${reviewWorkspaceStyles.summaryValue}`}
                             >
                                 {item.value}
                             </div>
                             <div
-                                className={`text-[13px] sm:text-sm ${reviewWorkspaceStyles.summarySubtitle}`}
+                                className={`text-[12px] sm:text-[13px] ${reviewWorkspaceStyles.summarySubtitle}`}
                             >
                                 {item.subtitle}
                             </div>
@@ -48,13 +48,16 @@ export default function SummaryStatCards({ items, gridClassName }: Props) {
                         <div
                             className={cn(
                                 item.iconPresentation === 'plain'
-                                    ? 'flex size-9 items-center justify-center sm:size-11'
+                                    ? 'flex size-8 items-center justify-center sm:size-9'
                                     : reviewWorkspaceStyles.summaryIconWrapper,
                                 item.iconWrapperClassName,
                             )}
                         >
                             <item.icon
-                                className={cn('size-4.5 sm:size-5', item.iconClassName)}
+                                className={cn(
+                                    'size-4 sm:size-4.5',
+                                    item.iconClassName,
+                                )}
                             />
                         </div>
                     </div>

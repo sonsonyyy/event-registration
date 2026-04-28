@@ -10,6 +10,7 @@ use App\Models\EventFeeCategory;
 use App\Models\Pastor;
 use App\Models\Registration;
 use App\Models\RegistrationItem;
+use App\Models\Section;
 use App\Models\User;
 use App\Support\DepartmentScopeAccess;
 use App\Support\EventCapacity;
@@ -36,7 +37,17 @@ class OnsiteRegistrationController extends Controller
 
         $user = $request->user();
         $filters = $request->filters();
-        $registrations = $this->onsiteRegistrationIndexQuery($user, $filters['search'])
+        $sections = $this->sectionOptions($user);
+        $filters['section_id'] = $this->selectedSectionId(
+            $sections,
+            $filters['section_id'],
+        );
+
+        $registrations = $this->onsiteRegistrationIndexQuery(
+            $user,
+            $filters['search'],
+            $filters['section_id'],
+        )
             ->paginate($filters['per_page'])
             ->withQueryString();
 
@@ -56,6 +67,14 @@ class OnsiteRegistrationController extends Controller
                 ],
             ],
             'filters' => $filters,
+            'sections' => $sections
+                ->map(fn (Section $section): array => [
+                    'id' => $section->getKey(),
+                    'name' => $section->name,
+                    'district_name' => $section->district?->name,
+                ])
+                ->values()
+                ->all(),
             'perPageOptions' => [10, 25, 50],
         ]);
     }
@@ -392,6 +411,49 @@ class OnsiteRegistrationController extends Controller
     }
 
     /**
+     * Fetch the section filter options available to the current user.
+     *
+     * @return Collection<int, Section>
+     */
+    private function sectionOptions(?User $user): Collection
+    {
+        if ($user === null || (! $user->isAdmin() && ! $user->isSuperAdmin())) {
+            return collect();
+        }
+
+        return Section::query()
+            ->with('district:id,name')
+            ->where('status', 'active')
+            ->when(
+                $user->isAdmin(),
+                function (Builder $query) use ($user): void {
+                    if ($user->district_id === null) {
+                        $query->whereRaw('1 = 0');
+
+                        return;
+                    }
+
+                    $query->where('district_id', $user->district_id);
+                },
+            )
+            ->orderBy('name')
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * Normalize the selected section filter to the current user's available scope.
+     */
+    private function selectedSectionId(Collection $sections, ?int $sectionId): ?int
+    {
+        if ($sectionId === null || ! $sections->contains('id', $sectionId)) {
+            return null;
+        }
+
+        return $sectionId;
+    }
+
+    /**
      * Ensure the selected fee categories still satisfy event and category capacity.
      *
      * @param  Collection<int, EventFeeCategory>  $feeCategories
@@ -526,7 +588,7 @@ class OnsiteRegistrationController extends Controller
         ];
     }
 
-    private function onsiteRegistrationIndexQuery(?User $user, string $search): Builder
+    private function onsiteRegistrationIndexQuery(?User $user, string $search, ?int $sectionId): Builder
     {
         $registrations = Registration::query()
             ->where('registration_mode', Registration::MODE_ONSITE)
@@ -581,6 +643,12 @@ class OnsiteRegistrationController extends Controller
 
         if ($user?->isRegistrationStaff()) {
             $registrations->where('encoded_by_user_id', $user->getKey());
+        }
+
+        if ($sectionId !== null) {
+            $registrations->whereHas('pastor', function (Builder $query) use ($sectionId): void {
+                $query->where('section_id', $sectionId);
+            });
         }
 
         return $registrations;

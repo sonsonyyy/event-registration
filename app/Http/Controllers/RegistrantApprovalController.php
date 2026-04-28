@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\IndexRegistrantApprovalRequest;
 use App\Http\Requests\UpdateRegistrantApprovalRequest;
 use App\Models\Role;
+use App\Models\Section;
 use App\Models\User;
 use App\Notifications\RegistrantAccessApproved;
 use App\Notifications\RegistrantAccessRejected;
@@ -12,6 +13,7 @@ use App\Support\DepartmentScopeAccess;
 use App\Support\NotificationRecipientResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Notification;
@@ -29,13 +31,23 @@ class RegistrantApprovalController extends Controller
 
         $reviewer = $request->user();
         $filters = $request->filters();
-        $requests = $this->approvalQuery($reviewer, $filters['search'], $filters['status'])
+        $sections = $this->sectionOptions($reviewer);
+        $filters['section_id'] = $this->selectedSectionId(
+            $sections,
+            $filters['section_id'],
+        );
+        $requests = $this->approvalQuery(
+            $reviewer,
+            $filters['search'],
+            $filters['status'],
+            $filters['section_id'],
+        )
             ->paginate($filters['per_page'])
             ->withQueryString();
 
         return Inertia::render('account-requests/index', [
             'scopeSummary' => $this->scopeSummary($reviewer),
-            'summary' => $this->summaryData($reviewer),
+            'summary' => $this->summaryData($reviewer, $filters['section_id']),
             'requests' => [
                 'data' => $requests->getCollection()
                     ->map(fn (User $user): array => $this->requestData($user))
@@ -51,6 +63,14 @@ class RegistrantApprovalController extends Controller
                 ],
             ],
             'filters' => $filters,
+            'sections' => $sections
+                ->map(fn (Section $section): array => [
+                    'id' => $section->getKey(),
+                    'name' => $section->name,
+                    'district_name' => $section->district?->name,
+                ])
+                ->values()
+                ->all(),
             'statusOptions' => $this->statusOptions(),
             'perPageOptions' => [10, 25, 50],
         ]);
@@ -106,7 +126,7 @@ class RegistrantApprovalController extends Controller
         );
     }
 
-    private function approvalQuery(User $reviewer, string $search, string $status): Builder
+    private function approvalQuery(User $reviewer, string $search, string $status, ?int $sectionId): Builder
     {
         $query = User::query()
             ->where('account_source', User::ACCOUNT_SOURCE_SELF_SERVICE)
@@ -131,6 +151,12 @@ class RegistrantApprovalController extends Controller
             ->orderByDesc('id');
 
         DepartmentScopeAccess::scopeRegistrantApprovalQueue($query, $reviewer);
+
+        if ($sectionId !== null) {
+            $query->whereHas('pastor', function (Builder $pastorQuery) use ($sectionId): void {
+                $pastorQuery->where('section_id', $sectionId);
+            });
+        }
 
         if ($status !== 'all') {
             $query->where('approval_status', $status);
@@ -167,7 +193,7 @@ class RegistrantApprovalController extends Controller
      *
      * @return array{pending: int, approved: int, rejected: int}
      */
-    private function summaryData(User $reviewer): array
+    private function summaryData(User $reviewer, ?int $sectionId): array
     {
         $query = User::query()
             ->where('account_source', User::ACCOUNT_SOURCE_SELF_SERVICE)
@@ -176,6 +202,12 @@ class RegistrantApprovalController extends Controller
             });
 
         DepartmentScopeAccess::scopeRegistrantApprovalQueue($query, $reviewer);
+
+        if ($sectionId !== null) {
+            $query->whereHas('pastor', function (Builder $pastorQuery) use ($sectionId): void {
+                $pastorQuery->where('section_id', $sectionId);
+            });
+        }
 
         return [
             'pending' => (clone $query)
@@ -193,6 +225,49 @@ class RegistrantApprovalController extends Controller
     private function scopeSummary(User $reviewer): string
     {
         return DepartmentScopeAccess::approvalScopeSummary($reviewer);
+    }
+
+    /**
+     * Fetch the section filter options available to the current reviewer.
+     *
+     * @return Collection<int, Section>
+     */
+    private function sectionOptions(User $reviewer): Collection
+    {
+        if (! $reviewer->isAdmin() && ! $reviewer->isSuperAdmin()) {
+            return collect();
+        }
+
+        return Section::query()
+            ->with('district:id,name')
+            ->where('status', 'active')
+            ->when(
+                $reviewer->isAdmin(),
+                function (Builder $query) use ($reviewer): void {
+                    if ($reviewer->district_id === null) {
+                        $query->whereRaw('1 = 0');
+
+                        return;
+                    }
+
+                    $query->where('district_id', $reviewer->district_id);
+                },
+            )
+            ->orderBy('name')
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * Normalize the selected section filter to the current reviewer scope.
+     */
+    private function selectedSectionId(Collection $sections, ?int $sectionId): ?int
+    {
+        if ($sectionId === null || ! $sections->contains('id', $sectionId)) {
+            return null;
+        }
+
+        return $sectionId;
     }
 
     /**
