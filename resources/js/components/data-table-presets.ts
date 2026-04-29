@@ -6,7 +6,7 @@ export const elevatedIndexTableStyles = {
     input: 'h-9 rounded-md border-slate-200 bg-white pl-10 text-[12px] text-slate-900 shadow-none placeholder:text-slate-400 sm:h-10 sm:pl-11 sm:text-[13px] focus-visible:border-[#184d47]/35 focus-visible:ring-[#184d47]/12 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500',
     action: 'w-full lg:w-auto',
     primaryButton:
-        'h-9 rounded-md text-[12px] shadow-xs sm:h-10 sm:text-[13px]',
+        'h-9 whitespace-nowrap rounded-md text-[12px] shadow-xs sm:h-10 sm:text-[13px]',
     selectTrigger:
         'h-9 w-full rounded-md border-slate-200 bg-white px-3 text-[12px] text-slate-700 shadow-none data-[placeholder]:text-slate-400 sm:h-10 sm:min-w-48 sm:px-3.5 sm:text-[13px] focus-visible:border-[#184d47]/35 focus-visible:ring-[#184d47]/12 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:data-[placeholder]:text-slate-500',
     selectContent:
@@ -20,11 +20,11 @@ export const elevatedIndexTableStyles = {
     headerRow:
         'text-left text-[10px] uppercase tracking-[0.14em] text-muted-foreground sm:text-[11px] sm:tracking-[0.16em] dark:text-slate-400',
     headerCell:
-        'py-2 pr-3 font-medium text-slate-500 sm:py-2.5 sm:pr-3.5 dark:text-slate-400',
+        'py-2 pr-3 font-medium whitespace-nowrap text-slate-500 sm:py-2.5 sm:pr-3.5 dark:text-slate-400',
     firstHeaderCell:
-        'py-2 pr-3 pl-4 font-medium text-slate-500 sm:py-2.5 sm:pr-3.5 sm:pl-5 dark:text-slate-400',
+        'py-2 pr-3 pl-4 font-medium whitespace-nowrap text-slate-500 sm:py-2.5 sm:pr-3.5 sm:pl-5 dark:text-slate-400',
     lastHeaderCellRight:
-        'py-2 pr-4 text-right font-medium text-slate-500 sm:py-2.5 sm:pr-5 dark:text-slate-400',
+        'py-2 pr-4 text-right font-medium whitespace-nowrap text-slate-500 sm:py-2.5 sm:pr-5 dark:text-slate-400',
     tbody: 'divide-y divide-slate-200/80 dark:divide-slate-800',
     row: 'bg-background transition-colors odd:bg-white even:bg-slate-50/70 hover:bg-[#f3f8f6] dark:bg-slate-950 dark:odd:bg-slate-950 dark:even:bg-slate-900/50 dark:hover:bg-slate-900',
     firstCell: 'px-4 py-2.5 align-middle sm:px-5 sm:py-3',
@@ -109,11 +109,11 @@ export const reviewWorkspaceStyles = {
     referenceTag:
         'mt-1.5 inline-flex rounded-md bg-slate-100 px-2.5 py-1 text-[10px] font-semibold tracking-[0.14em] uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-200',
     surfaceButton:
-        'rounded-md border-[#d6e2de] bg-white text-slate-700 shadow-xs hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800',
+        'whitespace-nowrap rounded-md border-[#d6e2de] bg-white text-slate-700 shadow-xs hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800',
     primaryButton:
-        'rounded-md bg-[#184d47] text-white shadow-xs hover:bg-[#143f3a] disabled:bg-[#184d47]/35 disabled:text-white',
+        'whitespace-nowrap rounded-md bg-[#184d47] text-white shadow-xs hover:bg-[#143f3a] disabled:bg-[#184d47]/35 disabled:text-white',
     dangerButton:
-        'rounded-md border-rose-200 bg-white text-rose-700 shadow-xs hover:bg-rose-50 hover:text-rose-800 dark:border-rose-900 dark:bg-slate-950 dark:text-rose-300 dark:hover:bg-rose-950/40 dark:hover:text-rose-200',
+        'whitespace-nowrap rounded-md border-rose-200 bg-white text-rose-700 shadow-xs hover:bg-rose-50 hover:text-rose-800 dark:border-rose-900 dark:bg-slate-950 dark:text-rose-300 dark:hover:bg-rose-950/40 dark:hover:text-rose-200',
     paginationWrapper:
         'border-t border-[#dce4e1] bg-white/75 px-3 py-2.5 sm:px-4 sm:py-3 md:px-5 dark:border-slate-800 dark:bg-slate-950/70',
     pagination: 'gap-3 border-none pt-0',

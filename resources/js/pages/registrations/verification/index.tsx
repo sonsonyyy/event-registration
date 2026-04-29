@@ -4,6 +4,7 @@ import {
     BadgeCheck,
     CircleX,
     Clock3,
+    Eye,
     FileSearch,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -154,6 +155,8 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: RegistrationVerificationController.index(),
     },
 ];
+
+const verificationTableClassName = `${elevatedIndexTableStyles.table} min-w-[88rem]`;
 
 const formatCurrency = (value: string): string =>
     new Intl.NumberFormat(undefined, {
@@ -465,7 +468,7 @@ export default function RegistrationVerificationIndex({
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className={elevatedIndexTableStyles.table}>
+                        <table className={verificationTableClassName}>
                             <thead className={elevatedIndexTableStyles.thead}>
                                 <tr
                                     className={
@@ -484,6 +487,13 @@ export default function RegistrationVerificationIndex({
                                             elevatedIndexTableStyles.headerCell
                                         }
                                     >
+                                        Submitted by
+                                    </th>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
                                         Church
                                     </th>
                                     <th
@@ -492,6 +502,13 @@ export default function RegistrationVerificationIndex({
                                         }
                                     >
                                         Items
+                                    </th>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Totals
                                     </th>
                                     <th
                                         className={
@@ -520,7 +537,7 @@ export default function RegistrationVerificationIndex({
                                 {registrations.data.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={6}
+                                            colSpan={8}
                                             className={
                                                 elevatedIndexTableStyles.emptyCell
                                             }
@@ -557,9 +574,7 @@ export default function RegistrationVerificationIndex({
                                             }
                                         >
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.firstCell
-                                                }
+                                                className={`${elevatedIndexTableStyles.firstCell} min-w-[16rem]`}
                                             >
                                                 <div
                                                     className={
@@ -578,28 +593,29 @@ export default function RegistrationVerificationIndex({
                                                         'Not submitted',
                                                     )}
                                                 </div>
-                                                {registration.submitted_by && (
-                                                    <div
-                                                        className={`${elevatedIndexTableStyles.metricText} line-clamp-1`}
-                                                    >
-                                                        {
-                                                            registration
-                                                                .submitted_by
-                                                                .name
-                                                        }
-                                                        {' • '}
-                                                        {
-                                                            registration
-                                                                .submitted_by
-                                                                .email
-                                                        }
-                                                    </div>
-                                                )}
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[13rem]`}
+                                            >
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                >
+                                                    {registration.submitted_by
+                                                        ?.name ??
+                                                        'Not available'}
+                                                </div>
+                                                <div
+                                                    className={`${elevatedIndexTableStyles.secondaryText} whitespace-nowrap`}
+                                                >
+                                                    {registration.submitted_by
+                                                        ?.email ??
+                                                        'No email on record'}
+                                                </div>
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[14rem]`}
                                             >
                                                 <div
                                                     className={
@@ -612,37 +628,21 @@ export default function RegistrationVerificationIndex({
                                                     }
                                                 </div>
                                                 <div
-                                                    className={
-                                                        elevatedIndexTableStyles.secondaryText
-                                                    }
+                                                    className={`${elevatedIndexTableStyles.secondaryText} whitespace-nowrap`}
                                                 >
                                                     {
                                                         registration.pastor
                                                             .pastor_name
                                                     }
-                                                    {' • '}
+                                                    {' - '}
                                                     {
                                                         registration.pastor
                                                             .section_name
                                                     }
-                                                    {' • '}
-                                                    {
-                                                        registration.pastor
-                                                            .district_name
-                                                    }
                                                 </div>
-                                                {registration.remarks && (
-                                                    <div
-                                                        className={`${elevatedIndexTableStyles.metricText} line-clamp-1`}
-                                                    >
-                                                        {registration.remarks}
-                                                    </div>
-                                                )}
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[18rem]`}
                                             >
                                                 <div className="space-y-1.5">
                                                     {registration.items.map(
@@ -651,71 +651,69 @@ export default function RegistrationVerificationIndex({
                                                                 key={item.id}
                                                                 className="space-y-0.5"
                                                             >
-                                                                <div
-                                                                    className={
-                                                                        elevatedIndexTableStyles.primaryText
-                                                                    }
-                                                                >
+                                                                <div className="text-[12px] font-medium whitespace-nowrap text-foreground sm:text-[13px]">
                                                                     {
                                                                         item.category_name
-                                                                    }
-                                                                </div>
-                                                                <div className="text-[12px] text-muted-foreground sm:text-[13px]">
-                                                                    {
-                                                                        item.quantity
                                                                     }{' '}
-                                                                    ×{' '}
-                                                                    {formatCurrency(
-                                                                        item.unit_amount,
-                                                                    )}{' '}
-                                                                    ={' '}
-                                                                    {formatCurrency(
-                                                                        item.subtotal_amount,
-                                                                    )}
+                                                                    -{' '}
+                                                                    <span className="text-muted-foreground">
+                                                                        {
+                                                                            item.quantity
+                                                                        }{' '}
+                                                                        x{' '}
+                                                                        {formatCurrency(
+                                                                            item.unit_amount,
+                                                                        )}
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                         ),
                                                     )}
-                                                    <div
-                                                        className={
-                                                            elevatedIndexTableStyles.metricText
-                                                        }
-                                                    >
-                                                        {
-                                                            registration.total_quantity
-                                                        }{' '}
-                                                        delegates •{' '}
-                                                        {formatCurrency(
-                                                            registration.total_amount,
-                                                        )}
-                                                    </div>
                                                 </div>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[10rem] text-[12px] text-muted-foreground sm:text-[13px]`}
                                             >
-                                                <div
-                                                    className={
-                                                        elevatedIndexTableStyles.primaryText
-                                                    }
-                                                >
-                                                    {registration.receipt
-                                                        .original_name ??
-                                                        'No receipt uploaded'}
+                                                <div className="font-medium whitespace-nowrap text-foreground">
+                                                    {
+                                                        registration.total_quantity
+                                                    }{' '}
+                                                    delegates
                                                 </div>
-                                                <div
-                                                    className={`${elevatedIndexTableStyles.secondaryText} line-clamp-1`}
-                                                >
-                                                    {formatDateTime(
-                                                        registration.receipt
-                                                            .uploaded_at,
-                                                        'Not uploaded',
+                                                <div className="mt-1 font-medium text-foreground">
+                                                    {formatCurrency(
+                                                        registration.total_amount,
                                                     )}
-                                                    {registration.payment_reference &&
-                                                        ` • Ref. ${registration.payment_reference}`}
                                                 </div>
+                                                {registration.remarks && (
+                                                    <div className="mt-1 line-clamp-1 max-w-sm">
+                                                        {registration.remarks}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[12rem]`}
+                                            >
+                                                {registration.payment_reference ? (
+                                                    <DataTableBadge
+                                                        tone="slate"
+                                                        capitalize={false}
+                                                        className="font-mono font-semibold tracking-[0.04em]"
+                                                    >
+                                                        Ref.{' '}
+                                                        {
+                                                            registration.payment_reference
+                                                        }
+                                                    </DataTableBadge>
+                                                ) : (
+                                                    <div
+                                                        className={
+                                                            elevatedIndexTableStyles.secondaryText
+                                                        }
+                                                    >
+                                                        Reference not provided
+                                                    </div>
+                                                )}
                                                 <div className="mt-2">
                                                     <Button
                                                         asChild
@@ -740,9 +738,7 @@ export default function RegistrationVerificationIndex({
                                                 </div>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[12rem]`}
                                             >
                                                 <DataTableBadge
                                                     tone={resolveDataTableTone(
@@ -764,7 +760,7 @@ export default function RegistrationVerificationIndex({
                                                 </DataTableBadge>
                                             </td>
                                             <td
-                                                className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
+                                                className={`${elevatedIndexTableStyles.lastCellRight} min-w-[8rem] text-right`}
                                             >
                                                 <Button
                                                     type="button"
@@ -779,6 +775,7 @@ export default function RegistrationVerificationIndex({
                                                         )
                                                     }
                                                 >
+                                                    <Eye className="size-4" />
                                                     View
                                                 </Button>
                                             </td>

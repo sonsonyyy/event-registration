@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { BadgeCheck, CircleX, Clock3 } from 'lucide-react';
+import { BadgeCheck, CircleX, Clock3, Eye } from 'lucide-react';
 import { useState } from 'react';
 import RegistrantApprovalController from '@/actions/App/Http/Controllers/RegistrantApprovalController';
 import ConfirmActionDialog from '@/components/confirm-action-dialog';
@@ -98,6 +98,8 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: RegistrantApprovalController.index(),
     },
 ];
+
+const accountRequestsTableClassName = `${elevatedIndexTableStyles.table} min-w-[70rem]`;
 
 const formatDateTime = (value: string | null): string => {
     if (!value) {
@@ -354,7 +356,7 @@ export default function AccountRequestsIndex({
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className={elevatedIndexTableStyles.table}>
+                        <table className={accountRequestsTableClassName}>
                             <thead className={elevatedIndexTableStyles.thead}>
                                 <tr
                                     className={
@@ -439,43 +441,35 @@ export default function AccountRequestsIndex({
                                             }
                                         >
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.firstCell
-                                                }
+                                                className={`${elevatedIndexTableStyles.firstCell} min-w-[14rem]`}
                                             >
                                                 <div className="font-medium text-slate-900 dark:text-slate-100">
                                                     {accountRequest.name}
                                                 </div>
-                                                <div className="mt-1 line-clamp-1 text-[12px] text-slate-500 sm:text-[13px] dark:text-slate-400">
+                                                <div className="mt-1 text-[12px] whitespace-nowrap text-slate-500 sm:text-[13px] dark:text-slate-400">
                                                     {accountRequest.email}
                                                 </div>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[16rem]`}
                                             >
                                                 <div className="font-medium text-slate-900 dark:text-slate-100">
                                                     {accountRequest.pastor
                                                         ?.church_name ??
                                                         'No church assigned'}
                                                 </div>
-                                                <div className="mt-1 line-clamp-1 text-[12px] text-slate-500 sm:text-[13px] dark:text-slate-400">
+                                                <div className="mt-1 text-[12px] whitespace-nowrap text-slate-500 sm:text-[13px] dark:text-slate-400">
                                                     {accountRequest.pastor
                                                         ?.pastor_name ??
                                                         'No pastor assigned'}
-                                                    {' • '}
+                                                    {' - '}
                                                     {accountRequest.pastor
                                                         ?.section_name ??
                                                         'No section'}
-                                                    {' • '}
-                                                    {accountRequest.pastor
-                                                        ?.district_name ??
-                                                        'No district'}
                                                 </div>
                                             </td>
                                             <td
-                                                className={`${elevatedIndexTableStyles.cell} text-[12px] text-slate-500 sm:text-[13px] dark:text-slate-400`}
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[16rem] text-[12px] text-slate-500 sm:text-[13px] dark:text-slate-400`}
                                             >
                                                 <div>
                                                     Submitted{' '}
@@ -485,7 +479,7 @@ export default function AccountRequestsIndex({
                                                 </div>
                                                 <div className="mt-1.5">
                                                     {accountRequest.approval_reviewer ? (
-                                                        <div className="line-clamp-2">
+                                                        <div className="line-clamp-1">
                                                             Reviewed by{' '}
                                                             <span className="font-medium text-slate-900 dark:text-slate-100">
                                                                 {
@@ -494,10 +488,6 @@ export default function AccountRequestsIndex({
                                                                         .name
                                                                 }
                                                             </span>
-                                                            {' • '}
-                                                            {formatDateTime(
-                                                                accountRequest.approval_reviewed_at,
-                                                            )}
                                                         </div>
                                                     ) : (
                                                         <div>
@@ -508,11 +498,9 @@ export default function AccountRequestsIndex({
                                                 </div>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[12rem]`}
                                             >
-                                                <div className="flex flex-wrap gap-1.5">
+                                                <div className="flex flex-nowrap gap-1.5">
                                                     <DataTableBadge
                                                         tone={resolveDataTableTone(
                                                             accountRequest.approval_status,
@@ -545,7 +533,7 @@ export default function AccountRequestsIndex({
                                                 </div>
                                             </td>
                                             <td
-                                                className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
+                                                className={`${elevatedIndexTableStyles.lastCellRight} min-w-[8rem] text-right`}
                                             >
                                                 <Button
                                                     type="button"
@@ -560,6 +548,7 @@ export default function AccountRequestsIndex({
                                                         )
                                                     }
                                                 >
+                                                    <Eye className="size-4" />
                                                     View
                                                 </Button>
                                             </td>
