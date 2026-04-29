@@ -443,56 +443,6 @@ export default function ReportsIndex({
                     </Card>
                 ) : (
                     <>
-                        <div className="grid gap-4 md:grid-cols-3">
-                            <Card className="overflow-hidden rounded-md border border-t-4 border-[#d6e2de] border-t-[#184d47] bg-[linear-gradient(145deg,_rgba(24,77,71,0.10),_rgba(255,255,255,0.98))] py-0 shadow-sm shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-emerald-500 dark:bg-slate-950">
-                                <CardContent className="p-4">
-                                    <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                                        Total registered quantity
-                                    </div>
-                                    <div className="mt-3 text-[1.75rem] font-semibold text-slate-900 dark:text-slate-100">
-                                        {
-                                            eventTotalRegistration.total_registered_quantity
-                                        }
-                                    </div>
-                                    <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                                        All quantities in scope.
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="overflow-hidden rounded-md border border-t-4 border-[#d9e2de] border-t-slate-900 bg-white py-0 shadow-sm shadow-[#184d47]/6 dark:border-slate-800 dark:border-t-slate-200 dark:bg-slate-950">
-                                <CardContent className="p-4">
-                                    <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                                        Verified online quantity
-                                    </div>
-                                    <div className="mt-3 text-[1.75rem] font-semibold text-slate-900 dark:text-slate-100">
-                                        {
-                                            eventTotalRegistration.verified_online_quantity
-                                        }
-                                    </div>
-                                    <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                                        Online quantities already verified.
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="overflow-hidden rounded-md border border-t-4 border-[#ecd7d8] border-t-[#be4b56] bg-white py-0 shadow-sm shadow-[#be4b56]/8 dark:border-slate-800 dark:border-t-rose-500 dark:bg-slate-950">
-                                <CardContent className="p-4">
-                                    <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                                        Pending online quantity
-                                    </div>
-                                    <div className="mt-3 text-[1.75rem] font-semibold text-slate-900 dark:text-slate-100">
-                                        {
-                                            eventTotalRegistration.pending_online_quantity
-                                        }
-                                    </div>
-                                    <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                                        Online quantities awaiting review.
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-
                         <Card className={reportsPanelClassName}>
                             <CardContent className="p-0">
                                 <div className={reportsPanelHeaderClassName}>

@@ -10,6 +10,7 @@ use App\Models\RegistrationItem;
 use App\Models\Section;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
+use Spatie\SimpleExcel\SimpleExcelReader;
 
 test('admins can view event total registration and churches without registration reports', function () {
     $district = District::factory()->create([
@@ -620,15 +621,22 @@ test('admins can export churches without registration based on report scope', fu
             'search' => 'hope',
         ]));
 
-    $response->assertDownload('cld-youth-conference-2026-churches-without-registration-section-3.xls');
+    $response->assertDownload('no-registration-report-'.now()->toDateString().'.xlsx');
 
-    $content = $response->streamedContent();
+    $rows = exportedSpreadsheetRows($response);
 
-    expect($content)
-        ->toContain('Pastor Anne Reyes')
-        ->toContain('Hope Chapel')
-        ->toContain('Section 3')
-        ->not->toContain('Faith Harvest Church');
+    expect($rows)->toBe([
+        [
+            'Pastor name' => 'Pastor Anne Reyes',
+            'Church name' => 'Hope Chapel',
+            'Section' => 'Section 3',
+        ],
+        [
+            'Pastor name' => 'Totals',
+            'Church name' => '1 church',
+            'Section' => '',
+        ],
+    ]);
 
     expect($pastorThree->church_name)->toBe('Hope Chapel');
 });
@@ -675,16 +683,26 @@ test('admins can export churches with registration based on report scope', funct
             'search' => 'grace',
         ]));
 
-    $response->assertDownload('cld-youth-conference-2026-churches-with-registration-section-1.xls');
+    $response->assertDownload('registration-summary-by-church-'.now()->toDateString().'.xlsx');
 
-    $content = $response->streamedContent();
+    $rows = exportedSpreadsheetRows($response);
 
-    expect($content)
-        ->toContain('Pastor Jane Doe')
-        ->toContain('Grace Community Church')
-        ->toContain('Section 1')
-        ->toContain('2400.00')
-        ->not->toContain('Faith Harvest Church');
+    expect($rows)->toBe([
+        [
+            'Church name' => 'Grace Community Church',
+            'Pastor name' => 'Pastor Jane Doe',
+            'Section' => 'Section 1',
+            'Registered quantity' => 3,
+            'Registered value' => '2400.00',
+        ],
+        [
+            'Church name' => 'Totals',
+            'Pastor name' => '',
+            'Section' => '',
+            'Registered quantity' => 3,
+            'Registered value' => '2400.00',
+        ],
+    ]);
 
     expect($pastorOne->church_name)->toBe('Grace Community Church');
 });
@@ -754,4 +772,27 @@ function createReportedRegistration(
         ]);
 
     return $registration;
+}
+
+/**
+ * @return array<int, array<string, mixed>>
+ */
+function exportedSpreadsheetRows($response): array
+{
+    $temporaryPath = tempnam(sys_get_temp_dir(), 'report-test-');
+
+    if ($temporaryPath === false) {
+        throw new RuntimeException('Unable to create a temporary spreadsheet path for the report test.');
+    }
+
+    @unlink($temporaryPath);
+
+    $spreadsheetPath = $temporaryPath.'.xlsx';
+    file_put_contents($spreadsheetPath, $response->streamedContent());
+
+    try {
+        return SimpleExcelReader::create($spreadsheetPath)->getRows()->values()->all();
+    } finally {
+        @unlink($spreadsheetPath);
+    }
 }

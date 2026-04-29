@@ -14,9 +14,10 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
+use Spatie\SimpleExcel\SimpleExcelWriter;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportsController extends Controller
@@ -163,22 +164,9 @@ class ReportsController extends Controller
             $filters['search'],
         )->get();
 
-        $filename = $this->churchesWithRegistrationFilename($selectedEvent, $selectedSection);
-
-        return response()->streamDownload(
-            function () use ($selectedEvent, $selectedSection, $filters, $churches): void {
-                echo $this->churchesWithRegistrationSpreadsheet(
-                    $selectedEvent,
-                    $selectedSection,
-                    $filters['search'],
-                    $churches,
-                );
-            },
-            $filename,
-            [
-                'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
-                'Cache-Control' => 'max-age=0',
-            ],
+        return $this->downloadSpreadsheet(
+            $this->churchesWithRegistrationFilename(),
+            $this->churchesWithRegistrationExportRows($churches),
         );
     }
 
@@ -205,22 +193,9 @@ class ReportsController extends Controller
             $filters['search'],
         )->get();
 
-        $filename = $this->churchesWithoutRegistrationFilename($selectedEvent, $selectedSection);
-
-        return response()->streamDownload(
-            function () use ($selectedEvent, $selectedSection, $filters, $churches): void {
-                echo $this->churchesWithoutRegistrationSpreadsheet(
-                    $selectedEvent,
-                    $selectedSection,
-                    $filters['search'],
-                    $churches,
-                );
-            },
-            $filename,
-            [
-                'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
-                'Cache-Control' => 'max-age=0',
-            ],
+        return $this->downloadSpreadsheet(
+            $this->churchesWithoutRegistrationFilename(),
+            $this->churchesWithoutRegistrationExportRows($churches),
         );
     }
 
@@ -591,160 +566,120 @@ class ReportsController extends Controller
         return $query;
     }
 
-    private function churchesWithRegistrationFilename(Event $event, ?Section $section): string
+    private function churchesWithRegistrationFilename(): string
     {
-        $parts = [
-            Str::slug($event->name),
-            'churches-with-registration',
-        ];
-
-        if ($section !== null) {
-            $parts[] = Str::slug($section->name);
-        }
-
-        return implode('-', $parts).'.xls';
+        return 'registration-summary-by-church-'.now()->toDateString().'.xlsx';
     }
 
-    private function churchesWithoutRegistrationFilename(Event $event, ?Section $section): string
+    private function churchesWithoutRegistrationFilename(): string
     {
-        $parts = [
-            Str::slug($event->name),
-            'churches-without-registration',
-        ];
-
-        if ($section !== null) {
-            $parts[] = Str::slug($section->name);
-        }
-
-        return implode('-', $parts).'.xls';
+        return 'no-registration-report-'.now()->toDateString().'.xlsx';
     }
 
     /**
      * @param  Collection<int, Pastor>  $churches
      */
-    private function churchesWithRegistrationSpreadsheet(
-        Event $event,
-        ?Section $section,
-        string $search,
-        Collection $churches,
-    ): string {
+    private function churchesWithRegistrationExportRows(Collection $churches): array
+    {
         $rows = $churches
-            ->map(function (Pastor $pastor): string {
-                $church = $this->churchWithRegistrationData($pastor);
+            ->map(fn (Pastor $pastor): array => $this->churchWithRegistrationData($pastor))
+            ->map(fn (array $church): array => [
+                'Church name' => $church['church_name'],
+                'Pastor name' => $church['pastor_name'],
+                'Section' => $church['section_name'] ?? 'Unassigned',
+                'Registered quantity' => $church['total_registered_quantity'],
+                'Registered value' => $church['total_registered_amount'],
+            ])
+            ->values();
 
-                return sprintf(
-                    '<tr><td>%s</td><td>%s</td><td>%s</td><td>%d</td><td>%s</td></tr>',
-                    e($church['pastor_name']),
-                    e($church['church_name']),
-                    e($church['section_name'] ?? 'Unassigned'),
-                    $church['total_registered_quantity'],
-                    e($church['total_registered_amount']),
-                );
-            })
-            ->implode('');
+        $rows->push([
+            'Church name' => 'Totals',
+            'Pastor name' => '',
+            'Section' => '',
+            'Registered quantity' => (int) $rows->sum(
+                fn (array $row): int => (int) $row['Registered quantity']
+            ),
+            'Registered value' => $this->formatAmount($rows->sum(
+                fn (array $row): float => (float) $row['Registered value']
+            )),
+        ]);
 
-        $eventName = e($event->name);
-        $scope = e($section?->name ?? 'All sections');
-        $searchSummary = $search !== '' ? e($search) : 'All churches with registrations';
-        $rows = $rows !== ''
-            ? $rows
-            : '<tr><td colspan="5">No churches found for the current filter.</td></tr>';
-
-        return <<<HTML
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Churches with Registration</title>
-</head>
-<body>
-    <table border="1">
-        <tr><td colspan="5"><strong>Event</strong></td></tr>
-        <tr><td colspan="5">{$eventName}</td></tr>
-        <tr><td colspan="5"><strong>Section Scope</strong></td></tr>
-        <tr><td colspan="5">{$scope}</td></tr>
-        <tr><td colspan="5"><strong>Search</strong></td></tr>
-        <tr><td colspan="5">{$searchSummary}</td></tr>
-    </table>
-    <br>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Pastor Name</th>
-                <th>Church Name</th>
-                <th>Section</th>
-                <th>Registered Quantity</th>
-                <th>Registered Value</th>
-            </tr>
-        </thead>
-        <tbody>
-            {$rows}
-        </tbody>
-    </table>
-</body>
-</html>
-HTML;
+        return $rows->all();
     }
 
     /**
      * @param  Collection<int, Pastor>  $churches
      */
-    private function churchesWithoutRegistrationSpreadsheet(
-        Event $event,
-        ?Section $section,
-        string $search,
-        Collection $churches,
-    ): string {
+    private function churchesWithoutRegistrationExportRows(Collection $churches): array
+    {
         $rows = $churches
-            ->map(function (Pastor $pastor): string {
-                return sprintf(
-                    '<tr><td>%s</td><td>%s</td><td>%s</td></tr>',
-                    e($pastor->pastor_name),
-                    e($pastor->church_name),
-                    e($pastor->section?->name ?? 'Unassigned'),
-                );
-            })
-            ->implode('');
+            ->map(fn (Pastor $pastor): array => $this->churchWithoutRegistrationData($pastor))
+            ->map(fn (array $church): array => [
+                'Pastor name' => $church['pastor_name'],
+                'Church name' => $church['church_name'],
+                'Section' => $church['section_name'] ?? 'Unassigned',
+            ])
+            ->values();
 
-        $eventName = e($event->name);
-        $scope = e($section?->name ?? 'All sections');
-        $searchSummary = $search !== '' ? e($search) : 'All visible churches';
-        $rows = $rows !== ''
-            ? $rows
-            : '<tr><td colspan="3">No churches found for the current filter.</td></tr>';
+        $rows->push([
+            'Pastor name' => 'Totals',
+            'Church name' => $this->churchCountLabel($rows->count()),
+            'Section' => '',
+        ]);
 
-        return <<<HTML
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Churches with No Registration</title>
-</head>
-<body>
-    <table border="1">
-        <tr><td colspan="3"><strong>Event</strong></td></tr>
-        <tr><td colspan="3">{$eventName}</td></tr>
-        <tr><td colspan="3"><strong>Section Scope</strong></td></tr>
-        <tr><td colspan="3">{$scope}</td></tr>
-        <tr><td colspan="3"><strong>Search</strong></td></tr>
-        <tr><td colspan="3">{$searchSummary}</td></tr>
-    </table>
-    <br>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Pastor Name</th>
-                <th>Church Name</th>
-                <th>Section</th>
-            </tr>
-        </thead>
-        <tbody>
-            {$rows}
-        </tbody>
-    </table>
-</body>
-</html>
-HTML;
+        return $rows->all();
+    }
+
+    /**
+     * @param  array<int, array<string, int|string>>  $rows
+     */
+    private function downloadSpreadsheet(string $filename, array $rows): StreamedResponse
+    {
+        $temporaryPath = $this->temporarySpreadsheetPath();
+
+        $writer = SimpleExcelWriter::create($temporaryPath);
+        $writer->addRows($rows);
+        $writer->close();
+
+        return response()->streamDownload(
+            function () use ($temporaryPath): void {
+                $stream = fopen($temporaryPath, 'rb');
+
+                if ($stream === false) {
+                    throw new RuntimeException('Unable to open the generated spreadsheet for download.');
+                }
+
+                try {
+                    fpassthru($stream);
+                } finally {
+                    fclose($stream);
+                    @unlink($temporaryPath);
+                }
+            },
+            $filename,
+            [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Cache-Control' => 'max-age=0',
+            ],
+        );
+    }
+
+    private function temporarySpreadsheetPath(): string
+    {
+        $temporaryPath = tempnam(sys_get_temp_dir(), 'report-export-');
+
+        if ($temporaryPath === false) {
+            throw new RuntimeException('Unable to create a temporary spreadsheet path.');
+        }
+
+        @unlink($temporaryPath);
+
+        return $temporaryPath.'.xlsx';
+    }
+
+    private function churchCountLabel(int $count): string
+    {
+        return $count.' '.($count === 1 ? 'church' : 'churches');
     }
 
     private function scopeSummary(User $user): string

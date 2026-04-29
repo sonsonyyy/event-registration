@@ -137,6 +137,15 @@ export default function OnsiteRegistrationForm({
         ) ?? null;
     const isSuperAdminViewer = auth.can.viewSystemAdminMenu;
     const availableFeeCategories = selectedEvent?.fee_categories ?? [];
+    const selectedFeeCategoryIds = new Set(
+        form.data.line_items
+            .map((lineItem) => lineItem.fee_category_id)
+            .filter((feeCategoryId) => feeCategoryId !== ''),
+    );
+    const canAddLineItem =
+        selectedEvent !== null &&
+        availableFeeCategories.length > 1 &&
+        form.data.line_items.length < availableFeeCategories.length;
     const districtOptions = Array.from(
         new Map(
             pastors.map((pastor) => [
@@ -617,6 +626,7 @@ export default function OnsiteRegistrationForm({
                         variant="outline"
                         className="rounded-md"
                         onClick={addLineItem}
+                        disabled={!canAddLineItem}
                     >
                         <Plus className="mr-2 h-4 w-4" />
                         Add item
@@ -689,6 +699,12 @@ export default function OnsiteRegistrationForm({
                                             (feeCategory) => ({
                                                 value: feeCategory.id.toString(),
                                                 label: `${feeCategory.category_name}${feeCategory.status !== 'active' ? ' (Inactive)' : ''} · ${formatCurrency(feeCategory.amount)}`,
+                                                disabled:
+                                                    lineItem.fee_category_id !==
+                                                        feeCategory.id.toString() &&
+                                                    selectedFeeCategoryIds.has(
+                                                        feeCategory.id.toString(),
+                                                    ),
                                             }),
                                         )}
                                         disabled={selectedEvent === null}

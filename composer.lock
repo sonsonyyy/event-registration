@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2c1bbd6af35c445001439fcd2f54b45c",
+    "content-hash": "b2e51479280e2906cd84d2b2a8542ac8",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -3361,6 +3361,99 @@
             "time": "2026-02-16T23:10:27+00:00"
         },
         {
+            "name": "openspout/openspout",
+            "version": "v4.32.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/openspout/openspout.git",
+                "reference": "41f045c1f632e1474e15d4c7bc3abcb4a153563d"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/openspout/openspout/zipball/41f045c1f632e1474e15d4c7bc3abcb4a153563d",
+                "reference": "41f045c1f632e1474e15d4c7bc3abcb4a153563d",
+                "shasum": ""
+            },
+            "require": {
+                "ext-dom": "*",
+                "ext-fileinfo": "*",
+                "ext-filter": "*",
+                "ext-libxml": "*",
+                "ext-xmlreader": "*",
+                "ext-zip": "*",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0"
+            },
+            "require-dev": {
+                "ext-zlib": "*",
+                "friendsofphp/php-cs-fixer": "^3.86.0",
+                "infection/infection": "^0.31.2",
+                "phpbench/phpbench": "^1.4.1",
+                "phpstan/phpstan": "^2.1.22",
+                "phpstan/phpstan-phpunit": "^2.0.7",
+                "phpstan/phpstan-strict-rules": "^2.0.6",
+                "phpunit/phpunit": "^12.3.7"
+            },
+            "suggest": {
+                "ext-iconv": "To handle non UTF-8 CSV files (if \"php-mbstring\" is not already installed or is too limited)",
+                "ext-mbstring": "To handle non UTF-8 CSV files (if \"iconv\" is not already installed)"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "3.3.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "OpenSpout\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Adrien Loison",
+                    "email": "adrien@box.com"
+                }
+            ],
+            "description": "PHP Library to read and write spreadsheet files (CSV, XLSX and ODS), in a fast and scalable way",
+            "homepage": "https://github.com/openspout/openspout",
+            "keywords": [
+                "OOXML",
+                "csv",
+                "excel",
+                "memory",
+                "odf",
+                "ods",
+                "office",
+                "open",
+                "php",
+                "read",
+                "scale",
+                "spreadsheet",
+                "stream",
+                "write",
+                "xlsx"
+            ],
+            "support": {
+                "issues": "https://github.com/openspout/openspout/issues",
+                "source": "https://github.com/openspout/openspout/tree/v4.32.0"
+            },
+            "funding": [
+                {
+                    "url": "https://paypal.me/filippotessarotto",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/Slamdunk",
+                    "type": "github"
+                }
+            ],
+            "time": "2025-09-03T16:03:54+00:00"
+        },
+        {
             "name": "paragonie/constant_time_encoding",
             "version": "v3.1.3",
             "source": {
@@ -5037,6 +5130,66 @@
                 }
             ],
             "time": "2024-06-11T12:45:25+00:00"
+        },
+        {
+            "name": "spatie/simple-excel",
+            "version": "3.9.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/spatie/simple-excel.git",
+                "reference": "67095053ff6037284fd213abd84259ea4faca7aa"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/spatie/simple-excel/zipball/67095053ff6037284fd213abd84259ea4faca7aa",
+                "reference": "67095053ff6037284fd213abd84259ea4faca7aa",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/support": "^9.0|^10.0|^11.0|^12.0|^13.0",
+                "openspout/openspout": "^4.30",
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^9.4|^10.5|^11.0|^12.0",
+                "spatie/pest-plugin-snapshots": "^1.1|^2.1",
+                "spatie/phpunit-snapshot-assertions": "^4.0|^5.1",
+                "spatie/temporary-directory": "^1.2|^2.2"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Spatie\\SimpleExcel\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Freek Van der Herten",
+                    "email": "freek@spatie.be",
+                    "homepage": "https://spatie.be",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Read and write simple Excel and CSV files",
+            "homepage": "https://github.com/spatie/simple-excel",
+            "keywords": [
+                "simple-excel",
+                "spatie"
+            ],
+            "support": {
+                "source": "https://github.com/spatie/simple-excel/tree/3.9.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/spatie",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-02-22T08:49:24+00:00"
         },
         {
             "name": "symfony/clock",
