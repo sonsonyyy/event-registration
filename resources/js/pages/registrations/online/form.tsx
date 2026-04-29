@@ -8,7 +8,8 @@ import {
     Upload,
     UsersRound,
 } from 'lucide-react';
-import { type FormEvent, useRef } from 'react';
+import type { FormEvent } from 'react';
+import { useRef } from 'react';
 import OnlineRegistrationController from '@/actions/App/Http/Controllers/OnlineRegistrationController';
 import AssignedChurchCard from '@/components/assigned-church-card';
 import FormSelect from '@/components/form-select';
@@ -18,11 +19,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { formatSystemDateOnly, formatSystemDateTime } from '@/lib/date-time';
 import { createClearFormErrorHandlers } from '@/lib/form-errors';
-import {
-    formatSystemDateOnly,
-    formatSystemDateTime,
-} from '@/lib/date-time';
 import {
     formTextareaClassName,
     formControlClassName,
@@ -119,7 +117,9 @@ const formatCurrency = (value: number | string): string =>
     new Intl.NumberFormat(undefined, {
         style: 'currency',
         currency: 'PHP',
-    }).format(typeof value === 'string' ? Number.parseFloat(value || '0') : value);
+    }).format(
+        typeof value === 'string' ? Number.parseFloat(value || '0') : value,
+    );
 
 const formatDate = (value: string): string => formatSystemDateTime(value);
 
@@ -152,6 +152,15 @@ export default function OnlineRegistrationForm({
         events.find((event) => event.id.toString() === form.data.event_id) ??
         null;
     const availableFeeCategories = selectedEvent?.fee_categories ?? [];
+    const selectedFeeCategoryIds = new Set(
+        form.data.line_items
+            .map((lineItem) => lineItem.fee_category_id)
+            .filter((feeCategoryId) => feeCategoryId !== ''),
+    );
+    const canAddLineItem =
+        selectedEvent !== null &&
+        availableFeeCategories.length > 1 &&
+        form.data.line_items.length < availableFeeCategories.length;
 
     let totalQuantity = 0;
     let totalAmount = 0;
@@ -166,8 +175,7 @@ export default function OnlineRegistrationForm({
         totalQuantity += quantity;
 
         const feeCategory = availableFeeCategories.find(
-            (category) =>
-                category.id.toString() === lineItem.fee_category_id,
+            (category) => category.id.toString() === lineItem.fee_category_id,
         );
 
         if (feeCategory) {
@@ -214,13 +222,15 @@ export default function OnlineRegistrationForm({
                 ? OnlineRegistrationController.update(registration.id)
                 : OnlineRegistrationController.store(),
             {
-            forceFormData: true,
-            preserveScroll: true,
+                forceFormData: true,
+                preserveScroll: true,
             },
         );
     };
 
-    const clearFormErrorHandlers = createClearFormErrorHandlers(form.clearErrors);
+    const clearFormErrorHandlers = createClearFormErrorHandlers(
+        form.clearErrors,
+    );
 
     return (
         <form
@@ -232,7 +242,9 @@ export default function OnlineRegistrationForm({
                 <div className="grid gap-6">
                     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch">
                         <div className="flex h-full flex-col gap-6">
-                            <AssignedChurchCard assignedPastor={assignedPastor} />
+                            <AssignedChurchCard
+                                assignedPastor={assignedPastor}
+                            />
 
                             {isEditing && registration?.latest_review && (
                                 <div
@@ -247,8 +259,8 @@ export default function OnlineRegistrationForm({
                                         Latest review
                                     </div>
                                     <div className="mt-2 text-sm font-medium">
-                                        {registration.latest_review.reviewer?.name ??
-                                            'Reviewer'}{' '}
+                                        {registration.latest_review.reviewer
+                                            ?.name ?? 'Reviewer'}{' '}
                                         marked this registration as{' '}
                                         {registration.latest_review.decision}.
                                     </div>
@@ -264,9 +276,10 @@ export default function OnlineRegistrationForm({
                                         </div>
                                     )}
                                     {registration.latest_review.decided_at && (
-                                        <div className="mt-2 text-xs uppercase tracking-[0.16em] opacity-75">
+                                        <div className="mt-2 text-xs tracking-[0.16em] uppercase opacity-75">
                                             {formatDate(
-                                                registration.latest_review.decided_at,
+                                                registration.latest_review
+                                                    .decided_at,
                                             )}
                                         </div>
                                     )}
@@ -305,7 +318,8 @@ export default function OnlineRegistrationForm({
                                         Event availability
                                     </div>
                                     <div className="text-lg font-semibold">
-                                        {selectedEvent?.name ?? 'Choose an event'}
+                                        {selectedEvent?.name ??
+                                            'Choose an event'}
                                     </div>
                                 </div>
 
@@ -325,8 +339,13 @@ export default function OnlineRegistrationForm({
                                                 Event dates
                                             </div>
                                             <div className="font-semibold text-white">
-                                                {formatEventDate(selectedEvent.date_from)} to{' '}
-                                                {formatEventDate(selectedEvent.date_to)}
+                                                {formatEventDate(
+                                                    selectedEvent.date_from,
+                                                )}{' '}
+                                                to{' '}
+                                                {formatEventDate(
+                                                    selectedEvent.date_to,
+                                                )}
                                             </div>
                                         </div>
 
@@ -335,7 +354,8 @@ export default function OnlineRegistrationForm({
                                                 Remaining slots
                                             </div>
                                             <div className="font-semibold text-white">
-                                                {selectedEvent.remaining_slots} slots available
+                                                {selectedEvent.remaining_slots}{' '}
+                                                slots available
                                             </div>
                                         </div>
 
@@ -344,13 +364,18 @@ export default function OnlineRegistrationForm({
                                                 Registration closes
                                             </div>
                                             <div className="font-semibold text-white">
-                                                {formatDate(selectedEvent.registration_close_at)}
+                                                {formatDate(
+                                                    selectedEvent.registration_close_at,
+                                                )}
                                             </div>
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="border-t border-white/10 pt-4 text-sm text-white/75">
-                                        Choose an event from the dropdown to review its venue, schedule, and available slots before adding your registration items.
+                                        Choose an event from the dropdown to
+                                        review its venue, schedule, and
+                                        available slots before adding your
+                                        registration items.
                                     </div>
                                 )}
                             </div>
@@ -376,7 +401,9 @@ export default function OnlineRegistrationForm({
                                 placeholder="Enter the OR, deposit slip, or transfer reference"
                                 className={formControlClassName}
                             />
-                            <InputError message={form.errors.payment_reference} />
+                            <InputError
+                                message={form.errors.payment_reference}
+                            />
                         </div>
 
                         <div className="grid gap-2">
@@ -421,16 +448,22 @@ export default function OnlineRegistrationForm({
                                         }`}
                                     >
                                         {form.data.receipt?.name ??
-                                            registration?.receipt.original_name ??
+                                            registration?.receipt
+                                                .original_name ??
                                             'JPG, PNG, or PDF'}
                                     </span>
                                 </div>
                             </div>
-                            {isEditing && registration?.receipt.uploaded_at && ! form.data.receipt && (
-                                <div className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-                                    Current proof uploaded {formatDate(registration.receipt.uploaded_at)}
-                                </div>
-                            )}
+                            {isEditing &&
+                                registration?.receipt.uploaded_at &&
+                                !form.data.receipt && (
+                                    <div className="text-xs tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
+                                        Current proof uploaded{' '}
+                                        {formatDate(
+                                            registration.receipt.uploaded_at,
+                                        )}
+                                    </div>
+                                )}
                             <InputError message={form.errors.receipt} />
                         </div>
                     </div>
@@ -468,6 +501,7 @@ export default function OnlineRegistrationForm({
                         variant="outline"
                         className="rounded-md"
                         onClick={addLineItem}
+                        disabled={!canAddLineItem}
                     >
                         <Plus className="mr-2 h-4 w-4" />
                         Add item
@@ -513,12 +547,18 @@ export default function OnlineRegistrationForm({
                                                 ? 'Select a fee category'
                                                 : 'Select an event first'
                                         }
-                                            options={availableFeeCategories.map(
-                                                (feeCategory) => ({
-                                                    value: feeCategory.id.toString(),
-                                                    label: `${feeCategory.category_name}${feeCategory.status !== 'active' ? ' (Inactive)' : ''} · ${formatCurrency(feeCategory.amount)}`,
-                                                }),
-                                            )}
+                                        options={availableFeeCategories.map(
+                                            (feeCategory) => ({
+                                                value: feeCategory.id.toString(),
+                                                label: `${feeCategory.category_name}${feeCategory.status !== 'active' ? ' (Inactive)' : ''} · ${formatCurrency(feeCategory.amount)}`,
+                                                disabled:
+                                                    lineItem.fee_category_id !==
+                                                        feeCategory.id.toString() &&
+                                                    selectedFeeCategoryIds.has(
+                                                        feeCategory.id.toString(),
+                                                    ),
+                                            }),
+                                        )}
                                         disabled={selectedEvent === null}
                                     />
                                     <InputError
@@ -534,25 +574,25 @@ export default function OnlineRegistrationForm({
                                     <Label htmlFor={`quantity_${index}`}>
                                         Quantity
                                     </Label>
-                                        <Input
-                                            id={`quantity_${index}`}
-                                            name={`line_items.${index}.quantity`}
-                                            type="text"
-                                            inputMode="numeric"
-                                            pattern="[0-9]*"
-                                            value={lineItem.quantity}
-                                            onChange={(event) =>
-                                                updateLineItem(
-                                                    index,
-                                                    'quantity',
-                                                    normalizeQuantityValue(
-                                                        event.target.value,
-                                                    ),
-                                                )
-                                            }
-                                            placeholder="0"
-                                            className={quantityInputClassName}
-                                        />
+                                    <Input
+                                        id={`quantity_${index}`}
+                                        name={`line_items.${index}.quantity`}
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={lineItem.quantity}
+                                        onChange={(event) =>
+                                            updateLineItem(
+                                                index,
+                                                'quantity',
+                                                normalizeQuantityValue(
+                                                    event.target.value,
+                                                ),
+                                            )
+                                        }
+                                        placeholder="0"
+                                        className={quantityInputClassName}
+                                    />
                                     <InputError
                                         message={
                                             form.errors[
@@ -591,7 +631,7 @@ export default function OnlineRegistrationForm({
                                             null
                                                 ? 'default'
                                                 : selectedFeeCategory.remaining_slots >
-                                                      0
+                                                    0
                                                   ? 'secondary'
                                                   : 'destructive'
                                         }
@@ -622,7 +662,9 @@ export default function OnlineRegistrationForm({
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3">
-                    <div className={`${summaryCardClassName} border-[#d6e2de] bg-[linear-gradient(145deg,_rgba(24,77,71,0.10),_rgba(255,255,255,0.98))] shadow-[#184d47]/8`}>
+                    <div
+                        className={`${summaryCardClassName} border-[#d6e2de] bg-[linear-gradient(145deg,_rgba(24,77,71,0.10),_rgba(255,255,255,0.98))] shadow-[#184d47]/8`}
+                    >
                         <div className="flex items-start justify-between gap-3">
                             <div className="text-sm font-medium text-slate-600">
                                 Church account
@@ -632,7 +674,8 @@ export default function OnlineRegistrationForm({
                             </div>
                         </div>
                         <div className="mt-5 text-lg font-semibold text-slate-900">
-                            {assignedPastor?.church_name ?? 'No church assigned'}
+                            {assignedPastor?.church_name ??
+                                'No church assigned'}
                         </div>
                         <div className="mt-2 text-sm text-slate-600">
                             {assignedPastor
@@ -641,7 +684,9 @@ export default function OnlineRegistrationForm({
                         </div>
                     </div>
 
-                    <div className={`${summaryCardClassName} border-[#dfe4e8] bg-[linear-gradient(145deg,_rgba(248,250,252,0.96),_rgba(255,255,255,1))] shadow-slate-200/70`}>
+                    <div
+                        className={`${summaryCardClassName} border-[#dfe4e8] bg-[linear-gradient(145deg,_rgba(248,250,252,0.96),_rgba(255,255,255,1))] shadow-slate-200/70`}
+                    >
                         <div className="flex items-start justify-between gap-3">
                             <div className="text-sm font-medium text-slate-600">
                                 Total quantity
@@ -660,7 +705,9 @@ export default function OnlineRegistrationForm({
                         </div>
                     </div>
 
-                    <div className={`${summaryCardClassName} border-[#184d47]/20 bg-[#184d47] text-white shadow-[#184d47]/20`}>
+                    <div
+                        className={`${summaryCardClassName} border-[#184d47]/20 bg-[#184d47] text-white shadow-[#184d47]/20`}
+                    >
                         <div className="flex items-start justify-between gap-3">
                             <div className="text-sm font-medium text-white/75">
                                 Estimated total

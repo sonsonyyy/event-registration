@@ -116,7 +116,134 @@ test('online registrants can submit registrations with receipt upload stored on 
             ->where('registrations.data.0.submitted_by_name', $registrant->name)
             ->where('registrations.data.0.registration_status', Registration::STATUS_PENDING_VERIFICATION)
             ->where('registrations.data.0.total_quantity', 6)
-            ->where('registrations.data.0.receipt.original_name', 'receipt.pdf'));
+            ->where('registrations.data.0.receipt.original_name', 'receipt.pdf')
+            ->where('registrations.data.0.receipt.url', route('registrations.online.receipt', $registration)));
+});
+
+test('online registrants can open their uploaded receipts from the registration list', function () {
+    Storage::fake('local');
+    config()->set('registration.receipts_disk', 'local');
+
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $section = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $pastor = Pastor::factory()->for($section)->create([
+        'church_name' => 'Grace Community Church',
+        'pastor_name' => 'Pastor Jane Doe',
+    ]);
+    $registrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'pastor_id' => $pastor->id,
+    ]);
+    $otherPastor = Pastor::factory()->for($section)->create();
+    $otherRegistrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'pastor_id' => $otherPastor->id,
+    ]);
+    $event = onlineRegistrationEvent();
+    $receiptPath = 'registration-receipts/2026/03/own-list-receipt.pdf';
+
+    Storage::disk('local')->put($receiptPath, 'receipt-content');
+
+    $registration = Registration::factory()
+        ->for($event)
+        ->for($pastor)
+        ->for($registrant, 'encodedByUser')
+        ->for($registrant, 'receiptUploadedByUser')
+        ->create([
+            'registration_mode' => Registration::MODE_ONLINE,
+            'payment_status' => Registration::PAYMENT_STATUS_PAID,
+            'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
+            'payment_reference' => 'DEP-2026-3001',
+            'receipt_file_path' => $receiptPath,
+            'receipt_original_name' => 'own-list-receipt.pdf',
+            'receipt_uploaded_at' => now()->subMinute(),
+            'submitted_at' => now()->subMinute(),
+        ]);
+
+    $this->actingAs($registrant)
+        ->get(route('registrations.online.index'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/online/index')
+            ->where('registrations.data.0.receipt.url', route('registrations.online.receipt', $registration))
+            ->where('registrations.data.0.payment_reference', 'DEP-2026-3001'));
+
+    $this->actingAs($registrant)
+        ->get(route('registrations.online.receipt', $registration))
+        ->assertSuccessful();
+
+    $this->actingAs($otherRegistrant)
+        ->get(route('registrations.online.receipt', $registration))
+        ->assertForbidden();
+});
+
+test('online registration list includes scope and department details for each event', function () {
+    Storage::fake('local');
+    config()->set('registration.receipts_disk', 'local');
+
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $section = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $department = Department::factory()->create([
+        'name' => 'Youth Ministries',
+    ]);
+    $pastor = Pastor::factory()->for($section)->create();
+    $registrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'pastor_id' => $pastor->id,
+    ]);
+    $event = onlineRegistrationEvent([
+        'name' => 'Sectional Youth Event',
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+        'department_id' => $department->id,
+    ]);
+    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular',
+        'amount' => '750.00',
+    ]);
+    $registration = Registration::factory()
+        ->for($event)
+        ->for($pastor)
+        ->for($registrant, 'encodedByUser')
+        ->for($registrant, 'receiptUploadedByUser')
+        ->create([
+            'registration_mode' => Registration::MODE_ONLINE,
+            'payment_status' => Registration::PAYMENT_STATUS_PAID,
+            'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
+            'payment_reference' => 'DEP-2026-3002',
+            'receipt_file_path' => 'registration-receipts/2026/03/scope-list-receipt.pdf',
+            'receipt_original_name' => 'scope-list-receipt.pdf',
+            'receipt_uploaded_at' => now()->subMinute(),
+            'submitted_at' => now()->subMinute(),
+        ]);
+
+    RegistrationItem::factory()
+        ->for($registration)
+        ->for($feeCategory, 'feeCategory')
+        ->create([
+            'quantity' => 3,
+            'unit_amount' => $feeCategory->amount,
+            'subtotal_amount' => '2250.00',
+        ]);
+
+    $this->actingAs($registrant)
+        ->get(route('registrations.online.index'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/online/index')
+            ->where('registrations.data.0.event.scope_label', 'Sectional')
+            ->where('registrations.data.0.event.department_name', 'Youth Ministries'));
 });
 
 test('online registrants only see accessible events and cannot submit registrations for other sections', function () {
