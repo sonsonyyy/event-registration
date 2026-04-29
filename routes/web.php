@@ -49,6 +49,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/', [OnlineRegistrationController::class, 'index'])->name('index');
             Route::get('create', [OnlineRegistrationController::class, 'create'])->name('create');
             Route::get('{registration}/edit', [OnlineRegistrationController::class, 'edit'])->name('edit');
+            Route::get('{registration}/receipt', [OnlineRegistrationController::class, 'receipt'])->name('receipt');
             Route::post('/', [OnlineRegistrationController::class, 'store'])->name('store');
             Route::match(['put', 'patch'], '{registration}', [OnlineRegistrationController::class, 'update'])->name('update');
             Route::patch('{registration}/cancel', [OnlineRegistrationController::class, 'cancel'])->name('cancel');

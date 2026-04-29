@@ -29,6 +29,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
 
 class OnlineRegistrationController extends Controller
@@ -341,6 +342,27 @@ class OnlineRegistrationController extends Controller
             ->with('success', 'Online registration cancelled.');
     }
 
+    public function receipt(Registration $registration): SymfonyResponse
+    {
+        Gate::authorize('uploadReceipt', $registration);
+
+        if (
+            $registration->registration_mode !== Registration::MODE_ONLINE
+            || $registration->receipt_file_path === null
+        ) {
+            abort(404);
+        }
+
+        if (! $this->registrationReceiptStorage->exists($registration->receipt_file_path)) {
+            abort(404);
+        }
+
+        return $this->registrationReceiptStorage->receiptResponse(
+            $registration->receipt_file_path,
+            $registration->receipt_original_name,
+        );
+    }
+
     /**
      * Build the event options available to online registrants.
      *
@@ -574,7 +596,7 @@ class OnlineRegistrationController extends Controller
             ->where('registration_mode', Registration::MODE_ONLINE)
             ->with([
                 'encodedByUser',
-                'event',
+                'event.department',
                 'latestReview.reviewer',
                 'pastor.section.district',
                 'items.feeCategory',
@@ -620,6 +642,10 @@ class OnlineRegistrationController extends Controller
                 'id' => $registration->event->getKey(),
                 'name' => $registration->event->name,
                 'venue' => $registration->event->venue,
+                'scope_label' => $registration->event->isSectionScoped()
+                    ? 'Sectional'
+                    : 'District',
+                'department_name' => $registration->event->department?->name,
             ],
             'pastor' => [
                 'id' => $registration->pastor->getKey(),
@@ -642,6 +668,7 @@ class OnlineRegistrationController extends Controller
             'receipt' => [
                 'original_name' => $registration->receipt_original_name,
                 'uploaded_at' => $registration->receipt_uploaded_at?->toIso8601String(),
+                'url' => route('registrations.online.receipt', $registration),
             ],
             'items' => $registration->items
                 ->map(fn (RegistrationItem $item): array => [

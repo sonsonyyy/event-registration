@@ -11,15 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { formatSystemDateOnly, formatSystemDateTime } from '@/lib/date-time';
 import { createClearFormErrorHandlers } from '@/lib/form-errors';
-import {
-    formatSystemDateOnly,
-    formatSystemDateTime,
-} from '@/lib/date-time';
-import {
-    formControlClassName,
-    formTextareaClassName,
-} from '@/lib/ui-styles';
+import { formControlClassName, formTextareaClassName } from '@/lib/ui-styles';
 import type { Auth } from '@/types/auth';
 
 type FeeCategoryOption = {
@@ -50,18 +44,6 @@ type PastorOption = {
     section_name: string;
     district_id: number;
     district_name: string;
-};
-
-type SectionOption = {
-    id: number;
-    name: string;
-    district_id: number;
-    district_name: string;
-};
-
-type DistrictOption = {
-    id: number;
-    name: string;
 };
 
 type LineItemFormValue = {
@@ -108,7 +90,9 @@ const formatCurrency = (value: number | string): string =>
     new Intl.NumberFormat(undefined, {
         style: 'currency',
         currency: 'PHP',
-    }).format(typeof value === 'string' ? Number.parseFloat(value || '0') : value);
+    }).format(
+        typeof value === 'string' ? Number.parseFloat(value || '0') : value,
+    );
 
 const formatDate = (value: string): string => formatSystemDateTime(value);
 
@@ -129,9 +113,9 @@ export default function OnsiteRegistrationForm({
     const { auth } = usePage<{ auth: Auth }>().props;
     const isEditing = registration !== undefined;
     const initialPastor = registration
-        ? pastors.find(
+        ? (pastors.find(
               (pastor) => pastor.id.toString() === registration.pastor_id,
-          ) ?? null
+          ) ?? null)
         : null;
     const form = useForm<OnsiteRegistrationFormData>({
         event_id: registration?.event_id ?? events[0]?.id.toString() ?? '',
@@ -148,8 +132,9 @@ export default function OnsiteRegistrationForm({
         events.find((event) => event.id.toString() === form.data.event_id) ??
         null;
     const selectedPastor =
-        pastors.find((pastor) => pastor.id.toString() === form.data.pastor_id) ??
-        null;
+        pastors.find(
+            (pastor) => pastor.id.toString() === form.data.pastor_id,
+        ) ?? null;
     const isSuperAdminViewer = auth.can.viewSystemAdminMenu;
     const availableFeeCategories = selectedEvent?.fee_categories ?? [];
     const districtOptions = Array.from(
@@ -184,8 +169,7 @@ export default function OnsiteRegistrationForm({
         : sectionOptions;
     const filteredPastors = form.data.section_id
         ? pastors.filter(
-              (pastor) =>
-                  pastor.section_id.toString() === form.data.section_id,
+              (pastor) => pastor.section_id.toString() === form.data.section_id,
           )
         : form.data.district_id
           ? pastors.filter(
@@ -234,8 +218,7 @@ export default function OnsiteRegistrationForm({
         totalQuantity += quantity;
 
         const feeCategory = availableFeeCategories.find(
-            (category) =>
-                category.id.toString() === lineItem.fee_category_id,
+            (category) => category.id.toString() === lineItem.fee_category_id,
         );
 
         if (feeCategory) {
@@ -291,16 +274,13 @@ export default function OnsiteRegistrationForm({
     };
 
     const changePastor = (value: string): void => {
-        const pastor = pastors.find(
-            (option) => option.id.toString() === value,
-        );
+        const pastor = pastors.find((option) => option.id.toString() === value);
 
         form.setData((currentData) => ({
             ...currentData,
             district_id:
                 pastor?.district_id.toString() ?? currentData.district_id,
-            section_id:
-                pastor?.section_id.toString() ?? currentData.section_id,
+            section_id: pastor?.section_id.toString() ?? currentData.section_id,
             pastor_id: value,
         }));
     };
@@ -349,7 +329,9 @@ export default function OnsiteRegistrationForm({
         );
     };
 
-    const clearFormErrorHandlers = createClearFormErrorHandlers(form.clearErrors);
+    const clearFormErrorHandlers = createClearFormErrorHandlers(
+        form.clearErrors,
+    );
 
     return (
         <form
@@ -360,7 +342,9 @@ export default function OnsiteRegistrationForm({
             <div className="space-y-6">
                 <div className="grid gap-6">
                     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch">
-                        <div className={`${detailCardClassName} flex h-full flex-col`}>
+                        <div
+                            className={`${detailCardClassName} flex h-full flex-col`}
+                        >
                             <div className="space-y-1.5">
                                 <div className="text-xs font-semibold tracking-[0.18em] text-[#184d47]/70 uppercase">
                                     Transaction details
@@ -371,33 +355,37 @@ export default function OnsiteRegistrationForm({
                                 <p className="text-sm leading-6 text-slate-600">
                                     Select the event and church covered by this
                                     onsite transaction, then record the official
-                                    receipt or cash reference required for
-                                    later confirmation.
+                                    receipt or cash reference required for later
+                                    confirmation.
                                 </p>
                             </div>
 
-                                <div className="mt-6 grid flex-1 gap-5">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="event_id">Event</Label>
-                                        <FormSelect
-                                            id="event_id"
-                                            name="event_id"
-                                            value={form.data.event_id}
-                                            onValueChange={setEvent}
-                                            placeholder="Select an event"
-                                            emptyLabel="Select an event"
-                                            options={events.map((event) => ({
-                                                value: event.id.toString(),
-                                                label: event.name,
-                                            }))}
-                                            disabled={events.length === 0}
-                                        />
-                                    <InputError message={form.errors.event_id} />
+                            <div className="mt-6 grid flex-1 gap-5">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="event_id">Event</Label>
+                                    <FormSelect
+                                        id="event_id"
+                                        name="event_id"
+                                        value={form.data.event_id}
+                                        onValueChange={setEvent}
+                                        placeholder="Select an event"
+                                        emptyLabel="Select an event"
+                                        options={events.map((event) => ({
+                                            value: event.id.toString(),
+                                            label: event.name,
+                                        }))}
+                                        disabled={events.length === 0}
+                                    />
+                                    <InputError
+                                        message={form.errors.event_id}
+                                    />
                                 </div>
 
                                 <div className="grid gap-5 xl:grid-cols-2">
                                     <div className="grid gap-2">
-                                        <Label htmlFor="district_id">District</Label>
+                                        <Label htmlFor="district_id">
+                                            District
+                                        </Label>
                                         <FormSelect
                                             id="district_id"
                                             name="district_id"
@@ -408,17 +396,22 @@ export default function OnsiteRegistrationForm({
                                             disabled={
                                                 districtOptions.length === 0 ||
                                                 (!isSuperAdminViewer &&
-                                                    districtOptions.length === 1)
+                                                    districtOptions.length ===
+                                                        1)
                                             }
-                                            options={districtOptions.map((district) => ({
-                                                value: district.id.toString(),
-                                                label: district.name,
-                                            }))}
+                                            options={districtOptions.map(
+                                                (district) => ({
+                                                    value: district.id.toString(),
+                                                    label: district.name,
+                                                }),
+                                            )}
                                         />
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="section_id">Section</Label>
+                                        <Label htmlFor="section_id">
+                                            Section
+                                        </Label>
                                         <FormSelect
                                             id="section_id"
                                             name="section_id"
@@ -429,12 +422,15 @@ export default function OnsiteRegistrationForm({
                                             disabled={
                                                 filteredSections.length === 0 ||
                                                 (!isSuperAdminViewer &&
-                                                    filteredSections.length === 1)
+                                                    filteredSections.length ===
+                                                        1)
                                             }
-                                            options={filteredSections.map((section) => ({
-                                                value: section.id.toString(),
-                                                label: `${section.name} · ${section.district_name}`,
-                                            }))}
+                                            options={filteredSections.map(
+                                                (section) => ({
+                                                    value: section.id.toString(),
+                                                    label: `${section.name} · ${section.district_name}`,
+                                                }),
+                                            )}
                                         />
                                     </div>
 
@@ -448,25 +444,29 @@ export default function OnsiteRegistrationForm({
                                             value={form.data.pastor_id}
                                             onValueChange={changePastor}
                                             placeholder="Select a pastor or church"
-                                            options={filteredPastors.map((pastor) => ({
-                                                value: pastor.id.toString(),
-                                                label: `${pastor.church_name} · ${pastor.pastor_name}`,
-                                                keywords: [
-                                                    pastor.church_name,
-                                                    pastor.pastor_name,
-                                                    pastor.section_name,
-                                                    pastor.district_name,
-                                                ],
-                                            }))}
+                                            options={filteredPastors.map(
+                                                (pastor) => ({
+                                                    value: pastor.id.toString(),
+                                                    label: `${pastor.church_name} · ${pastor.pastor_name}`,
+                                                    keywords: [
+                                                        pastor.church_name,
+                                                        pastor.pastor_name,
+                                                        pastor.section_name,
+                                                        pastor.district_name,
+                                                    ],
+                                                }),
+                                            )}
                                             disabled={pastors.length === 0}
                                             searchPlaceholder="Search pastor, church, or section"
                                             emptySearchMessage="No pastors match your search."
                                         />
-                                        <InputError message={form.errors.pastor_id} />
+                                        <InputError
+                                            message={form.errors.pastor_id}
+                                        />
                                     </div>
                                 </div>
 
-                                <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] xl:items-start">
+                                <div className="grid gap-5 xl:grid-cols-2 xl:items-start">
                                     <div className="flex flex-col gap-2">
                                         <Label htmlFor="payment_reference">
                                             Official receipt / reference
@@ -486,7 +486,9 @@ export default function OnsiteRegistrationForm({
                                             className={formControlClassName}
                                         />
                                         <InputError
-                                            message={form.errors.payment_reference}
+                                            message={
+                                                form.errors.payment_reference
+                                            }
                                         />
                                     </div>
 
@@ -533,7 +535,8 @@ export default function OnsiteRegistrationForm({
                                         Event availability
                                     </div>
                                     <div className="text-lg font-semibold">
-                                        {selectedEvent?.name ?? 'Choose an event'}
+                                        {selectedEvent?.name ??
+                                            'Choose an event'}
                                     </div>
                                 </div>
 
@@ -553,8 +556,13 @@ export default function OnsiteRegistrationForm({
                                                 Event dates
                                             </div>
                                             <div className="font-semibold text-white">
-                                                {formatEventDate(selectedEvent.date_from)} to{' '}
-                                                {formatEventDate(selectedEvent.date_to)}
+                                                {formatEventDate(
+                                                    selectedEvent.date_from,
+                                                )}{' '}
+                                                to{' '}
+                                                {formatEventDate(
+                                                    selectedEvent.date_to,
+                                                )}
                                             </div>
                                         </div>
 
@@ -563,7 +571,8 @@ export default function OnsiteRegistrationForm({
                                                 Remaining slots
                                             </div>
                                             <div className="font-semibold text-white">
-                                                {selectedEvent.remaining_slots} slots available
+                                                {selectedEvent.remaining_slots}{' '}
+                                                slots available
                                             </div>
                                         </div>
 
@@ -572,19 +581,23 @@ export default function OnsiteRegistrationForm({
                                                 Registration closes
                                             </div>
                                             <div className="font-semibold text-white">
-                                                {formatDate(selectedEvent.registration_close_at)}
+                                                {formatDate(
+                                                    selectedEvent.registration_close_at,
+                                                )}
                                             </div>
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="border-t border-white/10 pt-4 text-sm text-white/75">
-                                        Choose an event from the dropdown to review its venue, schedule, and available slots before adding your registration items.
+                                        Choose an event from the dropdown to
+                                        review its venue, schedule, and
+                                        available slots before adding your
+                                        registration items.
                                     </div>
                                 )}
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
 
@@ -611,155 +624,154 @@ export default function OnsiteRegistrationForm({
                 </div>
 
                 {form.data.line_items.map((lineItem, index) => {
-                        const selectedFeeCategory =
-                            availableFeeCategories.find(
-                                (feeCategory) =>
-                                    feeCategory.id.toString() ===
-                                    lineItem.fee_category_id,
-                            ) ?? null;
+                    const selectedFeeCategory =
+                        availableFeeCategories.find(
+                            (feeCategory) =>
+                                feeCategory.id.toString() ===
+                                lineItem.fee_category_id,
+                        ) ?? null;
 
-                        return (
-                            <div
-                                key={index}
-                                className="rounded-md border border-[#d9e1de] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(247,250,249,0.98))] p-5 shadow-sm shadow-[#184d47]/6"
-                            >
-                                <div className="mb-4 flex flex-col gap-3 border-b border-[#e5ece8] pb-4 sm:flex-row sm:items-center sm:justify-between">
-                                    <div>
-                                        <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
-                                            Line item {String(index + 1).padStart(2, '0')}
-                                        </div>
-                                        <div className="mt-1 text-sm text-slate-600">
-                                            Choose one fee category and the
-                                            quantity to add to this transaction.
-                                        </div>
+                    return (
+                        <div
+                            key={index}
+                            className="rounded-md border border-[#d9e1de] bg-[linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(247,250,249,0.98))] p-5 shadow-sm shadow-[#184d47]/6"
+                        >
+                            <div className="mb-4 flex flex-col gap-3 border-b border-[#e5ece8] pb-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase">
+                                        Line item{' '}
+                                        {String(index + 1).padStart(2, '0')}
                                     </div>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="h-10 rounded-md border-dashed"
-                                        onClick={() => removeLineItem(index)}
-                                        disabled={
-                                            form.data.line_items.length === 1
-                                        }
-                                    >
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        Remove
-                                    </Button>
+                                    <div className="mt-1 text-sm text-slate-600">
+                                        Choose one fee category and the quantity
+                                        to add to this transaction.
+                                    </div>
                                 </div>
-
-                                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_160px_auto]">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor={`fee_category_${index}`}>
-                                            Fee category
-                                        </Label>
-                                        <FormSelect
-                                            id={`fee_category_${index}`}
-                                            name={`line_items.${index}.fee_category_id`}
-                                            value={lineItem.fee_category_id}
-                                            onValueChange={(value) =>
-                                                updateLineItem(
-                                                    index,
-                                                    'fee_category_id',
-                                                    value,
-                                                )
-                                            }
-                                            placeholder={
-                                                selectedEvent
-                                                    ? 'Select a fee category'
-                                                    : 'Select an event first'
-                                            }
-                                            emptyLabel={
-                                                selectedEvent
-                                                    ? 'Select a fee category'
-                                                    : 'Select an event first'
-                                            }
-                                            options={availableFeeCategories.map(
-                                                (feeCategory) => ({
-                                                    value: feeCategory.id.toString(),
-                                                    label: `${feeCategory.category_name}${feeCategory.status !== 'active' ? ' (Inactive)' : ''} · ${formatCurrency(feeCategory.amount)}`,
-                                                }),
-                                            )}
-                                            disabled={selectedEvent === null}
-                                        />
-                                        <InputError
-                                            message={
-                                                form.errors[
-                                                    `line_items.${index}.fee_category_id`
-                                                ]
-                                            }
-                                        />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label htmlFor={`quantity_${index}`}>
-                                            Quantity
-                                        </Label>
-                                        <Input
-                                            id={`quantity_${index}`}
-                                            name={`line_items.${index}.quantity`}
-                                            type="text"
-                                            inputMode="numeric"
-                                            pattern="[0-9]*"
-                                            value={lineItem.quantity}
-                                            onChange={(event) =>
-                                                updateLineItem(
-                                                    index,
-                                                    'quantity',
-                                                    normalizeQuantityValue(
-                                                        event.target.value,
-                                                    ),
-                                                )
-                                            }
-                                            placeholder="0"
-                                            className={quantityInputClassName}
-                                        />
-                                        <InputError
-                                            message={
-                                                form.errors[
-                                                    `line_items.${index}.quantity`
-                                                ]
-                                            }
-                                        />
-                                    </div>
-
-                                    <div className="hidden lg:block" />
-                                </div>
-
-                                {selectedFeeCategory && (
-                                    <div className="mt-4 flex flex-wrap gap-2 text-sm text-muted-foreground">
-                                        <Badge
-                                            variant="outline"
-                                            className="rounded-md border-slate-200 bg-white px-3 py-1 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                                        >
-                                            {formatCurrency(
-                                                selectedFeeCategory.amount,
-                                            )}{' '}
-                                            each
-                                        </Badge>
-                                        <Badge
-                                            variant="outline"
-                                            className={`rounded-md px-3 py-1 ${
-                                                selectedFeeCategory.remaining_slots ===
-                                                null
-                                                    ? 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
-                                                    : selectedFeeCategory.remaining_slots >
-                                                          0
-                                                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-300'
-                                                      : 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-500/10 dark:text-rose-300'
-                                            }`}
-                                        >
-                                            {selectedFeeCategory.remaining_slots ===
-                                            null
-                                                ? 'No category slot limit'
-                                                : `${selectedFeeCategory.remaining_slots} category slots left`}
-                                        </Badge>
-                                    </div>
-                                )}
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-10 rounded-md border-dashed"
+                                    onClick={() => removeLineItem(index)}
+                                    disabled={form.data.line_items.length === 1}
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Remove
+                                </Button>
                             </div>
-                        );
-                    })}
 
-                    <InputError message={form.errors.line_items} />
+                            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_160px_auto]">
+                                <div className="grid gap-2">
+                                    <Label htmlFor={`fee_category_${index}`}>
+                                        Fee category
+                                    </Label>
+                                    <FormSelect
+                                        id={`fee_category_${index}`}
+                                        name={`line_items.${index}.fee_category_id`}
+                                        value={lineItem.fee_category_id}
+                                        onValueChange={(value) =>
+                                            updateLineItem(
+                                                index,
+                                                'fee_category_id',
+                                                value,
+                                            )
+                                        }
+                                        placeholder={
+                                            selectedEvent
+                                                ? 'Select a fee category'
+                                                : 'Select an event first'
+                                        }
+                                        emptyLabel={
+                                            selectedEvent
+                                                ? 'Select a fee category'
+                                                : 'Select an event first'
+                                        }
+                                        options={availableFeeCategories.map(
+                                            (feeCategory) => ({
+                                                value: feeCategory.id.toString(),
+                                                label: `${feeCategory.category_name}${feeCategory.status !== 'active' ? ' (Inactive)' : ''} · ${formatCurrency(feeCategory.amount)}`,
+                                            }),
+                                        )}
+                                        disabled={selectedEvent === null}
+                                    />
+                                    <InputError
+                                        message={
+                                            form.errors[
+                                                `line_items.${index}.fee_category_id`
+                                            ]
+                                        }
+                                    />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor={`quantity_${index}`}>
+                                        Quantity
+                                    </Label>
+                                    <Input
+                                        id={`quantity_${index}`}
+                                        name={`line_items.${index}.quantity`}
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={lineItem.quantity}
+                                        onChange={(event) =>
+                                            updateLineItem(
+                                                index,
+                                                'quantity',
+                                                normalizeQuantityValue(
+                                                    event.target.value,
+                                                ),
+                                            )
+                                        }
+                                        placeholder="0"
+                                        className={quantityInputClassName}
+                                    />
+                                    <InputError
+                                        message={
+                                            form.errors[
+                                                `line_items.${index}.quantity`
+                                            ]
+                                        }
+                                    />
+                                </div>
+
+                                <div className="hidden lg:block" />
+                            </div>
+
+                            {selectedFeeCategory && (
+                                <div className="mt-4 flex flex-wrap gap-2 text-sm text-muted-foreground">
+                                    <Badge
+                                        variant="outline"
+                                        className="rounded-md border-slate-200 bg-white px-3 py-1 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                                    >
+                                        {formatCurrency(
+                                            selectedFeeCategory.amount,
+                                        )}{' '}
+                                        each
+                                    </Badge>
+                                    <Badge
+                                        variant="outline"
+                                        className={`rounded-md px-3 py-1 ${
+                                            selectedFeeCategory.remaining_slots ===
+                                            null
+                                                ? 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
+                                                : selectedFeeCategory.remaining_slots >
+                                                    0
+                                                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-300'
+                                                  : 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-500/10 dark:text-rose-300'
+                                        }`}
+                                    >
+                                        {selectedFeeCategory.remaining_slots ===
+                                        null
+                                            ? 'No category slot limit'
+                                            : `${selectedFeeCategory.remaining_slots} category slots left`}
+                                    </Badge>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+
+                <InputError message={form.errors.line_items} />
             </section>
 
             <section className="space-y-4 border-t border-sidebar-border/70 pt-8">
@@ -768,13 +780,15 @@ export default function OnsiteRegistrationForm({
                         Transaction summary
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                        One receipt can cover multiple fee-category quantities in
-                        the same onsite transaction.
+                        One receipt can cover multiple fee-category quantities
+                        in the same onsite transaction.
                     </p>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3">
-                    <div className={`${summaryCardClassName} border-[#d6e2de] bg-[linear-gradient(145deg,_rgba(24,77,71,0.10),_rgba(255,255,255,0.98))] shadow-[#184d47]/8`}>
+                    <div
+                        className={`${summaryCardClassName} border-[#d6e2de] bg-[linear-gradient(145deg,_rgba(24,77,71,0.10),_rgba(255,255,255,0.98))] shadow-[#184d47]/8`}
+                    >
                         <div className="flex items-start justify-between gap-3">
                             <div className="text-sm font-medium text-slate-600">
                                 Selected church
@@ -784,7 +798,8 @@ export default function OnsiteRegistrationForm({
                             </div>
                         </div>
                         <div className="mt-5 text-lg font-semibold text-slate-900">
-                            {selectedPastor?.church_name ?? 'No church selected'}
+                            {selectedPastor?.church_name ??
+                                'No church selected'}
                         </div>
                         <div className="mt-2 text-sm text-slate-600">
                             {selectedPastor
@@ -793,7 +808,9 @@ export default function OnsiteRegistrationForm({
                         </div>
                     </div>
 
-                    <div className={`${summaryCardClassName} border-[#dfe4e8] bg-[linear-gradient(145deg,_rgba(248,250,252,0.96),_rgba(255,255,255,1))] shadow-slate-200/70`}>
+                    <div
+                        className={`${summaryCardClassName} border-[#dfe4e8] bg-[linear-gradient(145deg,_rgba(248,250,252,0.96),_rgba(255,255,255,1))] shadow-slate-200/70`}
+                    >
                         <div className="flex items-start justify-between gap-3">
                             <div className="text-sm font-medium text-slate-600">
                                 Total quantity
@@ -812,7 +829,9 @@ export default function OnsiteRegistrationForm({
                         </div>
                     </div>
 
-                    <div className={`${summaryCardClassName} border-[#184d47]/20 bg-[#184d47] text-white shadow-[#184d47]/20`}>
+                    <div
+                        className={`${summaryCardClassName} border-[#184d47]/20 bg-[#184d47] text-white shadow-[#184d47]/20`}
+                    >
                         <div className="flex items-start justify-between gap-3">
                             <div className="text-sm font-medium text-white/75">
                                 Estimated total
@@ -840,7 +859,9 @@ export default function OnsiteRegistrationForm({
                 <Button
                     type="submit"
                     disabled={
-                        form.processing || events.length === 0 || pastors.length === 0
+                        form.processing ||
+                        events.length === 0 ||
+                        pastors.length === 0
                     }
                 >
                     {form.processing && <Spinner />}
