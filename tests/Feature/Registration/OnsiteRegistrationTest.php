@@ -119,6 +119,35 @@ test('onsite registrations can be searched and paginated', function () {
             ->where('registrations.meta.last_page', 2));
 });
 
+test('onsite create page only exposes active fee categories for new transactions', function () {
+    $pastor = Pastor::factory()->create();
+    $staff = User::factory()->registrationStaff()->create([
+        'district_id' => $pastor->section->district_id,
+    ]);
+    $event = onsiteRegistrationEvent();
+
+    EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Onsite)',
+        'amount' => '500.00',
+        'status' => 'active',
+    ]);
+
+    EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'One-day Pass',
+        'amount' => '300.00',
+        'status' => 'inactive',
+    ]);
+
+    $this->actingAs($staff)
+        ->get(route('registrations.onsite.create'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/onsite/create')
+            ->has('events.0.fee_categories', 1)
+            ->where('events.0.fee_categories.0.category_name', 'Regular (Onsite)')
+            ->where('events.0.fee_categories.0.status', 'active'));
+});
+
 test('super admins can filter onsite registrations by section', function () {
     $centralDistrict = District::factory()->create([
         'name' => 'Central Luzon',
