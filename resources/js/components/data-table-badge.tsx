@@ -37,7 +37,7 @@ export function DataTableBadge({
         <Badge
             variant="outline"
             className={cn(
-                'w-fit rounded-md px-2 py-1 text-[11px]',
+                'w-fit rounded-md px-2 py-1 text-[11px] whitespace-nowrap',
                 capitalize && 'capitalize',
                 dataTableBadgeToneClasses[tone],
                 className,

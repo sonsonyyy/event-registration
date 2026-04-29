@@ -1,11 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Plus } from 'lucide-react';
+import { Eye, Plus } from 'lucide-react';
 import { useState } from 'react';
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
-import {
-    DataTableBadge,
-    resolveDataTableTone,
-} from '@/components/data-table-badge';
 import DataTablePagination from '@/components/data-table-pagination';
 import {
     elevatedIndexTableStyles,
@@ -97,6 +93,8 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: OnsiteRegistrationController.index(),
     },
 ];
+
+const onsiteTableClassName = `${elevatedIndexTableStyles.table} min-w-[68rem]`;
 
 const formatCurrency = (value: string): string =>
     new Intl.NumberFormat(undefined, {
@@ -299,7 +297,7 @@ export default function OnsiteRegistrationIndex({
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className={elevatedIndexTableStyles.table}>
+                        <table className={onsiteTableClassName}>
                             <thead className={elevatedIndexTableStyles.thead}>
                                 <tr
                                     className={
@@ -339,13 +337,6 @@ export default function OnsiteRegistrationIndex({
                                             elevatedIndexTableStyles.headerCell
                                         }
                                     >
-                                        Payment
-                                    </th>
-                                    <th
-                                        className={
-                                            elevatedIndexTableStyles.headerCell
-                                        }
-                                    >
                                         Encoded by
                                     </th>
                                     <th
@@ -361,7 +352,7 @@ export default function OnsiteRegistrationIndex({
                                 {registrations.data.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={7}
+                                            colSpan={6}
                                             className={
                                                 elevatedIndexTableStyles.emptyCell
                                             }
@@ -397,43 +388,19 @@ export default function OnsiteRegistrationIndex({
                                             }
                                         >
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.firstCell
-                                                }
+                                                className={`${elevatedIndexTableStyles.firstCell} min-w-[16rem]`}
                                             >
                                                 <div className="font-medium text-foreground">
                                                     {registration.event.name}
                                                 </div>
-                                                <div className="mt-1 flex flex-wrap items-center gap-2">
-                                                    <span className="text-[12px] text-muted-foreground sm:text-[13px]">
-                                                        {formatDate(
-                                                            registration.submitted_at,
-                                                        )}
-                                                    </span>
-                                                    <DataTableBadge
-                                                        tone={resolveDataTableTone(
-                                                            registration.registration_status,
-                                                            {
-                                                                completed:
-                                                                    'emerald',
-                                                                verified:
-                                                                    'emerald',
-                                                                cancelled:
-                                                                    'rose',
-                                                            },
-                                                            'amber',
-                                                        )}
-                                                    >
-                                                        {
-                                                            registration.registration_status
-                                                        }
-                                                    </DataTableBadge>
+                                                <div className="mt-1 text-[12px] text-muted-foreground sm:text-[13px]">
+                                                    {formatDate(
+                                                        registration.submitted_at,
+                                                    )}
                                                 </div>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[14rem]`}
                                             >
                                                 <div className="font-medium text-foreground">
                                                     {
@@ -441,27 +408,20 @@ export default function OnsiteRegistrationIndex({
                                                             .church_name
                                                     }
                                                 </div>
-                                                <div className="mt-1 line-clamp-1 text-[12px] text-muted-foreground sm:text-[13px]">
+                                                <div className="mt-1 text-[12px] whitespace-nowrap text-muted-foreground sm:text-[13px]">
                                                     {
                                                         registration.pastor
                                                             .pastor_name
                                                     }
-                                                    {' • '}
+                                                    {' - '}
                                                     {
                                                         registration.pastor
                                                             .section_name
                                                     }
-                                                    {' • '}
-                                                    {
-                                                        registration.pastor
-                                                            .district_name
-                                                    }
                                                 </div>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[18rem]`}
                                             >
                                                 <div className="space-y-1.5">
                                                     {registration.items.map(
@@ -470,23 +430,20 @@ export default function OnsiteRegistrationIndex({
                                                                 key={item.id}
                                                                 className="space-y-0.5"
                                                             >
-                                                                <div className="font-medium text-foreground">
+                                                                <div className="text-[12px] font-medium whitespace-nowrap text-foreground sm:text-[13px]">
                                                                     {
                                                                         item.category_name
-                                                                    }
-                                                                </div>
-                                                                <div className="text-[12px] text-muted-foreground sm:text-[13px]">
-                                                                    {
-                                                                        item.quantity
                                                                     }{' '}
-                                                                    x{' '}
-                                                                    {formatCurrency(
-                                                                        item.unit_amount,
-                                                                    )}{' '}
-                                                                    ={' '}
-                                                                    {formatCurrency(
-                                                                        item.subtotal_amount,
-                                                                    )}
+                                                                    -{' '}
+                                                                    <span className="text-muted-foreground">
+                                                                        {
+                                                                            item.quantity
+                                                                        }{' '}
+                                                                        x{' '}
+                                                                        {formatCurrency(
+                                                                            item.unit_amount,
+                                                                        )}
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                         ),
@@ -494,13 +451,15 @@ export default function OnsiteRegistrationIndex({
                                                 </div>
                                             </td>
                                             <td
-                                                className={`${elevatedIndexTableStyles.cell} text-[12px] text-muted-foreground sm:text-[13px]`}
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[10rem] text-[12px] text-muted-foreground sm:text-[13px]`}
                                             >
-                                                <div className="font-medium text-foreground">
+                                                <div className="font-medium whitespace-nowrap text-foreground">
                                                     {
                                                         registration.total_quantity
                                                     }{' '}
-                                                    delegates •{' '}
+                                                    delegates
+                                                </div>
+                                                <div className="mt-1 font-medium text-foreground">
                                                     {formatCurrency(
                                                         registration.total_amount,
                                                     )}
@@ -512,31 +471,7 @@ export default function OnsiteRegistrationIndex({
                                                 )}
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
-                                            >
-                                                <DataTableBadge
-                                                    tone={resolveDataTableTone(
-                                                        registration.payment_status,
-                                                        {
-                                                            paid: 'emerald',
-                                                            unpaid: 'rose',
-                                                            partial: 'amber',
-                                                        },
-                                                    )}
-                                                >
-                                                    {
-                                                        registration.payment_status
-                                                    }
-                                                </DataTableBadge>
-                                                <div className="mt-1 line-clamp-1 text-[12px] text-muted-foreground sm:text-[13px]">
-                                                    {registration.payment_reference ??
-                                                        'No receipt reference'}
-                                                </div>
-                                            </td>
-                                            <td
-                                                className={`${elevatedIndexTableStyles.cell} text-muted-foreground`}
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[10rem] whitespace-nowrap text-muted-foreground`}
                                             >
                                                 <div>
                                                     {
@@ -546,7 +481,7 @@ export default function OnsiteRegistrationIndex({
                                                 </div>
                                             </td>
                                             <td
-                                                className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
+                                                className={`${elevatedIndexTableStyles.lastCellRight} min-w-[8rem] text-right`}
                                             >
                                                 <Button
                                                     type="button"
@@ -561,6 +496,7 @@ export default function OnsiteRegistrationIndex({
                                                         )
                                                     }
                                                 >
+                                                    <Eye className="size-4" />
                                                     View
                                                 </Button>
                                             </td>

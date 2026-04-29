@@ -158,6 +158,12 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+const reportsPanelClassName =
+    'overflow-hidden border border-t-4 border-[#d3ddd8] border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-emerald-500 dark:bg-slate-950 dark:shadow-black/20';
+
+const reportsPanelHeaderClassName =
+    'border-b border-[#e2ebe6] px-5 py-4 dark:border-slate-800';
+
 const formatCurrency = (value: string): string =>
     new Intl.NumberFormat(undefined, {
         style: 'currency',
@@ -268,17 +274,17 @@ export default function ReportsIndex({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Reports" />
 
-            <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+            <div className="flex flex-1 flex-col gap-5 p-4 md:p-6">
                 <Heading
                     title="Reports"
-                    description={`Operational registration reporting for ${scopeSummary}.`}
-                    className="mb-4"
+                    description={`Registration reporting for ${scopeSummary}.`}
+                    className="mb-3"
                 />
 
-                <Card className="overflow-hidden border border-t-4 border-[#d3ddd8] border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-emerald-500 dark:bg-slate-950 dark:shadow-black/20">
-                    <CardContent className="p-6">
+                <Card className={reportsPanelClassName}>
+                    <CardContent className="p-5">
                         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-                            <div className="space-y-5">
+                            <div className="space-y-4">
                                 <div className="flex flex-wrap items-center gap-3">
                                     {selectedEvent !== null && (
                                         <Badge
@@ -296,13 +302,14 @@ export default function ReportsIndex({
                                 </div>
 
                                 <div className="space-y-2">
-                                    <div className="text-2xl font-bold tracking-[-0.03em] text-slate-900 dark:text-slate-100">
+                                    <div className="text-[1.65rem] font-bold tracking-[-0.03em] text-slate-900 dark:text-slate-100">
                                         {selectedEvent?.name ??
                                             'Select an event'}
                                     </div>
                                     <p className="max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400">
-                                        {selectedEvent?.description ??
-                                            'Filter the event and section scope to review registration volume, section and church summaries, fee-category totals, and churches that have not submitted registrations yet.'}
+                                        {selectedEvent !== null
+                                            ? 'Event and section scope for this report.'
+                                            : 'Choose an event to load the report.'}
                                     </p>
                                 </div>
                             </div>
@@ -423,7 +430,7 @@ export default function ReportsIndex({
                 </Card>
 
                 {selectedEvent === null ? (
-                    <Card className="border-dashed border-[#cad4c4] bg-white/70 py-8 shadow-sm dark:border-slate-800 dark:bg-slate-950/70">
+                    <Card className="border-dashed border-[#cad4c4] bg-white/70 py-6 shadow-sm dark:border-slate-800 dark:bg-slate-950/70">
                         <CardContent className="space-y-2 px-6 text-center">
                             <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                                 No events available for reporting.
@@ -438,60 +445,57 @@ export default function ReportsIndex({
                     <>
                         <div className="grid gap-4 md:grid-cols-3">
                             <Card className="overflow-hidden rounded-md border border-t-4 border-[#d6e2de] border-t-[#184d47] bg-[linear-gradient(145deg,_rgba(24,77,71,0.10),_rgba(255,255,255,0.98))] py-0 shadow-sm shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-emerald-500 dark:bg-slate-950">
-                                <CardContent className="p-5">
+                                <CardContent className="p-4">
                                     <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
                                         Total registered quantity
                                     </div>
-                                    <div className="mt-5 text-3xl font-semibold text-slate-900 dark:text-slate-100">
+                                    <div className="mt-3 text-[1.75rem] font-semibold text-slate-900 dark:text-slate-100">
                                         {
                                             eventTotalRegistration.total_registered_quantity
                                         }
                                     </div>
                                     <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                                        All reserved or confirmed quantities for
-                                        the selected event and section scope.
+                                        All quantities in scope.
                                     </div>
                                 </CardContent>
                             </Card>
 
                             <Card className="overflow-hidden rounded-md border border-t-4 border-[#d9e2de] border-t-slate-900 bg-white py-0 shadow-sm shadow-[#184d47]/6 dark:border-slate-800 dark:border-t-slate-200 dark:bg-slate-950">
-                                <CardContent className="p-5">
+                                <CardContent className="p-4">
                                     <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
                                         Verified online quantity
                                     </div>
-                                    <div className="mt-5 text-3xl font-semibold text-slate-900 dark:text-slate-100">
+                                    <div className="mt-3 text-[1.75rem] font-semibold text-slate-900 dark:text-slate-100">
                                         {
                                             eventTotalRegistration.verified_online_quantity
                                         }
                                     </div>
                                     <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                                        Submitted online quantities that have
-                                        already passed receipt verification.
+                                        Online quantities already verified.
                                     </div>
                                 </CardContent>
                             </Card>
 
                             <Card className="overflow-hidden rounded-md border border-t-4 border-[#ecd7d8] border-t-[#be4b56] bg-white py-0 shadow-sm shadow-[#be4b56]/8 dark:border-slate-800 dark:border-t-rose-500 dark:bg-slate-950">
-                                <CardContent className="p-5">
+                                <CardContent className="p-4">
                                     <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
                                         Pending online quantity
                                     </div>
-                                    <div className="mt-5 text-3xl font-semibold text-slate-900 dark:text-slate-100">
+                                    <div className="mt-3 text-[1.75rem] font-semibold text-slate-900 dark:text-slate-100">
                                         {
                                             eventTotalRegistration.pending_online_quantity
                                         }
                                     </div>
                                     <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                                        Online quantities still waiting for
-                                        receipt verification review.
+                                        Online quantities awaiting review.
                                     </div>
                                 </CardContent>
                             </Card>
                         </div>
 
-                        <Card className="overflow-hidden border border-t-4 border-[#d3ddd8] border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-emerald-500 dark:bg-slate-950 dark:shadow-black/20">
+                        <Card className={reportsPanelClassName}>
                             <CardContent className="p-0">
-                                <div className="border-b border-[#e2ebe6] px-6 py-6 dark:border-slate-800">
+                                <div className={reportsPanelHeaderClassName}>
                                     <div className="space-y-2">
                                         <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
                                             Event Total Registration
@@ -500,9 +504,8 @@ export default function ReportsIndex({
                                             Fee category totals
                                         </div>
                                         <p className="text-sm leading-6 text-slate-600 dark:text-slate-400">
-                                            Registered quantities and submitted
-                                            value per fee category for the
-                                            current event and section filter.
+                                            Fee-category quantity and value
+                                            totals.
                                         </p>
                                     </div>
                                 </div>
@@ -612,7 +615,7 @@ export default function ReportsIndex({
                             </CardContent>
                         </Card>
 
-                        <div className="flex flex-col gap-4 rounded-md border border-[#d3ddd8] bg-white px-5 py-5 shadow-sm shadow-[#184d47]/6 dark:border-slate-800 dark:bg-slate-950">
+                        <div className="flex flex-col gap-3 rounded-md border border-[#d3ddd8] bg-white px-4 py-4 shadow-sm shadow-[#184d47]/6 dark:border-slate-800 dark:bg-slate-950">
                             <div className="space-y-1">
                                 <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
                                     Detailed reports
@@ -742,9 +745,11 @@ export default function ReportsIndex({
                         </div>
 
                         {activeReportTab === 'section-summary' && (
-                            <Card className="overflow-hidden border border-t-4 border-[#d3ddd8] border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8 dark:border-slate-800 dark:border-t-emerald-500 dark:bg-slate-950 dark:shadow-black/20">
+                            <Card className={reportsPanelClassName}>
                                 <CardContent className="p-0">
-                                    <div className="border-b border-[#e2ebe6] px-6 py-6 dark:border-slate-800">
+                                    <div
+                                        className={reportsPanelHeaderClassName}
+                                    >
                                         <div className="space-y-2">
                                             <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
                                                 Registration Summary
@@ -753,10 +758,8 @@ export default function ReportsIndex({
                                                 By section
                                             </div>
                                             <p className="text-sm leading-6 text-slate-600 dark:text-slate-400">
-                                                Active churches, submitted
-                                                transactions, and registered
-                                                value grouped by section for the
-                                                current report scope.
+                                                Section totals for churches,
+                                                quantity, and value.
                                             </p>
                                         </div>
                                     </div>
@@ -875,7 +878,7 @@ export default function ReportsIndex({
                         {activeReportTab === 'church-summary' && (
                             <div className={elevatedIndexTableStyles.shell}>
                                 <div className={elevatedIndexTableStyles.band}>
-                                    <div className="space-y-5">
+                                    <div className="space-y-4">
                                         <div className="space-y-2">
                                             <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
                                                 Registration Summary
@@ -884,10 +887,8 @@ export default function ReportsIndex({
                                                 By church
                                             </div>
                                             <p className="text-sm leading-6 text-slate-600 dark:text-slate-400">
-                                                Search and export churches with
-                                                submitted registrations for the
-                                                selected event and section
-                                                scope.
+                                                Search churches with
+                                                registrations in scope.
                                             </p>
                                         </div>
 
@@ -1172,7 +1173,7 @@ export default function ReportsIndex({
                         {activeReportTab === 'no-registration' && (
                             <div className={elevatedIndexTableStyles.shell}>
                                 <div className={elevatedIndexTableStyles.band}>
-                                    <div className="space-y-5">
+                                    <div className="space-y-4">
                                         <div className="space-y-2">
                                             <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
                                                 No Registration Report
@@ -1181,10 +1182,8 @@ export default function ReportsIndex({
                                                 Churches with no registration
                                             </div>
                                             <p className="text-sm leading-6 text-slate-600 dark:text-slate-400">
-                                                Search and export the churches
-                                                that still have no submitted
-                                                registration for the selected
-                                                event and section scope.
+                                                Search churches still missing
+                                                registrations.
                                             </p>
                                         </div>
 
