@@ -107,7 +107,7 @@ const roleDescriptions: Record<string, string> = {
     Admin: 'Administrative access. Department is optional and scope can remain general for now.',
     Manager: 'Section oversight account. Assign a section and optionally attach a department.',
     'Registration Staff':
-        'Can encode onsite registrations. Scope is optional for this MVP.',
+        'Can encode onsite registrations. Assign a district, then optionally narrow access by section or department.',
     'Online Registrant':
         'Must be assigned to one pastor or church account. Department stays optional.',
 };

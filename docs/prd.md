@@ -1,635 +1,397 @@
 # PRD: Church Event Registration Application
 
+## Document Status
+This PRD is aligned to the current repository implementation as of May 1, 2026. It should be used as the product baseline for future enhancements, not as a pre-build wishlist.
+
+---
+
 ## 1. Product Overview
 
 ### Product Name
 Church Event Registration Application
 
-### Objective
-Build a centralized church event registration system for district use. The application must support onsite registration and church-based online registration without online payment processing. Online registrants submit a receipt or proof of payment instead.
+### Product Purpose
+Provide one operational workspace for district event registration that supports:
+- public event visibility
+- church representative account requests
+- onsite registration
+- online registration with proof of payment
+- scoped review and reporting
 
-### Primary Goal
-Provide one operational platform for district, sectional, and department-owned events while preserving clear access control, registration verification, and historical data.
+### Product Shape Today
+The application is already implemented as an Inertia + React Laravel app with:
+- public welcome and account-request flows
+- authenticated admin and reviewer workspace
+- church-based registrant workspace
+- notification-driven review loops
+- scoped reports and exports
 
-### Deployment Assumption
-The system is operated per district deployment, but the product structure should be reusable by other districts in the organization.
+### Core Product Position
+This is a registration operations system, not a payment platform and not a delegate management system.
 
 ---
 
-## 2. Scope
+## 2. Product Goals
+
+The current product is built to solve these operational needs:
+- Centralize district and sectional event setup in one workspace
+- Keep scope-sensitive authority clear across super admins, district admins, section managers, staff, and church registrants
+- Let churches submit grouped registrations without exposing public self-registration
+- Let reviewers verify uploaded receipts inside a structured queue
+- Keep event capacity accurate while registrations move through review
+- Give district and section leaders reporting they can act on
+
+---
+
+## 3. Primary Users
+
+### 3.1 Super Admin
+System owner with full access across all modules and scopes.
+
+### 3.2 Admin
+District-scoped operator responsible for district-level setup, reporting, online verification, and district-wide registration operations.
+
+### 3.3 Manager
+Section-scoped operator responsible for sectional event management, section review work, and section-level reporting.
+
+### 3.4 Registration Staff
+Operational encoder focused on onsite grouped registration.
+
+### 3.5 Online Registrant
+Church representative assigned to one pastor/church record and responsible for online submissions for that church.
+
+---
+
+## 4. Product Scope
 
 ### In Scope
-- Event management
-- Event fee configuration
-- District management
-- Section management
-- Department management
-- Pastor/church management
-- User management
-- Church representative access requests
-- Onsite registration
-- Online registration
-- Receipt upload for online registration
-- S3-backed receipt storage
-- Registration verification
-- In-app workflow notifications
-- Capacity tracking and reservation
-- Registration reports
-- Historical archiving through soft deletes
+- Public welcome page with live event availability
+- Self-service church representative account request form
+- Login, email verification, password reset, profile, password, and two-factor settings
+- Department, district, section, pastor/church, and user management
+- District and sectional event management
+- Fee-category management inside event forms
+- Onsite grouped registrations
+- Online grouped registrations with receipt upload
+- Registration verification with review history
+- In-app notifications with realtime broadcast delivery
+- Reports with search, section filters, pagination, and Excel export
+- Soft-delete archiving for master data, users, events, and fee categories
 
-### Out of Scope
-- Online payment gateway integration
-- Delegate-level personal details
+### Explicitly Out of Scope
+- Online payment processing
+- Delegate-level attendee records
 - QR code check-in
 - Badge printing
-- SMS or email notifications
-- Public self-registration without login
+- SMS workflow notifications
+- Email workflow notifications beyond standard auth flows
+- Public event registration without login
 
 ---
 
-## 3. Operating Model
+## 5. Operating Model
 
-### 3.1 Geographic Scope
-The system uses three scope levels:
-- District scope
-- Section scope
-- Church/pastor scope
+### 5.1 Territorial Scope
+The product operates across:
+- district scope
+- section scope
+- pastor/church scope
 
-### 3.2 Department Scope
-Privileged accounts and events may optionally belong to a department.
+### 5.2 Department Scope
+Privileged workflows use strict department matching:
+- department-scoped users only match the same department
+- no-department users only match records with no department
+- no-department is not a wildcard lane
 
-Supported departments for the current district are:
-- Youth Ministries
-- Ladies Ministries
-- Apostolic Men's
-- Sunday School
-- Home Missions
-- Music Commission
-- Information Technology Commission
+### 5.3 Action-Based Authority
+The same user may have different permissions for:
+- managing event records
+- posting onsite registrations
+- reviewing online registrations
+- approving account requests
+- viewing reports
 
-### 3.3 General vs Departmental Access
-Permissions must always be evaluated by combining:
-- role
-- territorial scope
-- department scope
-- action type
+The product intentionally separates those actions instead of using one broad access rule.
 
-Department matching is strict:
-- If a user belongs to a department, they only match records and events in that same department
-- If a user has no department, they only match records and events with no department
-- No-department is not a wildcard
-- Same department alone does not grant authority
-
-### 3.4 Positions and Titles
-District and sectional positions such as `President`, `Director`, `Presbyter`, and `Secretary` are organizational titles, not permission roles.
-
-Titles should be stored as account metadata and must not replace the role model.
+### 5.4 Title Metadata
+Titles such as `President` or `Secretary` are stored as metadata only. They do not replace role-based access.
 
 ---
 
-## 4. Users and Roles
+## 6. Current User Experience
 
-### 4.1 Super Admin
-#### Description
-Deployment-wide system owner for IT or platform administration.
+### 6.1 Public Experience
+Guests land on a welcome page that:
+- lists currently open events
+- shows remaining event slots
+- shows remaining fee-category slots where applicable
+- explains the registration flow
+- answers common account-request and proof-of-payment questions
 
-#### Permissions
-- Full access to all modules
-- Manage every district, section, department, church, event, and user
-- Approve church access requests
-- Verify any registration
-- Override scope restrictions when needed
-- Generate all reports
+The page refreshes event availability through polling so capacity changes appear without a full reload.
 
-#### Scope Rules
-- Must not be assigned to any district, section, department, or pastor
-- No position/title is required
+### 6.2 Church Representative Access Request
+Guests can request a registrant account through the public access-request form.
 
----
+Current business behavior:
+- the request captures representative identity plus section and pastor/church assignment
+- the request creates an active `Online Registrant` account in `pending` approval state
+- each church may have at most two active or pending registrant accounts
+- approval unlocks online registration routes
+- pending or rejected requestors can still sign in and see the dashboard notice
 
-### 4.2 Admin
-#### Description
-District-scoped reviewer and operator.
+### 6.3 Admin and Reviewer Workspace
+Authenticated privileged users work from a scoped dashboard with:
+- quick actions
+- notification count and recent notifications
+- open event visibility
+- recent scoped registrations
+- role-specific metrics
 
-#### Scope Rules
-- Must belong to one district
-- May belong to exactly one department or no department
-- Must not be assigned to a pastor
-- Must not be treated as section-scoped
-
-#### Permissions
-- Manage users
-- Manage districts, sections, departments, and pastors/churches
-- Manage district-wide events and fee categories inside matching district and department scope
-- Post onsite registrations for district-wide events inside matching district and department scope
-- Verify online registrations for district-wide events inside matching district and department scope
-- View reports for accessible district and department scope
-
-#### Access Rules
-- A no-department admin matches only no-department district events
-- A department-scoped admin matches only district events in the same department
-- Admins do not manage sectional events
-- Admins do not process account requests in this ruleset
+### 6.4 Registrant Workspace
+Approved online registrants can:
+- see only accessible district and same-section events
+- submit grouped registrations with receipt upload
+- review current registration status
+- edit correctable submissions
+- cancel unverified submissions
+- open their own stored receipts
 
 ---
 
-### 4.3 Manager
-#### Description
-Section-scoped reviewer and operator.
-
-#### Scope Rules
-- Must belong to one section
-- May belong to exactly one department or no department
-- Must not be assigned to a pastor
-
-#### Permissions
-- Process account requests for churches in the same section
-- Manage sectional events and fee categories inside matching section and department scope
-- Post onsite registrations for churches in the same section when the event and department scope match
-- Verify online registrations for churches in the same section when the event and department scope match
-- View reports for accessible section and department scope
-
-#### Access Rules
-- A no-department manager matches only no-department section events
-- A department-scoped manager matches only section events in the same department
-- Managers may help process district-wide registrations for their own section, but that does not make them managers of the district-wide event record
-
----
-
-### 4.4 Registration Staff
-#### Description
-Operational user for onsite event registration.
-
-#### Permissions
-- Create onsite registrations
-- Search churches/pastors
-- View event availability
-- Save onsite transactions
-
-#### Current Rule
-Registration staff is operational only.
-
-#### Scope Rules
-- Scope depends on assigned district, optional section, and optional department
-- Must not be assigned to a pastor
-- No position/title is required
-- Cannot manage event records
-- Can post registrations only inside explicitly assigned scope
-
----
-
-### 4.5 Registrant
-#### Description
-Church representative account used for online registration.
-
-#### Permissions
-- Log in
-- Submit online registrations for assigned church/pastor
-- Upload proof of payment
-- View own registration history and status
-
-#### Business Rules
-- Registrants remain church-based, not department-based
-- Each church may have up to two registrant accounts
-- Registrants can register only under their assigned pastor/church record
-
----
-
-## 5. Event Model
-
-### Supported Event Ownership
-An event may be:
-- District event under a department
-- Sectional event under a department
-- District event with no department
-- Sectional event with no department
-
-### Event Scope Rules
-Managing an event is separate from viewing an event or helping with registration.
-
-- District event under a department:
-  - managed by `Super Admin` or an `Admin` in the same district and same department
-- District event with no department:
-  - managed by `Super Admin` or a no-department `Admin` in the same district
-- Sectional event under a department:
-  - managed by `Super Admin` or a `Manager` in the same section and same department
-- Sectional event with no department:
-  - managed by `Super Admin` or a no-department `Manager` in the same section
-- Managers may view district-wide events for workflow purposes when separate registration rules allow it, but they do not manage the event record
-- Admins may view sectional events for workflow purposes when separate registration rules allow it, but they do not manage the event record
-- Registration Staff and Registrants cannot manage events
-
-### Event Fields
-- Event name
-- Description
-- Venue
-- Date from
-- Date to
-- Registration opening date
-- Registration closing date
-- Status
-- Total capacity
-- Remaining slots (computed)
-- Owning district
-- Scope type (`district` or `section`)
-- Assigned section (required for sectional events, otherwise null)
-- Assigned department (optional)
-
-### Event Ownership Storage Rules
-- Every event stores `district_id`
-- District-wide events must store the owning `district_id` and keep `section_id` null
-- Sectional events must store both `section_id` and the matching `district_id` from that section
-- Event management, reporting, verification, and onsite posting must use the stored event district instead of inferring district ownership from related registrations
-- Non-superadmin event forms must prefill and lock actor-owned scope fields:
-  - `Admin` defaults to district-wide scope, assigned district, and assigned department or no-department lane
-  - `Manager` defaults to sectional scope, assigned district, assigned section, and assigned department or no-department lane
-
-### Fee Categories
-Each event can have multiple fee categories such as:
-- Regular (Online)
-- Regular (Onsite)
-- One-day Pass
-
-### Fee Category Fields
-- Category name
-- Amount
-- Slot limit (optional)
-- Active status
-
-### Event Business Rules
-- Registration closes automatically when capacity is reached
-- Registration closes when the closing date is reached
-- Closed or cancelled events cannot accept new registrations
-- `Pending Verification`, `Needs Correction`, and verified registrations reserve capacity
-- `Rejected` and cancelled registrations release capacity
-- Onsite registrations consume capacity immediately when saved
-- Remaining slots must refresh without a full page reload
-- Authenticated users receive real-time workflow notifications; public homepage availability may refresh through polling
-- Archived events and fee categories remain available for historical lookups and audit reporting
-
----
-
-## 6. Core Modules
-
-### 6.1 Department Management
-#### Description
-Manage departments that own or organize district and sectional events.
-
-#### Functional Requirements
-- Create departments
-- Edit departments
-- Archive departments
-
-#### Department Fields
-- Department name
-- Description (optional)
-- Status
-
----
-
-### 6.2 User Management
-#### Description
-Manage privileged accounts, registrant accounts, and scope assignments.
-
-#### Functional Requirements
-- Create users
-- Edit users
-- Deactivate users
-- Archive users
-- Assign roles
-- Assign district, section, and department scope when applicable
-- Assign pastor/church scope for registrants
-- Store organizational position/title when needed
-
-#### User Fields
-- Full name
-- Email
-- Password
-- Role
-- District (optional by role)
-- Section (optional by role)
-- Department (optional by role)
-- Pastor/church assignment (registrant only)
-- Position/title (optional metadata)
-- Status
-
----
-
-### 6.3 District Management
-#### Functional Requirements
-- Create districts
-- Edit districts
-- Archive districts
-
----
-
-### 6.4 Section Management
-#### Functional Requirements
-- Create sections
-- Edit sections
-- Archive sections
-
-#### Business Rules
-- A section must belong to a district
-- Archive operations must preserve historical registrations, scoped users, and master data references
-
----
-
-### 6.5 Pastor / Church Management
-#### Functional Requirements
-- Create pastor/church records
-- Edit pastor/church records
-- Archive pastor/church records
-
-#### Pastor / Church Fields
-- Parent section
-- Pastor full name
-- Church name
-- Contact number
-- Email (optional)
-- Address (optional)
-- Status
-
-#### Business Rules
-- A pastor/church must belong to a section
-- The pastor/church record is the church access anchor for online registrants
-
----
-
-### 6.6 Event Management
-#### Functional Requirements
-- Create events
-- Edit events
-- Archive events
-- Configure fee categories
-- Set total capacity
-- Set event scope, owning district, and department ownership
-- Open and close registration
-
-#### Business Rules
-- Every event must store an owning district
-- District-wide events require `district_id` and must not store `section_id`
-- Sectional events require `section_id` and must store the matching section district on `district_id`
-- `Admin` can manage only district-wide events in the same district and matching department scope
-- `Manager` can manage only sectional events in the same section and matching department scope
-- Workflow visibility for registration help does not change event-record ownership
-
----
-
-### 6.7 Onsite Registration
-#### Description
-Used by registration staff, managers, or admins for onsite transactions.
-
-#### Functional Requirements
-- Select event
-- Search and select pastor/church
-- Add multiple fee-category line items in one transaction
-- Enter quantity per line item
-- Save the transaction as paid
-- Record official receipt or manual reference
-
-#### Business Rules
-- Onsite registration is quantity-based, not delegate-based
-- Onsite transactions are recorded as `Paid` in the current MVP
-- `Unpaid` and `Partial` remain reserved for future workflow expansion
-- `Registration Staff` can post onsite registrations only inside explicitly assigned territorial and department scope
-- `Admin` can post onsite registrations only for district-wide events in the same district and matching department scope
-- `Manager` can post onsite registrations for churches inside the assigned section when the event is available to that section and department scope matches
-- Manager help on district-wide events is a workflow action only, not event ownership
-- Onsite posting does not send notifications
-
----
-
-### 6.8 Online Registration
-#### Description
-Used by authorized church registrants assigned to a pastor/church.
-
-#### Functional Requirements
-- Select open event
-- Add one or more registration line items
-- Enter quantity per fee category
-- Upload proof of payment
-- Submit registration
-- Track registration status
-
-#### Business Rules
-- Registrants can submit only under their assigned pastor/church
-- System must validate capacity before submission
-- System reserves event and fee-category capacity immediately after successful submission
-- Receipt or reference number is required
-- Proof of payment is required
-- Proof of payment files must be stored in S3-compatible object storage for production use
-- Uploaded receipt access must remain authorization-controlled
-- One receipt can cover multiple fee-category quantities in one submission
-
----
-
-### 6.9 File Storage
-#### Description
-Uploaded proof-of-payment files must be stored on S3-compatible object storage instead of relying on local application disk storage.
-
-#### Functional Requirements
-- Store online registration receipt uploads on a configurable cloud disk
-- Keep stored receipt objects private by default
-- Preserve original file name and upload timestamp metadata
-- Support authorized viewing of receipts during verification and history review
-- Delete replaced receipt objects after successful updates
-
-#### Storage Rules
-- Production deployments should use S3 or S3-compatible object storage
-- Local development may still use local disk when cloud credentials are not configured
-- Receipt delivery should use authorized temporary access or an application-controlled proxy route
-- Bucket contents must not be exposed publicly by default
-- Production receipt storage must have `ONLINE_REGISTRATION_RECEIPTS_DISK=s3`, `AWS_DEFAULT_REGION`, and `AWS_BUCKET` configured
-- Production deployments may use static AWS credentials or an IAM role / equivalent provider identity
-- `AWS_URL` and `AWS_ENDPOINT` should remain empty for standard AWS S3 and only be set for S3-compatible providers when required
-- `AWS_USE_PATH_STYLE_ENDPOINT` should remain `false` unless the object-storage provider explicitly requires path-style access
-
-#### Production Bucket Settings
-- Keep the bucket private and block all public access
-- Disable public website hosting for the receipt bucket
-- Limit application access to object read, write, and delete operations only
-- Use short-lived temporary URLs for authorized receipt access instead of public object URLs
-- Keep region and bucket naming consistent with deployed environment configuration
-
----
-
-### 6.10 Notifications
-#### Description
-In-app workflow notifications keep reviewers and registrants aware of approval and verification updates.
-
-#### Functional Requirements
-- Store notifications in the database
-- Show unread notification count in the authenticated header
-- Show recent notifications in a dropdown list
-- Mark one notification as read
-- Mark all notifications as read
-- Deliver notifications in real time to authenticated users
-
-#### Notification Triggers
-- Church access request submitted
-- Church access request approved
-- Church access request rejected
-- Online registration submitted for review
-- Registration returned for correction
-- Registration resubmitted after correction
-- Registration verified
-- Registration rejected
-
-#### Delivery Rules
-- Database notifications are the persisted source of truth
-- Real-time delivery is for authenticated users inside the app
-- The public homepage does not require strict instant updates; capacity may refresh through polling
-- External email and SMS notifications remain out of scope in this phase
-
----
-
-### 6.11 Reports
-#### Required Reports
-- Event total registration
-- No registration report
-
-#### Recommended Additional Reports
-- Remaining slots by event
-- Registration summary by department
-- Registration summary by section
-- Registration summary by pastor/church
-- Payment summary based on submitted references and receipts
-
-#### Report Access Rules
-- `Super Admin` can generate all reports across all scopes
-- `Admin` can generate reports only for events inside the assigned district and matching department scope
-- A no-department `Admin` can report only on no-department district events
-- `Manager` can generate reports only for events inside the assigned section and matching department scope
-- A no-department `Manager` can report only on no-department section events
-- Report section filters must show only sections inside the signed-in user’s district, or the manager’s own section
-- For district-wide events, a `Manager` may see only data from the manager's own section
-- Managers must not see data from other sections
-
----
-
-## 7. Key Business Rules
-
-### 7.1 Church Access Request Approval
-Church representative access requests may be approved by:
-- Super Admin
-- Manager
-
-This approval rule is section-scoped. Managers may process requests only when they belong to the same section as the requesting church. Department does not restrict account request handling in this ruleset, and Admins do not process account requests unless a later rule explicitly adds that authority.
-
-New account requests notify:
-- Managers in the same section as the requesting church
-- Optional `Super Admin`
-
-### 7.2 Registration Verification Ownership
-- `Admin` can verify only district-wide events in the same district and matching department scope
-- `Manager` can verify registrations for churches in the assigned section when the event is district-wide or sectional and department scope matches
-- No-department reviewers match only no-department events
-- `Super Admin` can verify any registration
-- Event ownership does not automatically determine verification ownership; role, territorial scope, department scope, and action type must all match
-
-### 7.3 General Event Coverage
-If general non-departmental events exist at a scope, at least one no-department reviewer account must exist at that scope.
-
-### 7.4 Verification Notifications
-- District-wide event under a department -> matching district `Admin`, matching section `Manager`, optional `Super Admin`
-- District-wide event with no department -> no-department district `Admin`, no-department section `Manager`, optional `Super Admin`
-- Sectional event under a department -> matching section `Manager`, optional `Super Admin`
-- Sectional event with no department -> no-department section `Manager`, optional `Super Admin`
-
-### 7.5 Historical Data
-- Archive operations must preserve historical registrations and review history
-- Archived users, events, departments, sections, pastors, and fee categories must remain available for historical reporting and future audit trail features
-
-### 7.6 Authorization Precedence
-Apply permission logic in this order:
-1. `Super Admin` override
-2. role authority for the action
-3. territorial scope check
-4. strict department match
-5. section / church ownership where relevant
-6. deny by default
-
----
-
-## 8. Core Workflows
-
-### 8.1 Event Setup Workflow
-1. Super Admin sets up or oversees districts, sections, departments, and pastors/churches
-2. Admin creates district-wide events inside matching district and department scope
-3. Manager creates sectional events inside matching section and department scope
-4. Event owner assigns the owning district, scope, and optional department
-5. Super Admin or Admin creates user accounts with role, territorial scope, optional department, and optional title
-6. Registration opens
-
-### 8.2 Church Access Workflow
-1. Church representative requests access for an assigned pastor/church
-2. Super Admin or a Manager in the same section reviews the request
-3. Reviewers receive in-app notifications for new requests
-4. Approved account can sign in and submit registrations
-5. Registrant receives approval or rejection notification
-
-### 8.3 Online Registration Workflow
-1. Registrant logs in
-2. Selects an open event
-3. Adds one or more fee-category line items
-4. Enters receipt/reference number
-5. Uploads proof of payment to private cloud object storage
-6. Submits registration and reserves capacity immediately
-7. Assigned reviewers receive in-app notification for verification
-8. Assigned reviewer verifies or returns the registration
-9. Registrant receives the verification outcome notification
-
-### 8.4 Onsite Registration Workflow
-1. Staff selects event
-2. Staff selects pastor/church
-3. Staff adds one or more registration line items
-4. Staff records the official receipt/reference
-5. Staff saves the paid transaction and consumes capacity immediately
-
----
-
-## 9. Data Model Summary
-
-### Core Entities
-- users
-- roles
+## 7. Functional Requirements
+
+### 7.1 Identity and Access
+The implemented product must:
+- support `Super Admin`, `Admin`, `Manager`, `Registration Staff`, and `Online Registrant`
+- require territorial scope assignments where the role needs them
+- keep `Super Admin` as a system-level global override
+- restrict registrants to one pastor/church assignment
+- keep department matching strict for privileged event workflows
+
+Current approval behavior:
+- `Super Admin` can review all self-service account requests
+- `Admin` can review requests across the assigned district
+- `Manager` can review requests inside the assigned section
+- department does not restrict account-request approval
+
+### 7.2 Master Data and User Management
+The product must support CRUD plus archive behavior for:
+- departments
 - districts
 - sections
-- departments
-- pastors
-- events
-- event_fee_categories
-- registrations
-- registration_items
-- notifications
+- pastors/churches
+- users
 
-### Target Data Additions for the Department Model
-- `users.department_id` nullable
-- `users.position_title` nullable
-- `events.scope_type`
-- `events.district_id` nullable for migration/backfill, required for managed events going forward
-- `events.section_id` nullable
-- `events.department_id` nullable
+Current constraints:
+- the standard user form exposes `Admin`, `Manager`, `Registration Staff`, and `Online Registrant`
+- managers must have a section
+- registration staff must have a district
+- online registrants must have a pastor
+- admin users are limited to managing users inside their district
 
-### Receipt Storage Notes
-- Existing registration receipt metadata remains the source of truth
-- `receipt_file_path` stores the object key on the configured storage disk
-- The storage disk should be environment-driven so local and production deployments can differ safely
+### 7.3 Event Management
+The product must support:
+- district-wide events
+- sectional events
+- optional department ownership on either scope
+- inline fee-category setup inside event create/edit flows
+
+Current authority rules:
+- `Admin` manages district-wide events only
+- `Manager` manages sectional events only
+- both still require matching territorial and department scope
+
+Current event model includes:
+- name and description
+- venue
+- event date range
+- registration window
+- capacity
+- status
+- scope type
+- district, section, and department ownership
+
+### 7.4 Fee Categories
+Each event can contain multiple fee categories with:
+- name
+- amount
+- optional slot limit
+- active or inactive status
+
+Current product behavior:
+- registration create flows only expose active fee categories
+- fee-category capacity can be unlimited or slot-limited
+- fee-category totals are included in reports
+
+### 7.5 Onsite Registration
+The onsite flow must allow authorized users to:
+- pick an event
+- pick a pastor/church
+- add one or more grouped line items
+- store a receipt or manual reference number
+- save the transaction
+
+Current workflow behavior:
+- onsite registrations are grouped, not delegate-based
+- onsite submissions are stored as `paid`
+- onsite submissions are stored as `completed`
+- onsite submission does not send workflow notifications
+
+Current access rules:
+- `Registration Staff` is the primary onsite encoder role
+- `Admin` may post only for district-wide events in the assigned district
+- `Manager` may post only for churches inside the assigned section
+
+### 7.6 Online Registration
+The online flow must allow approved registrants to:
+- select an accessible open event
+- submit grouped line items
+- enter a payment reference
+- upload proof of payment
+- view registration history
+- view latest review and review history
+- edit or cancel when still allowed
+
+Current workflow behavior:
+- submission requires a payment reference
+- submission requires a receipt file
+- submission reserves capacity immediately
+- submission stores `payment_status = paid`
+- submission stores `registration_status = pending verification`
+- correction resubmission notifies reviewers again
+- cancellation releases capacity
+
+### 7.7 Verification and Review
+The review flow must allow authorized reviewers to:
+- browse a scoped verification queue
+- open uploaded receipts
+- verify a registration
+- reject a registration
+- return a registration for correction
+- store reason, notes, reviewer, and timestamp
+
+Current review audience:
+- `Super Admin`
+- `Admin` for district-wide events in the assigned district and matching department lane
+- `Manager` for section registrations in the assigned section, including district-wide events affecting that section
+
+### 7.8 Notifications
+The product must provide in-app workflow notifications for:
+- new account requests
+- account request approval
+- account request rejection
+- registration submission
+- registration return for correction
+- registration resubmission
+- registration verification
+- registration rejection
+
+Current delivery model:
+- database notifications are the persisted source of truth
+- broadcast delivery updates authenticated users in realtime
+- notification menu supports single-read and mark-all-read actions
+
+### 7.9 Reporting
+The reporting module must allow authorized users to:
+- select an accessible event
+- optionally filter by section when allowed
+- review event total registration
+- review fee-category totals
+- review section summaries
+- review churches with registration
+- review churches without registration
+- export the two church lists as Excel files
+
+Current access rules:
+- `Super Admin` can report across all accessible events
+- `Admin` can report across district events in the assigned department lane
+- `Manager` can report only their own section data
+- `Registration Staff` and `Online Registrant` cannot access reports
+
+### 7.10 Dashboard and Settings
+The authenticated workspace must provide:
+- role-aware quick actions
+- role-aware summary metrics
+- open event visibility
+- recent registration visibility
+- notification visibility
+- registrant approval notices where needed
+- profile, password, and two-factor settings
 
 ---
 
-## 10. Product Direction
+## 8. Key Business Rules
 
-The product should be implemented around this model:
-- role controls permissions
-- territorial scope controls reach
-- department scope must match strictly
-- `null department` means no-department only, not wildcard authority
-- action type must be evaluated separately
-- position/title is metadata, not authorization
-- registrant accounts stay church-based
-- same department does not automatically grant authority
-- uploaded receipt files should be stored on private S3-compatible object storage in production
+### 8.1 Event Ownership
+- Every event stores `district_id`
+- District events keep `section_id = null`
+- Sectional events store both `district_id` and `section_id`
+- Event ownership does not automatically grant report or verification access without the matching action rule
 
-This keeps the system operationally clear while supporting both departmental and general district events.
+### 8.2 Department Matching
+- Privileged users and events must match department exactly
+- Registrants are not department-scoped
+- Account request approval ignores department
+
+### 8.3 Registrant Access Requests
+- A church can have at most two active or pending registrant accounts
+- Self-service requests start in pending approval
+- Admin-created registrants start approved by default through database defaults
+
+### 8.4 Capacity Reservation
+These registration states reserve slots:
+- `submitted`
+- `pending verification`
+- `needs correction`
+- `verified`
+- `completed`
+
+These states release or avoid reservation:
+- `draft`
+- `rejected`
+- `cancelled`
+
+### 8.5 Historical Preservation
+- Users, master data, events, and fee categories are archived with soft deletes
+- Registrations and review history remain durable records
+- Reports continue to support historical lookup against archived relationships
+
+---
+
+## 9. Storage and Delivery Requirements
+
+### 9.1 Receipt Storage
+The product stores online registration receipts on a configurable disk.
+
+Current environment behavior:
+- non-production defaults to `local`
+- production defaults to `s3`
+
+### 9.2 Receipt Access
+Receipt files must remain authorization-controlled.
+
+Current implementation behavior:
+- local storage is served through the application
+- S3 storage uses temporary URLs
+- missing files return `404`
+
+### 9.3 Production Expectation
+Production receipt storage is expected to use S3-compatible object storage with required bucket and region configuration.
+
+---
+
+## 10. Current Product Baseline
+
+The repository currently demonstrates the following baseline:
+- one public welcome flow
+- one public self-service registrant access-request flow
+- one scoped admin/reviewer workspace
+- one scoped registrant workspace
+- quantity-based onsite and online registration
+- proof-of-payment upload plus receipt review
+- strict district, section, and department aware authorization
+- in-app realtime workflow notifications
+- scoped reporting with export
+
+This baseline should be treated as the contract for future work unless a later change explicitly expands or replaces it.
