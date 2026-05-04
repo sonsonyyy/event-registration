@@ -138,6 +138,11 @@ class User extends Authenticatable
         return $this->hasMany(RegistrationReview::class, 'reviewer_user_id');
     }
 
+    public function processedEventCheckIns(): HasMany
+    {
+        return $this->hasMany(EventCheckIn::class, 'checked_in_by_user_id');
+    }
+
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;

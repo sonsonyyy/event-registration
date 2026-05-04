@@ -3,6 +3,8 @@
 use App\Models\Department;
 use App\Models\District;
 use App\Models\Event;
+use App\Models\EventCheckIn;
+use App\Models\EventCheckInItem;
 use App\Models\EventFeeCategory;
 use App\Models\Pastor;
 use App\Models\Registration;
@@ -25,6 +27,8 @@ test('mvp schema tables and key columns exist', function () {
     expect(Schema::hasTable('registrations'))->toBeTrue();
     expect(Schema::hasTable('registration_items'))->toBeTrue();
     expect(Schema::hasTable('registration_reviews'))->toBeTrue();
+    expect(Schema::hasTable('event_check_ins'))->toBeTrue();
+    expect(Schema::hasTable('event_check_in_items'))->toBeTrue();
     expect(Schema::hasColumns('districts', ['deleted_at']))->toBeTrue();
     expect(Schema::hasColumns('sections', ['deleted_at']))->toBeTrue();
     expect(Schema::hasColumns('departments', ['deleted_at']))->toBeTrue();
@@ -77,6 +81,21 @@ test('mvp schema tables and key columns exist', function () {
         'reason',
         'notes',
         'decided_at',
+    ]))->toBeTrue();
+    expect(Schema::hasColumns('event_check_ins', [
+        'event_id',
+        'pastor_id',
+        'checked_in_by_user_id',
+        'representative_name',
+        'total_claimed_quantity',
+        'remarks',
+        'checked_in_at',
+    ]))->toBeTrue();
+    expect(Schema::hasColumns('event_check_in_items', [
+        'event_check_in_id',
+        'fee_category_id',
+        'quantity_claimed',
+        'remarks',
     ]))->toBeTrue();
 });
 
@@ -142,6 +161,20 @@ test('core mvp model relationships resolve correctly', function () {
             'decision' => Registration::STATUS_NEEDS_CORRECTION,
             'reason' => 'Receipt image is incomplete.',
         ]);
+    $eventCheckIn = EventCheckIn::factory()
+        ->for($event)
+        ->for($pastor)
+        ->for($user, 'checkedInByUser')
+        ->create([
+            'representative_name' => 'Brother Joel',
+            'total_claimed_quantity' => 2,
+        ]);
+    $eventCheckInItem = EventCheckInItem::factory()
+        ->for($eventCheckIn)
+        ->for($feeCategory, 'feeCategory')
+        ->create([
+            'quantity_claimed' => 2,
+        ]);
 
     expect($district->sections)->toHaveCount(1);
     expect($district->sections->first()->is($section))->toBeTrue();
@@ -157,6 +190,7 @@ test('core mvp model relationships resolve correctly', function () {
     expect($event->section->is($section))->toBeTrue();
     expect($event->department->is($department))->toBeTrue();
     expect($event->feeCategories->first()->is($feeCategory))->toBeTrue();
+    expect($event->eventCheckIns->first()->is($eventCheckIn))->toBeTrue();
     expect($registration->event->is($event))->toBeTrue();
     expect($registration->pastor->is($pastor))->toBeTrue();
     expect($registration->encodedByUser->is($user))->toBeTrue();
@@ -168,4 +202,13 @@ test('core mvp model relationships resolve correctly', function () {
     expect($item->feeCategory->is($feeCategory))->toBeTrue();
     expect($review->registration->is($registration))->toBeTrue();
     expect($review->reviewer->is($user))->toBeTrue();
+    expect($pastor->eventCheckIns->first()->is($eventCheckIn))->toBeTrue();
+    expect($user->processedEventCheckIns->first()->is($eventCheckIn))->toBeTrue();
+    expect($feeCategory->eventCheckInItems->first()->is($eventCheckInItem))->toBeTrue();
+    expect($eventCheckIn->event->is($event))->toBeTrue();
+    expect($eventCheckIn->pastor->is($pastor))->toBeTrue();
+    expect($eventCheckIn->checkedInByUser->is($user))->toBeTrue();
+    expect($eventCheckIn->items->first()->is($eventCheckInItem))->toBeTrue();
+    expect($eventCheckInItem->eventCheckIn->is($eventCheckIn))->toBeTrue();
+    expect($eventCheckInItem->feeCategory->is($feeCategory))->toBeTrue();
 });

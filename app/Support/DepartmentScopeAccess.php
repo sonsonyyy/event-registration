@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Event;
+use App\Models\EventCheckIn;
 use App\Models\Pastor;
 use App\Models\Registration;
 use App\Models\Section;
@@ -374,7 +375,7 @@ class DepartmentScopeAccess
     public static function verificationScopeSummary(User $reviewer): string
     {
         if ($reviewer->isSuperAdmin()) {
-            return 'all events and departments';
+            return 'All events and departments';
         }
 
         if ($reviewer->isAdmin()) {
@@ -450,6 +451,116 @@ class DepartmentScopeAccess
         }
 
         return false;
+    }
+
+    public static function canProcessEventCheckIn(User $user, Pastor $pastor, Event $event): bool
+    {
+        return self::canPostOnsiteRegistration($user, $pastor, $event);
+    }
+
+    public static function canAccessEventCheckInRecord(User $user, EventCheckIn $eventCheckIn): bool
+    {
+        $eventCheckIn->loadMissing('event.section', 'pastor.section');
+
+        return self::canProcessEventCheckIn(
+            $user,
+            $eventCheckIn->pastor,
+            $eventCheckIn->event,
+        );
+    }
+
+    public static function scopeAccessibleEventCheckInPastors(Builder $query, User $user): Builder
+    {
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+
+        if ($user->isAdmin()) {
+            if ($user->district_id === null) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query->whereHas('section', function (Builder $sectionQuery) use ($user): void {
+                $sectionQuery->where('district_id', $user->district_id);
+            });
+        }
+
+        if ($user->isManager()) {
+            if ($user->section_id === null) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query->where('section_id', $user->section_id);
+        }
+
+        if ($user->isRegistrationStaff()) {
+            if ($user->district_id === null) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            $query->whereHas('section', function (Builder $sectionQuery) use ($user): void {
+                $sectionQuery->where('district_id', $user->district_id);
+            });
+
+            if ($user->section_id !== null) {
+                $query->where('section_id', $user->section_id);
+            }
+
+            return $query;
+        }
+
+        return $query->whereRaw('1 = 0');
+    }
+
+    public static function eventCheckInScopeSummary(User $user): string
+    {
+        if ($user->isSuperAdmin()) {
+            return 'All events and departments';
+        }
+
+        if ($user->isAdmin()) {
+            $districtName = $user->district?->name
+                ?? $user->district()->value('name');
+
+            return $districtName !== null
+                ? $districtName.' • district events • '.self::departmentScopeLabel($user)
+                : 'district events • '.self::departmentScopeLabel($user);
+        }
+
+        $section = $user->section()
+            ->with('district')
+            ->first();
+
+        if ($user->isManager()) {
+            if ($section === null) {
+                return 'your assigned scope';
+            }
+
+            return $section->district->name
+                .' • '
+                .$section->name
+                .' • '
+                .self::departmentScopeLabel($user);
+        }
+
+        if ($user->isRegistrationStaff()) {
+            $districtName = $user->district?->name
+                ?? $user->district()->value('name');
+
+            if ($section !== null) {
+                return $section->district->name
+                    .' • '
+                    .$section->name
+                    .' • '
+                    .self::departmentScopeLabel($user);
+            }
+
+            return $districtName !== null
+                ? $districtName.' • all sections • '.self::departmentScopeLabel($user)
+                : 'your assigned scope';
+        }
+
+        return 'your assigned scope';
     }
 
     public static function canAccessPastorForOnsiteScope(User $user, Pastor $pastor): bool

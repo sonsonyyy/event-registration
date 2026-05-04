@@ -21,6 +21,7 @@ export type Auth = {
         viewSystemAdminMenu: boolean;
         manageOnlineRegistrations: boolean;
         manageOnsiteRegistrations: boolean;
+        manageEventCheckIns: boolean;
         viewReports: boolean;
         reviewOnlineRegistrations: boolean;
         manageUsers: boolean;

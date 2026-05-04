@@ -51,6 +51,11 @@ class EventFeeCategory extends Model
         return $this->hasMany(RegistrationItem::class, 'fee_category_id');
     }
 
+    public function eventCheckInItems(): HasMany
+    {
+        return $this->hasMany(EventCheckInItem::class, 'fee_category_id');
+    }
+
     public function reservedRegistrationItems(): HasMany
     {
         return $this->registrationItems()->whereHas('registration', function ($query): void {
