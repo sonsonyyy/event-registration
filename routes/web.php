@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\PastorController;
 use App\Http\Controllers\Admin\SectionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EventCheckInController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnlineRegistrationController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\RegistrationVerificationController;
 use App\Http\Controllers\ReportsController;
 use App\Models\District;
 use App\Models\Event as ManagedEvent;
+use App\Models\EventCheckIn;
 use App\Models\Registration;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -73,6 +75,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/', [RegistrationVerificationController::class, 'index'])->name('index');
             Route::get('{registration}/receipt', [RegistrationVerificationController::class, 'receipt'])->name('receipt');
             Route::patch('{registration}', [RegistrationVerificationController::class, 'update'])->name('update');
+        });
+
+    Route::prefix('event-check-in')
+        ->name('event-check-in.')
+        ->middleware('can:viewAny,'.EventCheckIn::class)
+        ->group(function (): void {
+            Route::get('/', [EventCheckInController::class, 'index'])->name('index');
+            Route::post('/', [EventCheckInController::class, 'store'])->name('store');
         });
 
     Route::prefix('account-requests')

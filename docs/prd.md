@@ -395,3 +395,143 @@ The repository currently demonstrates the following baseline:
 - scoped reporting with export
 
 This baseline should be treated as the contract for future work unless a later change explicitly expands or replaces it.
+
+---
+
+## 11. Event Check-in Module
+
+### 11.1 Module Purpose
+The Event Check-in module will support event-day registration booth operations where authorized users can confirm a church's registered quantities, release or claim event kits, and log attendance quantities for the selected event.
+
+This module keeps the product aligned with its quantity-based registration model. It does not introduce delegate-level attendee records, QR code check-in, or badge printing.
+
+### 11.2 Recommended Product Term
+The primary module name should be **Event Check-in**.
+
+Within the module, the operational workflow should use the more specific label **Kit Claiming & Attendance** because the event-day process is focused on:
+- confirming registered church quantities
+- recording kit claims
+- logging attendance quantities by church and fee category
+
+The navigation item should use a distinct kit or package-style icon so it does not visually duplicate Verification.
+
+### 11.3 In Scope
+The Event Check-in module should allow authorized users to:
+- select an accessible event
+- search and filter churches registered for the event
+- view church-level registered quantities across multiple transactions
+- view registration breakdown by fee category
+- record kit claims by quantity
+- record the representative name claiming the kits
+- capture remarks where needed
+- support partial and multiple kit claims for the same church
+- view claim history for the church and event
+- report claimed, unclaimed, and remaining quantities
+
+### 11.4 Explicitly Out of Scope for This Module
+The Event Check-in module should not introduce:
+- delegate-level attendee profiles
+- individual attendee check-in
+- QR code scanning
+- badge printing
+- public self-check-in
+- payment collection workflow
+
+### 11.5 Event-Day Workflow
+The recommended event-day workflow is:
+1. Booth staff selects the event.
+2. Booth staff searches for the church or pastor record.
+3. The system displays all claimable registrations for that church and event.
+4. The system summarizes registered quantities by fee category.
+5. Booth staff enters the quantities being claimed.
+6. Booth staff records the representative name and optional remarks.
+7. The system stores the claim log and updates the church's claim status.
+
+### 11.6 Claim Statuses
+Each church's event check-in status should be derived from the registered quantity and claimed quantity:
+- `not claimed` when no kits or attendance quantities have been claimed
+- `partially claimed` when some but not all registered quantities have been claimed
+- `fully claimed` when all registered quantities have been claimed
+
+### 11.7 Claimable Registration Rules
+Only registrations that are safe to honor should be claimable.
+
+Online registrations should be claimable only when the registration status is:
+- `verified`
+- `completed`
+
+Onsite registrations should be claimable when the registration status is:
+- `completed`
+
+Registrations should not be claimable when the registration status is:
+- `draft`
+- `submitted`
+- `pending verification`
+- `needs correction`
+- `rejected`
+- `cancelled`
+
+### 11.8 Access Rules
+Event Check-in access should follow the same scope-aware authority model used by privileged registration workflows.
+
+Recommended access behavior:
+- `Super Admin` can process check-ins for all events and churches.
+- `Admin` can process check-ins for district-wide events in the assigned district and matching department lane.
+- `Manager` can process check-ins only for churches in the assigned section, including district-wide events that affect the manager's section.
+- `Registration Staff` is the primary booth role and can process check-ins within the assigned district, optional section, and optional department lane.
+- `Online Registrant` cannot process check-ins, but may later be allowed to view their own church's check-in or claim status if needed.
+
+### 11.9 Recommended User Experience
+The Event Check-in page should be an event-first booth workspace instead of a standard CRUD page.
+
+Recommended layout:
+- event selector at the top
+- concise workspace description: `Claim kits and track attendance by church.`
+- scope indicator chips based on the current user
+- event-day summary cards
+- full-width fee-category progress card
+- church search and filters
+- full-width church-level table showing registered, claimed, and remaining quantities
+- right-side drawer for the selected church
+- fee-category claim form inside the drawer
+- claim history inside the drawer
+
+Recommended summary cards:
+- Registered Qty
+- Claimed Qty
+- Remaining Qty
+- Not Yet Claimed
+
+Recommended table columns:
+- Church
+- Section
+- Registered Qty
+- Claimed Qty
+- Remaining Qty
+- Claim Status
+- Last Claim
+- Action
+
+Recommended drawer content:
+- selected church summary
+- registered quantity by fee category
+- already claimed quantity by fee category
+- remaining quantity by fee category
+- quantity-to-claim inputs that allow staff to clear and replace `0` values cleanly before submit
+- representative name field
+- remarks field
+- confirm claim action
+- claim history
+
+### 11.10 Reporting Expectations
+Event Check-in reporting should support:
+- total registered quantity
+- total claimed quantity
+- total remaining quantity
+- churches not claimed
+- churches partially claimed
+- churches fully claimed
+- fee-category claim totals
+- section-level claim progress where the user's scope allows it
+
+Managers should continue to see only their own section data even for district-wide events.

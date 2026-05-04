@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\District;
 use App\Models\Event;
+use App\Models\EventCheckIn;
 use App\Models\Registration;
 use App\Models\User;
 use Closure;
@@ -123,6 +124,7 @@ class HandleInertiaRequests extends Middleware
                     'manageOnlineRegistrations' => ($user?->isOnlineRegistrant() ?? false)
                         && ($user?->can('viewAnyOnline', Registration::class) ?? false),
                     'manageOnsiteRegistrations' => $user?->can('viewAnyOnsite', Registration::class) ?? false,
+                    'manageEventCheckIns' => $user?->can('viewAny', EventCheckIn::class) ?? false,
                     'viewReports' => $user?->can('viewReports') ?? false,
                     'reviewOnlineRegistrations' => $user?->can('viewAnyVerification', Registration::class) ?? false,
                     'manageUsers' => $user?->can('viewAny', User::class) ?? false,

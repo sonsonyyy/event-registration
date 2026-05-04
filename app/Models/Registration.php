@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\RegistrationFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -202,6 +203,29 @@ class Registration extends Model
             self::STATUS_PENDING_VERIFICATION,
             self::STATUS_NEEDS_CORRECTION,
         ];
+    }
+
+    /**
+     * Scope a query to registrations that may be honored during Event Check-in.
+     */
+    public function scopeClaimableForCheckIn(Builder $query): void
+    {
+        $query->where(function (Builder $claimableQuery): void {
+            $claimableQuery
+                ->where(function (Builder $onlineQuery): void {
+                    $onlineQuery
+                        ->where('registration_mode', self::MODE_ONLINE)
+                        ->whereIn('registration_status', [
+                            self::STATUS_VERIFIED,
+                            self::STATUS_COMPLETED,
+                        ]);
+                })
+                ->orWhere(function (Builder $onsiteQuery): void {
+                    $onsiteQuery
+                        ->where('registration_mode', self::MODE_ONSITE)
+                        ->where('registration_status', self::STATUS_COMPLETED);
+                });
+        });
     }
 
     public function reservesCapacity(): bool

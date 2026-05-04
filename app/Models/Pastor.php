@@ -43,4 +43,9 @@ class Pastor extends Model
     {
         return $this->hasMany(Registration::class);
     }
+
+    public function eventCheckIns(): HasMany
+    {
+        return $this->hasMany(EventCheckIn::class);
+    }
 }

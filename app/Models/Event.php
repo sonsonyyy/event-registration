@@ -94,6 +94,11 @@ class Event extends Model
         return $this->hasMany(EventFeeCategory::class);
     }
 
+    public function eventCheckIns(): HasMany
+    {
+        return $this->hasMany(EventCheckIn::class);
+    }
+
     public function section(): BelongsTo
     {
         return $this->belongsTo(Section::class)->withTrashed();
