@@ -37,12 +37,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('reports', ReportsController::class)
         ->middleware('can:viewReports')
         ->name('reports.index');
+    Route::get('reports/onsite-collection', [ReportsController::class, 'onsiteCollectionIndex'])
+        ->middleware('can:viewReports')
+        ->name('reports.onsite-collection.index');
     Route::get('reports/churches-with-registration/export', [ReportsController::class, 'exportChurchesWithRegistration'])
         ->middleware('can:viewReports')
         ->name('reports.churches-with-registration.export');
     Route::get('reports/churches-without-registration/export', [ReportsController::class, 'exportChurchesWithoutRegistration'])
         ->middleware('can:viewReports')
         ->name('reports.churches-without-registration.export');
+    Route::get('reports/onsite-collection/export', [ReportsController::class, 'exportOnsiteCollection'])
+        ->middleware('can:viewReports')
+        ->name('reports.onsite-collection.export');
 
     Route::prefix('registrations/online')
         ->name('registrations.online.')
