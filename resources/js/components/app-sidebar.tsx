@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BarChart3, Building2, CalendarRange, Landmark, Layers3, LayoutGrid, Map, PackageCheck, ReceiptText, ShieldCheck, UserRoundCheck, Users } from 'lucide-react';
+import { BarChart3, Building2, CalendarRange, HandCoins, Landmark, Layers3, LayoutGrid, Map, PackageCheck, ReceiptText, ShieldCheck, UserRoundCheck, Users } from 'lucide-react';
 import DepartmentController from '@/actions/App/Http/Controllers/Admin/DepartmentController';
 import DistrictController from '@/actions/App/Http/Controllers/Admin/DistrictController';
 import EventController from '@/actions/App/Http/Controllers/Admin/EventController';
@@ -11,7 +11,7 @@ import OnlineRegistrationController from '@/actions/App/Http/Controllers/OnlineR
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
 import RegistrantApprovalController from '@/actions/App/Http/Controllers/RegistrantApprovalController';
 import RegistrationVerificationController from '@/actions/App/Http/Controllers/RegistrationVerificationController';
-import ReportsController from '@/actions/App/Http/Controllers/ReportsController';
+import ReportsController, { onsiteCollectionIndex } from '@/actions/App/Http/Controllers/ReportsController';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import {
@@ -53,6 +53,15 @@ export function AppSidebar() {
                       title: 'Onsite Registration',
                       href: OnsiteRegistrationController.index(),
                       icon: ReceiptText,
+                  },
+              ]
+            : []),
+        ...(auth.can.viewReports
+            ? [
+                  {
+                      title: 'Onsite Collection Report',
+                      href: onsiteCollectionIndex(),
+                      icon: HandCoins,
                   },
               ]
             : []),

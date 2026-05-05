@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BarChart3, Building2, CalendarRange, Landmark, Layers3, LayoutGrid, Map, Menu, ReceiptText, ShieldCheck, UserRoundCheck, Users } from 'lucide-react';
+import { BarChart3, Building2, CalendarRange, HandCoins, Landmark, Layers3, LayoutGrid, Map, Menu, ReceiptText, ShieldCheck, UserRoundCheck, Users } from 'lucide-react';
 import DepartmentController from '@/actions/App/Http/Controllers/Admin/DepartmentController';
 import DistrictController from '@/actions/App/Http/Controllers/Admin/DistrictController';
 import EventController from '@/actions/App/Http/Controllers/Admin/EventController';
@@ -8,9 +8,9 @@ import SectionController from '@/actions/App/Http/Controllers/Admin/SectionContr
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
 import OnlineRegistrationController from '@/actions/App/Http/Controllers/OnlineRegistrationController';
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
-import ReportsController from '@/actions/App/Http/Controllers/ReportsController';
-import RegistrationVerificationController from '@/actions/App/Http/Controllers/RegistrationVerificationController';
 import RegistrantApprovalController from '@/actions/App/Http/Controllers/RegistrantApprovalController';
+import RegistrationVerificationController from '@/actions/App/Http/Controllers/RegistrationVerificationController';
+import ReportsController, { onsiteCollectionIndex } from '@/actions/App/Http/Controllers/ReportsController';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -75,6 +75,15 @@ export function AppHeader({ breadcrumbs: _breadcrumbs = [] }: Props) {
                       title: 'Onsite Registration',
                       href: OnsiteRegistrationController.index(),
                       icon: ReceiptText,
+                  },
+              ]
+            : []),
+        ...(auth.can.viewReports
+            ? [
+                  {
+                      title: 'Onsite Collection Report',
+                      href: onsiteCollectionIndex(),
+                      icon: HandCoins,
                   },
               ]
             : []),

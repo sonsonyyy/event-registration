@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -29,6 +30,10 @@ class IndexReportRequest extends FormRequest
             'search' => ['nullable', 'string', 'max:255'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'page' => ['nullable', 'integer', 'min:1'],
+            'collection_date_from' => ['nullable', 'date'],
+            'collection_date_to' => ['nullable', 'date', 'after_or_equal:collection_date_from'],
+            'collection_user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'collection_generated' => ['nullable', 'boolean'],
         ];
     }
 
@@ -62,6 +67,33 @@ class IndexReportRequest extends FormRequest
     }
 
     /**
+     * Get the normalized onsite collection report filters.
+     *
+     * @return array{
+     *     date_from: string,
+     *     date_to: string,
+     *     user_id: int|null,
+     *     generated: bool
+     * }
+     */
+    public function onsiteCollectionFilters(): array
+    {
+        $user = $this->user();
+        $collectorId = $this->validated('collection_user_id');
+
+        if ($user instanceof User && $user->isManager()) {
+            $collectorId = $user->getKey();
+        }
+
+        return [
+            'date_from' => (string) $this->validated('collection_date_from', ''),
+            'date_to' => (string) $this->validated('collection_date_to', ''),
+            'user_id' => $collectorId !== null ? (int) $collectorId : null,
+            'generated' => $this->boolean('collection_generated'),
+        ];
+    }
+
+    /**
      * Get custom validation messages.
      *
      * @return array<string, string>
@@ -76,6 +108,10 @@ class IndexReportRequest extends FormRequest
             'per_page.min' => 'Rows per page must be at least 1.',
             'per_page.max' => 'Rows per page may not be greater than 100.',
             'page.min' => 'Choose a valid page number.',
+            'collection_date_from.date' => 'Choose a valid collection start date.',
+            'collection_date_to.date' => 'Choose a valid collection end date.',
+            'collection_date_to.after_or_equal' => 'The collection end date must be on or after the start date.',
+            'collection_user_id.exists' => 'Choose a valid collecting user.',
         ];
     }
 }

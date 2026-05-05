@@ -141,6 +141,20 @@ class ReportsController extends Controller
         ]);
     }
 
+    public function onsiteCollectionIndex(IndexReportRequest $request): Response
+    {
+        Gate::authorize('viewReports');
+
+        $user = $request->user();
+
+        abort_unless($user instanceof User, 403);
+
+        return Inertia::render('reports/onsite-collection/index', [
+            'scopeSummary' => $this->scopeSummary($user),
+            ...$this->onsiteCollectionPageProps($user, $request->onsiteCollectionFilters()),
+        ]);
+    }
+
     public function exportChurchesWithRegistration(IndexReportRequest $request): StreamedResponse
     {
         Gate::authorize('viewReports');
@@ -196,6 +210,33 @@ class ReportsController extends Controller
         return $this->downloadSpreadsheet(
             $this->churchesWithoutRegistrationFilename(),
             $this->churchesWithoutRegistrationExportRows($churches),
+        );
+    }
+
+    public function exportOnsiteCollection(IndexReportRequest $request): StreamedResponse
+    {
+        Gate::authorize('viewReports');
+
+        $user = $request->user();
+
+        abort_unless($user instanceof User, 403);
+
+        $filters = $request->onsiteCollectionFilters();
+        $collectors = $this->onsiteCollectionUsers($user);
+        $selectedCollectorId = $this->selectedOnsiteCollectionUserId(
+            $collectors,
+            $filters['user_id'],
+        );
+        $registrations = $this->onsiteCollectionQuery(
+            $user,
+            $this->nullableFilter($filters['date_from']),
+            $this->nullableFilter($filters['date_to']),
+            $selectedCollectorId,
+        )->get();
+
+        return $this->downloadSpreadsheet(
+            $this->onsiteCollectionFilename(),
+            $this->onsiteCollectionExportRows($registrations),
         );
     }
 
@@ -470,6 +511,96 @@ class ReportsController extends Controller
         ];
     }
 
+    private function onsiteCollectionReport(
+        User $user,
+        ?string $dateFrom,
+        ?string $dateTo,
+        ?int $collectorId,
+    ): array {
+        $registrations = $this->onsiteCollectionQuery($user, $dateFrom, $dateTo, $collectorId)->get();
+
+        return [
+            'data' => $registrations
+                ->map(fn (Registration $registration): array => $this->onsiteCollectionRecordData($registration))
+                ->values()
+                ->all(),
+            'totals' => [
+                'transaction_count' => $registrations->count(),
+                'total_quantity' => (int) $registrations->sum(
+                    fn (Registration $registration): int => $registration->totalQuantity()
+                ),
+                'total_amount' => $this->formatAmount($registrations->sum(
+                    fn (Registration $registration): float => (float) $registration->totalAmount()
+                )),
+            ],
+        ];
+    }
+
+    private function emptyOnsiteCollectionReport(): array
+    {
+        return [
+            'data' => [],
+            'totals' => [
+                'transaction_count' => 0,
+                'total_quantity' => 0,
+                'total_amount' => '0.00',
+            ],
+        ];
+    }
+
+    /**
+     * @param  array{date_from: string, date_to: string, user_id: int|null, generated: bool}  $filters
+     * @return array{
+     *     onsiteCollectionCollectorLocked: bool,
+     *     onsiteCollectionFilters: array{date_from: string, date_to: string, user_id: int|null, generated: bool},
+     *     onsiteCollectionUsers: array<int, array{id: int, name: string}>,
+     *     onsiteCollectionReport: array{data: array<int, array<string, mixed>>, totals: array{transaction_count: int, total_quantity: int, total_amount: string}},
+     *     onsiteCollectionExportUrl: string|null
+     * }
+     */
+    private function onsiteCollectionPageProps(User $user, array $filters): array
+    {
+        $onsiteCollectionCollectorLocked = $user->isManager();
+        $onsiteCollectionUsers = $this->onsiteCollectionUsers($user);
+        $selectedOnsiteCollectionUserId = $this->selectedOnsiteCollectionUserId(
+            $onsiteCollectionUsers,
+            $filters['user_id'],
+        );
+        $onsiteCollectionReport = $filters['generated']
+            ? $this->onsiteCollectionReport(
+                $user,
+                $this->nullableFilter($filters['date_from']),
+                $this->nullableFilter($filters['date_to']),
+                $selectedOnsiteCollectionUserId,
+            )
+            : $this->emptyOnsiteCollectionReport();
+
+        return [
+            'onsiteCollectionCollectorLocked' => $onsiteCollectionCollectorLocked,
+            'onsiteCollectionFilters' => [
+                'date_from' => $filters['date_from'],
+                'date_to' => $filters['date_to'],
+                'user_id' => $selectedOnsiteCollectionUserId,
+                'generated' => $filters['generated'],
+            ],
+            'onsiteCollectionUsers' => $onsiteCollectionUsers
+                ->map(fn (User $collector): array => [
+                    'id' => $collector->getKey(),
+                    'name' => $collector->name,
+                ])
+                ->values()
+                ->all(),
+            'onsiteCollectionReport' => $onsiteCollectionReport,
+            'onsiteCollectionExportUrl' => $filters['generated']
+                ? route('reports.onsite-collection.export', $this->onsiteCollectionQueryParams(
+                    $filters['date_from'],
+                    $filters['date_to'],
+                    $selectedOnsiteCollectionUserId,
+                ))
+                : null,
+        ];
+    }
+
     private function emptyChurchesWithRegistrationReport(int $perPage): array
     {
         return [
@@ -531,6 +662,29 @@ class ReportsController extends Controller
         ];
     }
 
+    private function onsiteCollectionRecordData(Registration $registration): array
+    {
+        return [
+            'transaction_id' => $registration->getKey(),
+            'transaction_date' => $registration->submitted_at?->toIso8601String(),
+            'collector' => [
+                'id' => $registration->encodedByUser?->getKey(),
+                'name' => $registration->encodedByUser?->name ?? 'Unknown user',
+            ],
+            'event' => [
+                'id' => $registration->event->getKey(),
+                'name' => $registration->event->name,
+            ],
+            'church_name' => $registration->pastor->church_name,
+            'pastor_name' => $registration->pastor->pastor_name,
+            'section_name' => $registration->pastor->section?->name,
+            'district_name' => $registration->pastor->section?->district?->name,
+            'remarks' => $registration->remarks,
+            'total_quantity' => $registration->totalQuantity(),
+            'total_amount' => $registration->totalAmount(),
+        ];
+    }
+
     /**
      * @return array{current_page: int, last_page: int, per_page: int, from: int|null, to: int|null, total: int}
      */
@@ -566,6 +720,30 @@ class ReportsController extends Controller
         return $query;
     }
 
+    /**
+     * @return array{collection_date_from?: string, collection_date_to?: string, collection_user_id?: int, collection_generated: int}
+     */
+    private function onsiteCollectionQueryParams(string $dateFrom, string $dateTo, ?int $collectorId): array
+    {
+        $query = [
+            'collection_generated' => 1,
+        ];
+
+        if ($dateFrom !== '') {
+            $query['collection_date_from'] = $dateFrom;
+        }
+
+        if ($dateTo !== '') {
+            $query['collection_date_to'] = $dateTo;
+        }
+
+        if ($collectorId !== null) {
+            $query['collection_user_id'] = $collectorId;
+        }
+
+        return $query;
+    }
+
     private function churchesWithRegistrationFilename(): string
     {
         return 'registration-summary-by-church-'.now()->toDateString().'.xlsx';
@@ -574,6 +752,11 @@ class ReportsController extends Controller
     private function churchesWithoutRegistrationFilename(): string
     {
         return 'no-registration-report-'.now()->toDateString().'.xlsx';
+    }
+
+    private function onsiteCollectionFilename(): string
+    {
+        return 'onsite-collection-report-'.now()->toDateString().'.xlsx';
     }
 
     /**
@@ -631,6 +814,44 @@ class ReportsController extends Controller
     }
 
     /**
+     * @param  Collection<int, Registration>  $registrations
+     */
+    private function onsiteCollectionExportRows(Collection $registrations): array
+    {
+        $rows = $registrations
+            ->map(fn (Registration $registration): array => [
+                'Transaction #' => $registration->getKey(),
+                'Transaction date' => $registration->submitted_at?->format('Y-m-d H:i:s') ?? '',
+                'Collected by' => $registration->encodedByUser?->name ?? 'Unknown user',
+                'Event' => $registration->event->name,
+                'Church name' => $registration->pastor->church_name,
+                'Pastor name' => $registration->pastor->pastor_name,
+                'Section' => $registration->pastor->section?->name ?? 'Unassigned',
+                'Remarks' => $registration->remarks ?? '',
+                'Quantity' => $registration->totalQuantity(),
+                'Amount' => $registration->totalAmount(),
+            ])
+            ->values();
+
+        $rows->push([
+            'Transaction #' => 'Totals',
+            'Transaction date' => $this->transactionCountLabel($rows->count()),
+            'Collected by' => '',
+            'Event' => '',
+            'Church name' => '',
+            'Pastor name' => '',
+            'Section' => '',
+            'Remarks' => '',
+            'Quantity' => (int) $rows->sum(fn (array $row): int => (int) $row['Quantity']),
+            'Amount' => $this->formatAmount($rows->sum(
+                fn (array $row): float => (float) $row['Amount']
+            )),
+        ]);
+
+        return $rows->all();
+    }
+
+    /**
      * @param  array<int, array<string, int|string>>  $rows
      */
     private function downloadSpreadsheet(string $filename, array $rows): StreamedResponse
@@ -680,6 +901,11 @@ class ReportsController extends Controller
     private function churchCountLabel(int $count): string
     {
         return $count.' '.($count === 1 ? 'church' : 'churches');
+    }
+
+    private function transactionCountLabel(int $count): string
+    {
+        return $count.' '.($count === 1 ? 'transaction' : 'transactions');
     }
 
     private function scopeSummary(User $user): string
@@ -799,6 +1025,107 @@ class ReportsController extends Controller
             ->all();
     }
 
+    private function onsiteCollectionBaseQuery(User $user): Builder
+    {
+        $query = Registration::query()
+            ->where('registration_mode', Registration::MODE_ONSITE);
+
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+
+        if ($user->isManager()) {
+            $query->whereHas('pastor', function (Builder $pastorQuery) use ($user): void {
+                $pastorQuery->where('section_id', $user->section_id);
+            });
+
+            return $query->whereHas('event', function (Builder $eventQuery) use ($user): void {
+                DepartmentScopeAccess::scopeAccessibleEvents($eventQuery, $user);
+            });
+        }
+
+        if ($user->isAdmin()) {
+            $query->whereHas('pastor.section', function (Builder $sectionQuery) use ($user): void {
+                $sectionQuery->where('district_id', $user->district_id);
+            });
+
+            return $query->whereHas('event', function (Builder $eventQuery) use ($user): void {
+                DepartmentScopeAccess::scopeAccessibleEvents($eventQuery, $user);
+            });
+        }
+
+        return $query->whereRaw('1 = 0');
+    }
+
+    private function onsiteCollectionQuery(
+        User $user,
+        ?string $dateFrom,
+        ?string $dateTo,
+        ?int $collectorId,
+    ): Builder {
+        return $this->onsiteCollectionBaseQuery($user)
+            ->when(
+                $dateFrom !== null,
+                fn (Builder $query) => $query->whereDate('submitted_at', '>=', $dateFrom),
+            )
+            ->when(
+                $dateTo !== null,
+                fn (Builder $query) => $query->whereDate('submitted_at', '<=', $dateTo),
+            )
+            ->when(
+                $collectorId !== null,
+                fn (Builder $query) => $query->where('encoded_by_user_id', $collectorId),
+            )
+            ->with([
+                'encodedByUser',
+                'event',
+                'items.feeCategory',
+                'pastor.section.district',
+            ])
+            ->latest('submitted_at')
+            ->latest('id');
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    private function onsiteCollectionUsers(User $user): Collection
+    {
+        if ($user->isManager()) {
+            return collect([$user]);
+        }
+
+        $collectorIds = $this->onsiteCollectionBaseQuery($user)
+            ->whereNotNull('encoded_by_user_id')
+            ->distinct()
+            ->pluck('encoded_by_user_id')
+            ->map(fn (mixed $collectorId): int => (int) $collectorId)
+            ->values();
+
+        if ($collectorIds->isEmpty()) {
+            return collect();
+        }
+
+        return User::query()
+            ->withTrashed()
+            ->whereIn('id', $collectorIds->all())
+            ->orderBy('name')
+            ->orderBy('id')
+            ->get();
+    }
+
+    private function selectedOnsiteCollectionUserId(Collection $collectors, ?int $collectorId): ?int
+    {
+        if ($collectorId === null) {
+            return null;
+        }
+
+        /** @var User|null $collector */
+        $collector = $collectors->firstWhere('id', $collectorId);
+
+        return $collector?->getKey();
+    }
+
     private function scopedRegistrationsQuery(User $user, Event $event, ?Section $section): Builder
     {
         $query = Registration::query()
@@ -864,6 +1191,11 @@ class ReportsController extends Controller
         return $user->department?->name
             ?? $user->department()->value('name')
             ?? 'No department';
+    }
+
+    private function nullableFilter(string $value): ?string
+    {
+        return $value !== '' ? $value : null;
     }
 
     private function formatAmount(float|int $amount): string

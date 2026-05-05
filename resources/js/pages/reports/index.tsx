@@ -147,6 +147,15 @@ type Props = {
 
 type ReportTab = 'section-summary' | 'church-summary' | 'no-registration';
 
+type ReportsQuery = {
+    event_id?: number;
+    section_id?: number;
+    tab: ReportTab;
+    search?: string;
+    per_page: number;
+    page?: number;
+};
+
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Dashboard',
@@ -202,14 +211,17 @@ export default function ReportsIndex({
     const [search, setSearch] = useState(filters.search);
     const activeReportTab = filters.tab;
 
-    const visitReport = (query: {
-        event_id?: number;
-        section_id?: number;
-        tab: ReportTab;
-        search?: string;
-        per_page: number;
-        page?: number;
-    }): void => {
+    const currentReportQuery = (): Omit<ReportsQuery, 'page'> => ({
+        ...(filters.event_id !== null ? { event_id: filters.event_id } : {}),
+        ...(filters.section_id !== null
+            ? { section_id: filters.section_id }
+            : {}),
+        tab: activeReportTab,
+        ...(filters.search !== '' ? { search: filters.search } : {}),
+        per_page: filters.per_page,
+    });
+
+    const visitReport = (query: ReportsQuery): void => {
         router.get(
             ReportsController.url({
                 query,
@@ -227,43 +239,21 @@ export default function ReportsIndex({
         const normalizedSearch = search.trim();
 
         visitReport({
-            ...(filters.event_id !== null
-                ? { event_id: filters.event_id }
-                : {}),
-            ...(filters.section_id !== null
-                ? { section_id: filters.section_id }
-                : {}),
-            tab: activeReportTab,
+            ...currentReportQuery(),
             ...(normalizedSearch !== '' ? { search: normalizedSearch } : {}),
-            per_page: filters.per_page,
         });
     };
 
     const updatePerPage = (value: number): void => {
         visitReport({
-            ...(filters.event_id !== null
-                ? { event_id: filters.event_id }
-                : {}),
-            ...(filters.section_id !== null
-                ? { section_id: filters.section_id }
-                : {}),
-            tab: activeReportTab,
-            ...(filters.search !== '' ? { search: filters.search } : {}),
+            ...currentReportQuery(),
             per_page: value,
         });
     };
 
     const changePage = (pageNumber: number): void => {
         visitReport({
-            ...(filters.event_id !== null
-                ? { event_id: filters.event_id }
-                : {}),
-            ...(filters.section_id !== null
-                ? { section_id: filters.section_id }
-                : {}),
-            tab: activeReportTab,
-            ...(filters.search !== '' ? { search: filters.search } : {}),
-            per_page: filters.per_page,
+            ...currentReportQuery(),
             ...(pageNumber > 1 ? { page: pageNumber } : {}),
         });
     };
@@ -1366,6 +1356,7 @@ export default function ReportsIndex({
                         )}
                     </>
                 )}
+
             </div>
         </AppLayout>
     );
