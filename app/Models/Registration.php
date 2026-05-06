@@ -116,6 +116,13 @@ class Registration extends Model
             ->orderByDesc('id');
     }
 
+    public function histories(): HasMany
+    {
+        return $this->hasMany(RegistrationHistory::class)
+            ->orderByDesc('altered_at')
+            ->orderByDesc('id');
+    }
+
     public function latestReview(): HasOne
     {
         return $this->hasOne(RegistrationReview::class)
@@ -256,6 +263,13 @@ class Registration extends Model
         return $this->canBeCorrectedOnline();
     }
 
+    public function canBeAlteredForVerification(): bool
+    {
+        return $this->registration_mode === self::MODE_ONLINE
+            && in_array($this->registration_status, self::verificationStatuses(), true)
+            && ! $this->trashed();
+    }
+
     public function canBeUpdatedOnsite(): bool
     {
         return $this->registration_mode === self::MODE_ONSITE
@@ -293,5 +307,56 @@ class Registration extends Model
         }
 
         return number_format((float) $this->items()->sum('subtotal_amount'), 2, '.', '');
+    }
+
+    /**
+     * Build the immutable snapshot stored before a super-admin alteration.
+     *
+     * @return array<string, mixed>
+     */
+    public function historySnapshot(): array
+    {
+        $this->loadMissing([
+            'event',
+            'items.feeCategory',
+            'pastor.section.district',
+            'encodedByUser',
+        ]);
+
+        return [
+            'registration' => [
+                'event_id' => $this->event_id,
+                'event_name' => $this->event?->name,
+                'pastor_id' => $this->pastor_id,
+                'church_name' => $this->pastor?->church_name,
+                'pastor_name' => $this->pastor?->pastor_name,
+                'encoded_by_user_id' => $this->encoded_by_user_id,
+                'encoded_by_name' => $this->encodedByUser?->name,
+                'registration_mode' => $this->registration_mode,
+                'payment_status' => $this->payment_status,
+                'registration_status' => $this->registration_status,
+                'payment_reference' => $this->payment_reference,
+                'receipt_file_path' => $this->receipt_file_path,
+                'receipt_original_name' => $this->receipt_original_name,
+                'receipt_uploaded_at' => $this->receipt_uploaded_at?->toIso8601String(),
+                'receipt_uploaded_by_user_id' => $this->receipt_uploaded_by_user_id,
+                'remarks' => $this->remarks,
+                'submitted_at' => $this->submitted_at?->toIso8601String(),
+                'verified_at' => $this->verified_at?->toIso8601String(),
+                'verified_by_user_id' => $this->verified_by_user_id,
+                'total_quantity' => $this->totalQuantity(),
+                'total_amount' => $this->totalAmount(),
+            ],
+            'line_items' => $this->items
+                ->map(fn (RegistrationItem $item): array => [
+                    'fee_category_id' => $item->fee_category_id,
+                    'category_name' => $item->feeCategory?->category_name,
+                    'quantity' => $item->quantity,
+                    'unit_amount' => $item->unit_amount,
+                    'subtotal_amount' => $item->subtotal_amount,
+                ])
+                ->values()
+                ->all(),
+        ];
     }
 }

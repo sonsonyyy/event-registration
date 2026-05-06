@@ -14,6 +14,7 @@ use App\Http\Controllers\OnlineRegistrationController;
 use App\Http\Controllers\OnsiteRegistrationController;
 use App\Http\Controllers\RegistrantAccessController;
 use App\Http\Controllers\RegistrantApprovalController;
+use App\Http\Controllers\RegistrationAlterationController;
 use App\Http\Controllers\RegistrationVerificationController;
 use App\Http\Controllers\ReportsController;
 use App\Models\District;
@@ -81,6 +82,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->group(function (): void {
             Route::get('/', [RegistrationVerificationController::class, 'index'])->name('index');
             Route::get('{registration}/receipt', [RegistrationVerificationController::class, 'receipt'])->name('receipt');
+            Route::get('{registration}/alter', [RegistrationAlterationController::class, 'edit'])->name('alter.edit');
+            Route::patch('{registration}/alter', [RegistrationAlterationController::class, 'update'])->name('alter.update');
             Route::patch('{registration}', [RegistrationVerificationController::class, 'update'])->name('update');
         });
 

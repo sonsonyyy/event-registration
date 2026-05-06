@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\EventFeeCategory;
 use App\Models\Pastor;
 use App\Models\Registration;
+use App\Models\RegistrationHistory;
 use App\Models\RegistrationItem;
 use App\Models\Section;
 use App\Models\User;
@@ -195,6 +196,186 @@ test('admins can open uploaded receipts and verify online registrations', functi
         ->and($registration->verified_at)->not->toBeNull();
 
     Notification::assertSentTo($registrant, RegistrationVerified::class);
+});
+
+test('super admins can alter verification registrations and store the previous snapshot', function () {
+    Storage::fake('local');
+    config()->set('registration.receipts_disk', 'local');
+
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $superAdmin = User::factory()->superAdmin()->create();
+    $reviewer = User::factory()->manager()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+    ]);
+    $pastor = Pastor::factory()->for($section)->create([
+        'church_name' => 'Grace Community Church',
+        'pastor_name' => 'Pastor Jane Doe',
+    ]);
+    $registrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'pastor_id' => $pastor->id,
+    ]);
+    $event = verificationEvent([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+        'total_capacity' => 6,
+    ]);
+    $regular = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+        'slot_limit' => 6,
+    ]);
+    $oneDayPass = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'One-day Pass',
+        'amount' => '500.00',
+        'slot_limit' => 6,
+    ]);
+
+    $registration = createOnlineRegistrationForVerification(
+        $event,
+        $pastor,
+        $registrant,
+        $regular,
+        [
+            'registration_status' => Registration::STATUS_VERIFIED,
+            'verified_at' => now()->subHour(),
+            'verified_by_user_id' => $reviewer->id,
+            'payment_reference' => 'DEP-2026-4101',
+            'remarks' => 'Original uploaded registration.',
+        ],
+        2,
+    );
+
+    Storage::disk('local')->put(
+        (string) $registration->receipt_file_path,
+        'verified-registration-receipt',
+    );
+
+    $this->actingAs($superAdmin)
+        ->get(route('registrations.verification.index', [
+            'status' => 'all',
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/verification/index')
+            ->where('registrations.data.0.can_alter', true));
+
+    $this->actingAs($superAdmin)
+        ->get(route('registrations.verification.alter.edit', $registration))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/verification/alter')
+            ->where('registration.payment_reference', 'DEP-2026-4101')
+            ->where('alterationHistory', []));
+
+    $this->actingAs($superAdmin)
+        ->from(route('registrations.verification.alter.edit', $registration))
+        ->patch(route('registrations.verification.alter.update', $registration), [
+            'event_id' => $event->id,
+            'payment_reference' => 'DEP-2026-4199',
+            'remarks' => 'Adjusted grouped quantities after verification review.',
+            'line_items' => [
+                [
+                    'fee_category_id' => $regular->id,
+                    'quantity' => 3,
+                ],
+                [
+                    'fee_category_id' => $oneDayPass->id,
+                    'quantity' => 1,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('registrations.verification.alter.edit', $registration))
+        ->assertInertiaFlash('toasts.0.title', 'Registration altered successfully.');
+
+    $registration->refresh()->load('items.feeCategory', 'histories.alteredByUser');
+
+    expect($registration->registration_status)->toBe(Registration::STATUS_PENDING_VERIFICATION)
+        ->and($registration->verified_at)->toBeNull()
+        ->and($registration->verified_by_user_id)->toBeNull()
+        ->and($registration->payment_reference)->toBe('DEP-2026-4199')
+        ->and($registration->remarks)->toBe('Adjusted grouped quantities after verification review.')
+        ->and($registration->totalQuantity())->toBe(4)
+        ->and($registration->items)->toHaveCount(2)
+        ->and($registration->items->firstWhere('fee_category_id', $regular->id)?->quantity)->toBe(3)
+        ->and($registration->items->firstWhere('fee_category_id', $oneDayPass->id)?->quantity)->toBe(1)
+        ->and($registration->histories)->toHaveCount(1)
+        ->and($registration->histories->first()->alteredByUser?->is($superAdmin))->toBeTrue();
+
+    /** @var RegistrationHistory $history */
+    $history = $registration->histories->first();
+
+    expect($history->snapshot['registration']['payment_reference'])->toBe('DEP-2026-4101')
+        ->and($history->snapshot['registration']['registration_status'])->toBe(Registration::STATUS_VERIFIED)
+        ->and($history->snapshot['registration']['total_quantity'])->toBe(2)
+        ->and($history->snapshot['registration']['remarks'])->toBe('Original uploaded registration.')
+        ->and($history->snapshot['line_items'][0]['category_name'])->toBe('Regular (Online)')
+        ->and($history->snapshot['line_items'][0]['quantity'])->toBe(2);
+});
+
+test('reviewers other than super admins cannot access the alteration module', function () {
+    Storage::fake('local');
+    config()->set('registration.receipts_disk', 'local');
+
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $pastor = Pastor::factory()->for($section)->create();
+    $registrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'pastor_id' => $pastor->id,
+    ]);
+    $event = verificationEvent([
+        'district_id' => $district->id,
+        'department_id' => null,
+    ]);
+    $feeCategory = EventFeeCategory::factory()->for($event)->create();
+    $registration = createOnlineRegistrationForVerification(
+        $event,
+        $pastor,
+        $registrant,
+        $feeCategory,
+    );
+
+    Storage::disk('local')->put(
+        (string) $registration->receipt_file_path,
+        'pending-registration-receipt',
+    );
+
+    $this->actingAs($admin)
+        ->get(route('registrations.verification.index', [
+            'status' => 'all',
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('registrations.data.0.can_alter', false));
+
+    $this->actingAs($admin)
+        ->get(route('registrations.verification.alter.edit', $registration))
+        ->assertForbidden();
+
+    $this->actingAs($admin)
+        ->patch(route('registrations.verification.alter.update', $registration), [
+            'event_id' => $event->id,
+            'payment_reference' => 'DEP-2026-4999',
+            'remarks' => 'Unauthorized change attempt.',
+            'line_items' => [
+                [
+                    'fee_category_id' => $feeCategory->id,
+                    'quantity' => 2,
+                ],
+            ],
+        ])
+        ->assertForbidden();
+
+    expect(RegistrationHistory::query()->count())->toBe(0)
+        ->and($registration->fresh()->payment_reference)->toBe('DEP-2026-0001');
 });
 
 test('admins can filter the verification queue by section within their district', function () {

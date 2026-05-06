@@ -11,9 +11,13 @@ type AssignedPastor = {
 
 type Props = {
     assignedPastor: AssignedPastor;
+    label?: string;
 };
 
-export default function AssignedChurchCard({ assignedPastor }: Props) {
+export default function AssignedChurchCard({
+    assignedPastor,
+    label = 'Assigned church',
+}: Props) {
     return (
         <div className="overflow-hidden rounded-md border border-[#ccd8d4] bg-[linear-gradient(135deg,_rgba(24,77,71,0.12),_rgba(236,244,241,0.94)_46%,_rgba(255,255,255,0.98))] px-5 py-5 shadow-sm shadow-[#184d47]/10">
             <div className="flex flex-col gap-5">
@@ -25,7 +29,7 @@ export default function AssignedChurchCard({ assignedPastor }: Props) {
 
                         <div className="space-y-2">
                             <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
-                                Assigned church
+                                {label}
                             </div>
                             <div className="text-lg font-semibold text-slate-900">
                                 {assignedPastor?.church_name ?? 'No church assigned'}

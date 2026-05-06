@@ -99,10 +99,19 @@ type OnlineRegistrationFormData = {
     line_items: LineItemFormValue[];
 };
 
+type FormAction = {
+    method: 'get' | 'post' | 'put' | 'patch' | 'delete';
+    url: string;
+};
+
 type Props = {
     assignedPastor: AssignedPastor;
     events: EventOption[];
     registration?: EditableRegistration;
+    submitAction?: FormAction;
+    cancelHref?: string;
+    submitLabel?: string;
+    churchCardLabel?: string;
 };
 
 const textareaClassName = formTextareaClassName;
@@ -136,6 +145,10 @@ export default function OnlineRegistrationForm({
     assignedPastor,
     events,
     registration,
+    submitAction,
+    cancelHref,
+    submitLabel,
+    churchCardLabel,
 }: Props) {
     const receiptInputRef = useRef<HTMLInputElement | null>(null);
     const isEditing = registration !== undefined;
@@ -217,10 +230,14 @@ export default function OnlineRegistrationForm({
     const submit = (event: FormEvent<HTMLFormElement>): void => {
         event.preventDefault();
 
-        form.submit(
-            isEditing
+        const action =
+            submitAction ??
+            (isEditing
                 ? OnlineRegistrationController.update(registration.id)
-                : OnlineRegistrationController.store(),
+                : OnlineRegistrationController.store());
+
+        form.submit(
+            action,
             {
                 forceFormData: true,
                 preserveScroll: true,
@@ -244,6 +261,7 @@ export default function OnlineRegistrationForm({
                         <div className="flex h-full flex-col gap-6">
                             <AssignedChurchCard
                                 assignedPastor={assignedPastor}
+                                label={churchCardLabel}
                             />
 
                             {isEditing && registration?.latest_review && (
@@ -728,7 +746,12 @@ export default function OnlineRegistrationForm({
 
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                 <Button variant="outline" asChild>
-                    <Link href={OnlineRegistrationController.index()}>
+                    <Link
+                        href={
+                            cancelHref ??
+                            OnlineRegistrationController.index().url
+                        }
+                    >
                         Cancel
                     </Link>
                 </Button>
@@ -741,12 +764,13 @@ export default function OnlineRegistrationForm({
                     }
                 >
                     {form.processing && <Spinner />}
-                    {isEditing &&
-                    registration?.registration_status === 'needs correction'
-                        ? 'Resubmit online registration'
-                        : isEditing
-                          ? 'Save online registration'
-                          : 'Submit online registration'}
+                    {submitLabel ??
+                        (isEditing &&
+                        registration?.registration_status === 'needs correction'
+                            ? 'Resubmit online registration'
+                            : isEditing
+                              ? 'Save online registration'
+                              : 'Submit online registration')}
                 </Button>
             </div>
         </form>
