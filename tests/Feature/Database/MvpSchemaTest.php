@@ -8,6 +8,7 @@ use App\Models\EventCheckInItem;
 use App\Models\EventFeeCategory;
 use App\Models\Pastor;
 use App\Models\Registration;
+use App\Models\RegistrationHistory;
 use App\Models\RegistrationItem;
 use App\Models\RegistrationReview;
 use App\Models\Role;
@@ -26,6 +27,7 @@ test('mvp schema tables and key columns exist', function () {
     expect(Schema::hasTable('event_fee_categories'))->toBeTrue();
     expect(Schema::hasTable('registrations'))->toBeTrue();
     expect(Schema::hasTable('registration_items'))->toBeTrue();
+    expect(Schema::hasTable('registration_histories'))->toBeTrue();
     expect(Schema::hasTable('registration_reviews'))->toBeTrue();
     expect(Schema::hasTable('event_check_ins'))->toBeTrue();
     expect(Schema::hasTable('event_check_in_items'))->toBeTrue();
@@ -82,6 +84,12 @@ test('mvp schema tables and key columns exist', function () {
         'reason',
         'notes',
         'decided_at',
+    ]))->toBeTrue();
+    expect(Schema::hasColumns('registration_histories', [
+        'registration_id',
+        'altered_by_user_id',
+        'snapshot',
+        'altered_at',
     ]))->toBeTrue();
     expect(Schema::hasColumns('event_check_ins', [
         'event_id',
@@ -162,6 +170,10 @@ test('core mvp model relationships resolve correctly', function () {
             'decision' => Registration::STATUS_NEEDS_CORRECTION,
             'reason' => 'Receipt image is incomplete.',
         ]);
+    $history = RegistrationHistory::factory()
+        ->for($registration)
+        ->for($user, 'alteredByUser')
+        ->create();
     $eventCheckIn = EventCheckIn::factory()
         ->for($event)
         ->for($pastor)
@@ -198,11 +210,14 @@ test('core mvp model relationships resolve correctly', function () {
     expect($registration->receiptUploadedByUser->is($user))->toBeTrue();
     expect($registration->items->first()->is($item))->toBeTrue();
     expect($registration->reviews->first()->is($review))->toBeTrue();
+    expect($registration->histories->first()->is($history))->toBeTrue();
     expect($registration->latestReview->is($review))->toBeTrue();
     expect($item->registration->is($registration))->toBeTrue();
     expect($item->feeCategory->is($feeCategory))->toBeTrue();
     expect($review->registration->is($registration))->toBeTrue();
     expect($review->reviewer->is($user))->toBeTrue();
+    expect($history->registration->is($registration))->toBeTrue();
+    expect($history->alteredByUser->is($user))->toBeTrue();
     expect($pastor->eventCheckIns->first()->is($eventCheckIn))->toBeTrue();
     expect($user->processedEventCheckIns->first()->is($eventCheckIn))->toBeTrue();
     expect($feeCategory->eventCheckInItems->first()->is($eventCheckInItem))->toBeTrue();

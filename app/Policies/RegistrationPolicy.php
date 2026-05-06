@@ -108,6 +108,12 @@ class RegistrationPolicy
             && $registration->canBeCancelledOnsite();
     }
 
+    public function alterVerification(User $user, Registration $registration): bool
+    {
+        return $user->isSuperAdmin()
+            && $registration->canBeAlteredForVerification();
+    }
+
     public function delete(User $user, Registration $registration): bool
     {
         return ($user->isAdmin() || $user->isManager())

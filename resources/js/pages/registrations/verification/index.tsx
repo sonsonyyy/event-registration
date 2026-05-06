@@ -1,4 +1,4 @@
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
     AlertTriangle,
     BadgeCheck,
@@ -6,8 +6,10 @@ import {
     Clock3,
     Eye,
     FileSearch,
+    PencilLine,
 } from 'lucide-react';
 import { useState } from 'react';
+import RegistrationAlterationController from '@/actions/App/Http/Controllers/RegistrationAlterationController';
 import RegistrationVerificationController from '@/actions/App/Http/Controllers/RegistrationVerificationController';
 import {
     DataTableBadge,
@@ -84,6 +86,7 @@ type RegistrationRecord = {
     payment_reference: string | null;
     registration_status: string;
     can_review: boolean;
+    can_alter: boolean;
     total_quantity: number;
     total_amount: string;
     remarks: string | null;
@@ -1036,6 +1039,18 @@ export default function RegistrationVerificationIndex({
                             >
                                 Close
                             </Button>
+                            {selectedRegistration?.can_alter && (
+                                <Button type="button" variant="outline" asChild>
+                                    <Link
+                                        href={RegistrationAlterationController.edit.url(
+                                            selectedRegistration.id,
+                                        )}
+                                    >
+                                        <PencilLine className="size-4" />
+                                        Alter registration
+                                    </Link>
+                                </Button>
+                            )}
                             {selectedRegistration?.can_review && (
                                 <Button
                                     type="button"

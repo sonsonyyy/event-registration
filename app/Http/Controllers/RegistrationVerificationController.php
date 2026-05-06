@@ -62,7 +62,7 @@ class RegistrationVerificationController extends Controller
             'summary' => $this->summaryData($user, $filters['section_id']),
             'registrations' => [
                 'data' => $registrations->getCollection()
-                    ->map(fn (Registration $registration): array => $this->registrationData($registration))
+                    ->map(fn (Registration $registration): array => $this->registrationData($registration, $user))
                     ->values()
                     ->all(),
                 'meta' => [
@@ -377,7 +377,7 @@ class RegistrationVerificationController extends Controller
      *
      * @return array<string, mixed>
      */
-    private function registrationData(Registration $registration): array
+    private function registrationData(Registration $registration, User $viewer): array
     {
         return [
             'id' => $registration->getKey(),
@@ -401,6 +401,8 @@ class RegistrationVerificationController extends Controller
             'payment_reference' => $registration->payment_reference,
             'registration_status' => $registration->registration_status,
             'can_review' => $registration->canBeReviewed(),
+            'can_alter' => $registration->canBeAlteredForVerification()
+                && $viewer->can('alterVerification', $registration),
             'total_quantity' => $registration->totalQuantity(),
             'total_amount' => $registration->totalAmount(),
             'remarks' => $registration->remarks,
