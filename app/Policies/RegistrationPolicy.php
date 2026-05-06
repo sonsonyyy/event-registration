@@ -102,6 +102,12 @@ class RegistrationPolicy
             && $user->belongsToPastor($registration->pastor_id);
     }
 
+    public function cancelOnsite(User $user, Registration $registration): bool
+    {
+        return $user->isSuperAdmin()
+            && $registration->canBeCancelledOnsite();
+    }
+
     public function delete(User $user, Registration $registration): bool
     {
         return ($user->isAdmin() || $user->isManager())

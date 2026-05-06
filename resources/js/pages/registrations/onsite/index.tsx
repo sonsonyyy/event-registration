@@ -1,7 +1,8 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Eye, Plus } from 'lucide-react';
+import { Ban, Eye, Plus } from 'lucide-react';
 import { useState } from 'react';
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
+import ConfirmActionDialog from '@/components/confirm-action-dialog';
 import DataTablePagination from '@/components/data-table-pagination';
 import {
     elevatedIndexTableStyles,
@@ -52,6 +53,7 @@ type RegistrationRecord = {
     remarks: string | null;
     submitted_at: string | null;
     can_edit: boolean;
+    can_cancel: boolean;
     encoded_by: {
         id: number;
         name: string;
@@ -122,6 +124,9 @@ export default function OnsiteRegistrationIndex({
     );
     const [selectedRegistration, setSelectedRegistration] =
         useState<RegistrationRecord | null>(null);
+    const [registrationToCancel, setRegistrationToCancel] =
+        useState<RegistrationRecord | null>(null);
+    const [isCancelling, setIsCancelling] = useState(false);
 
     const buildQuery = ({
         searchValue,
@@ -192,6 +197,26 @@ export default function OnsiteRegistrationIndex({
                 perPage: filters.per_page,
                 page: pageNumber,
             }),
+        );
+    };
+
+    const cancelRegistration = (): void => {
+        if (registrationToCancel === null) {
+            return;
+        }
+
+        setIsCancelling(true);
+
+        router.patch(
+            OnsiteRegistrationController.cancel(registrationToCancel.id),
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    setIsCancelling(false);
+                    setRegistrationToCancel(null);
+                },
+            },
         );
     };
 
@@ -612,9 +637,59 @@ export default function OnsiteRegistrationIndex({
                                         </Link>
                                     </Button>
                                 )}
+                                {selectedRegistration.can_cancel && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className={
+                                            reviewWorkspaceStyles.surfaceButton
+                                        }
+                                        onClick={() => {
+                                            setSelectedRegistration(null);
+                                            setRegistrationToCancel(
+                                                selectedRegistration,
+                                            );
+                                        }}
+                                    >
+                                        <Ban className="size-4" />
+                                        Cancel transaction
+                                    </Button>
+                                )}
                             </div>
                         ) : null
                     }
+                />
+
+                <ConfirmActionDialog
+                    open={registrationToCancel !== null}
+                    onOpenChange={(open) => {
+                        if (!open && !isCancelling) {
+                            setRegistrationToCancel(null);
+                        }
+                    }}
+                    title="Cancel onsite registration"
+                    description="This will cancel the onsite transaction, remove it from active registration totals, and keep an archived copy for audit history."
+                    confirmLabel="Cancel transaction"
+                    confirmVariant="destructive"
+                    processing={isCancelling}
+                    details={
+                        registrationToCancel ? (
+                            <>
+                                <div className="font-medium text-slate-900 dark:text-slate-100">
+                                    #{registrationToCancel.id} ·{' '}
+                                    {registrationToCancel.event.name}
+                                </div>
+                                <div>
+                                    {registrationToCancel.total_quantity}{' '}
+                                    delegates ·{' '}
+                                    {formatCurrency(
+                                        registrationToCancel.total_amount,
+                                    )}
+                                </div>
+                            </>
+                        ) : undefined
+                    }
+                    onConfirm={cancelRegistration}
                 />
             </div>
         </AppLayout>
