@@ -36,6 +36,7 @@ test('mvp schema tables and key columns exist', function () {
     expect(Schema::hasColumns('events', ['deleted_at']))->toBeTrue();
     expect(Schema::hasColumns('event_fee_categories', ['deleted_at']))->toBeTrue();
     expect(Schema::hasColumns('users', ['deleted_at']))->toBeTrue();
+    expect(Schema::hasColumns('registrations', ['deleted_at']))->toBeTrue();
     expect(Schema::hasColumns('users', [
         'role_id',
         'district_id',

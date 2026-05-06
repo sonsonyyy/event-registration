@@ -766,6 +766,118 @@ test('onsite registration update rejects capacity overflow while preserving curr
     expect((int) $registration->fresh()->items()->sum('quantity'))->toBe(2);
 });
 
+test('super admins can cancel onsite registrations and release capacity through soft deletes', function () {
+    $pastor = Pastor::factory()->create();
+    $staff = User::factory()->registrationStaff()->create([
+        'district_id' => $pastor->section->district_id,
+    ]);
+    $superAdmin = User::factory()->superAdmin()->create();
+    $event = onsiteRegistrationEvent([
+        'district_id' => $pastor->section->district_id,
+        'total_capacity' => 2,
+    ]);
+    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Onsite)',
+        'amount' => '500.00',
+        'slot_limit' => 2,
+    ]);
+
+    $registration = Registration::factory()
+        ->for($event)
+        ->for($pastor)
+        ->for($staff, 'encodedByUser')
+        ->create([
+            'registration_mode' => Registration::MODE_ONSITE,
+            'payment_status' => Registration::PAYMENT_STATUS_PAID,
+            'registration_status' => Registration::STATUS_COMPLETED,
+            'payment_reference' => 'OR-2026-7001',
+            'submitted_at' => now()->subHour(),
+        ]);
+
+    RegistrationItem::factory()
+        ->for($registration)
+        ->for($feeCategory, 'feeCategory')
+        ->create([
+            'quantity' => 2,
+            'unit_amount' => $feeCategory->amount,
+            'subtotal_amount' => '1000.00',
+        ]);
+
+    $this->actingAs($superAdmin)
+        ->get(route('registrations.onsite.index'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/onsite/index')
+            ->where('registrations.data.0.id', $registration->id)
+            ->where('registrations.data.0.can_cancel', true));
+
+    $this->actingAs($superAdmin)
+        ->patch(route('registrations.onsite.cancel', $registration))
+        ->assertRedirect(route('registrations.onsite.index'))
+        ->assertInertiaFlash('toasts.0.title', 'Onsite registration cancelled.');
+
+    $cancelledRegistration = Registration::withTrashed()->findOrFail($registration->id);
+
+    expect($cancelledRegistration->trashed())->toBeTrue()
+        ->and($cancelledRegistration->registration_status)->toBe(Registration::STATUS_CANCELLED)
+        ->and(Registration::query()->count())->toBe(0);
+
+    $this->actingAs($staff)
+        ->post(route('registrations.onsite.store'), [
+            'event_id' => $event->id,
+            'pastor_id' => $pastor->id,
+            'payment_reference' => 'OR-2026-7002',
+            'remarks' => '',
+            'line_items' => [
+                [
+                    'fee_category_id' => $feeCategory->id,
+                    'quantity' => 2,
+                ],
+            ],
+        ])
+        ->assertRedirect(route('registrations.onsite.index'));
+
+    expect(Registration::query()->count())->toBe(1)
+        ->and(Registration::withTrashed()->count())->toBe(2);
+});
+
+test('admins can view but cannot cancel onsite registrations', function () {
+    $pastor = Pastor::factory()->create();
+    $staff = User::factory()->registrationStaff()->create([
+        'district_id' => $pastor->section->district_id,
+    ]);
+    $admin = User::factory()->admin()->create([
+        'district_id' => $pastor->section->district_id,
+    ]);
+    $event = onsiteRegistrationEvent([
+        'district_id' => $pastor->section->district_id,
+    ]);
+    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Onsite)',
+        'amount' => '500.00',
+    ]);
+
+    $registration = createOnsiteRegistration(
+        $event,
+        $pastor,
+        $staff,
+        $feeCategory,
+        2,
+    );
+
+    $this->actingAs($admin)
+        ->get(route('registrations.onsite.index'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/onsite/index')
+            ->where('registrations.data.0.id', $registration->id)
+            ->where('registrations.data.0.can_cancel', false));
+
+    $this->actingAs($admin)
+        ->patch(route('registrations.onsite.cancel', $registration))
+        ->assertForbidden();
+});
+
 function onsiteRegistrationEvent(array $attributes = []): Event
 {
     $sectionId = $attributes['section_id'] ?? null;

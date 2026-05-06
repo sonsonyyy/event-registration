@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CancelOnsiteRegistrationRequest;
 use App\Http\Requests\IndexOnsiteRegistrationRequest;
 use App\Http\Requests\StoreOnsiteRegistrationRequest;
 use App\Http\Requests\UpdateOnsiteRegistrationRequest;
@@ -243,6 +244,32 @@ class OnsiteRegistrationController extends Controller
 
         return to_route('registrations.onsite.index')
             ->with('success', 'Onsite registration updated.');
+    }
+
+    public function cancel(CancelOnsiteRegistrationRequest $request, Registration $registration): RedirectResponse
+    {
+        DB::transaction(function () use ($registration): void {
+            $registration = Registration::query()
+                ->with('items')
+                ->lockForUpdate()
+                ->findOrFail($registration->getKey());
+
+            Gate::authorize('cancelOnsite', $registration);
+
+            abort_unless($registration->canBeCancelledOnsite(), 403);
+
+            $registration->forceFill([
+                'registration_status' => Registration::STATUS_CANCELLED,
+                'verified_at' => null,
+                'verified_by_user_id' => null,
+            ])->save();
+
+            $registration->delete();
+            $this->syncEventStatuses([$registration->event_id]);
+        });
+
+        return to_route('registrations.onsite.index')
+            ->with('success', 'Onsite registration cancelled.');
     }
 
     /**
@@ -546,6 +573,8 @@ class OnsiteRegistrationController extends Controller
             'remarks' => $registration->remarks,
             'submitted_at' => $registration->submitted_at?->toIso8601String(),
             'can_edit' => $viewer->can('updateOnsite', $registration),
+            'can_cancel' => $registration->canBeCancelledOnsite()
+                && $viewer->can('cancelOnsite', $registration),
             'encoded_by' => [
                 'id' => $registration->encodedByUser->getKey(),
                 'name' => $registration->encodedByUser->name,

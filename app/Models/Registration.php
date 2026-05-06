@@ -9,11 +9,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Registration extends Model
 {
     /** @use HasFactory<RegistrationFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     public const MODE_ONSITE = 'onsite';
 
@@ -259,6 +260,13 @@ class Registration extends Model
     {
         return $this->registration_mode === self::MODE_ONSITE
             && $this->registration_status !== self::STATUS_CANCELLED;
+    }
+
+    public function canBeCancelledOnsite(): bool
+    {
+        return $this->registration_mode === self::MODE_ONSITE
+            && $this->registration_status !== self::STATUS_CANCELLED
+            && ! $this->trashed();
     }
 
     public function totalQuantity(): int

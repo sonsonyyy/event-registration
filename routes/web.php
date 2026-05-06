@@ -72,6 +72,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('{registration}/edit', [OnsiteRegistrationController::class, 'edit'])->name('edit');
             Route::post('/', [OnsiteRegistrationController::class, 'store'])->name('store');
             Route::match(['put', 'patch'], '{registration}', [OnsiteRegistrationController::class, 'update'])->name('update');
+            Route::patch('{registration}/cancel', [OnsiteRegistrationController::class, 'cancel'])->name('cancel');
         });
 
     Route::prefix('registrations/verification')
