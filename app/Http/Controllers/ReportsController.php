@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\IndexReportRequest;
 use App\Models\Event;
+use App\Models\EventFeeCategory;
 use App\Models\Pastor;
 use App\Models\Registration;
 use App\Models\RegistrationItem;
@@ -349,8 +350,13 @@ class ReportsController extends Controller
         $items = $registrations->flatMap->items;
         $registrationsByPastor = $registrations->groupBy('pastor_id');
         $feeCategories = $event->feeCategories
+            ->filter(fn (EventFeeCategory $feeCategory): bool => ! $feeCategory->trashed())
             ->sortBy('id')
             ->values();
+        $visibleFeeCategoryIds = $feeCategories
+            ->map(fn (EventFeeCategory $feeCategory): int => $feeCategory->getKey())
+            ->all();
+        $visibleFeeCategoryItems = $items->whereIn('fee_category_id', $visibleFeeCategoryIds);
         $totalRegisteredAmount = $this->formatAmount($items->sum(
             fn (RegistrationItem $item): float => (float) $item->subtotal_amount
         ));
@@ -391,8 +397,10 @@ class ReportsController extends Controller
                 ->values()
                 ->all(),
             'fee_category_totals' => [
-                'registered_quantity' => (int) $items->sum('quantity'),
-                'registered_amount' => $totalRegisteredAmount,
+                'registered_quantity' => (int) $visibleFeeCategoryItems->sum('quantity'),
+                'registered_amount' => $this->formatAmount($visibleFeeCategoryItems->sum(
+                    fn (RegistrationItem $item): float => (float) $item->subtotal_amount
+                )),
             ],
             'section_summaries' => $this->sectionSummaries($visiblePastors, $registrationsByPastor),
             'section_summary_totals' => [

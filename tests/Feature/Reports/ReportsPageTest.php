@@ -148,6 +148,62 @@ test('admins can view event total registration and churches without registration
     expect($pastorTwo->church_name)->not->toBe($pastorFour->church_name);
 });
 
+test('reports hide deleted fee categories from fee category totals', function () {
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $pastor = Pastor::factory()->for($section)->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $encoder = User::factory()->registrationStaff()->create();
+    $event = reportEvent();
+    $regular = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+    ]);
+    $oneDayPass = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'One-day Pass',
+        'amount' => '600.00',
+    ]);
+
+    createReportedRegistration(
+        $event,
+        $pastor,
+        $encoder,
+        $regular,
+        Registration::MODE_ONLINE,
+        Registration::STATUS_VERIFIED,
+        3,
+    );
+
+    createReportedRegistration(
+        $event,
+        $pastor,
+        $encoder,
+        $oneDayPass,
+        Registration::MODE_ONLINE,
+        Registration::STATUS_VERIFIED,
+        2,
+    );
+
+    $oneDayPass->delete();
+
+    $this->actingAs($admin)
+        ->get(route('reports.index', [
+            'event_id' => $event->id,
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('reports/index')
+            ->where('eventTotalRegistration.total_registered_quantity', 5)
+            ->where('eventTotalRegistration.total_registered_amount', '3600.00')
+            ->has('eventTotalRegistration.fee_categories', 1)
+            ->where('eventTotalRegistration.fee_categories.0.category_name', 'Regular (Online)')
+            ->where('eventTotalRegistration.fee_categories.0.registered_quantity', 3)
+            ->where('eventTotalRegistration.fee_category_totals.registered_quantity', 3)
+            ->where('eventTotalRegistration.fee_category_totals.registered_amount', '2400.00'));
+});
+
 test('admins can filter and search churches without registration report', function () {
     $district = District::factory()->create([
         'name' => 'Central Luzon',
