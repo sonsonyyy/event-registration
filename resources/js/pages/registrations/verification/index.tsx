@@ -1,7 +1,9 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { format } from 'date-fns';
 import {
     AlertTriangle,
     BadgeCheck,
+    CalendarDays,
     CircleX,
     Clock3,
     Eye,
@@ -26,7 +28,13 @@ import InputError from '@/components/input-error';
 import RegistrationRecordDialog from '@/components/registration-record-dialog';
 import SummaryStatCards from '@/components/summary-stat-cards';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
 import {
     Select,
     SelectContent,
@@ -38,8 +46,10 @@ import AppLayout from '@/layouts/app-layout';
 import { formatSystemDateTime } from '@/lib/date-time';
 import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import { formTextareaClassName } from '@/lib/ui-styles';
+import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
+import type { Auth } from '@/types/auth';
 
 type StatusOption = {
     value: string;
@@ -125,6 +135,8 @@ type Props = {
         section_id: number | null;
         search: string;
         status: string;
+        submitted_date_from: string;
+        submitted_date_to: string;
         per_page: number;
     };
     sections: SectionOption[];
@@ -144,6 +156,8 @@ type VerificationIndexQuery = {
     section_id?: number;
     search?: string;
     status: string;
+    submitted_date_from?: string;
+    submitted_date_to?: string;
     per_page: number;
     page?: number;
 };
@@ -171,6 +185,109 @@ const formatDateTime = (
     value: string | null,
     fallback = 'Not available',
 ): string => (value ? formatSystemDateTime(value) : fallback);
+
+const parseDateValue = (value: string): Date | undefined => {
+    if (value === '') {
+        return undefined;
+    }
+
+    const [year, month, day] = value.split('-').map(Number);
+
+    if (!year || !month || !day) {
+        return undefined;
+    }
+
+    return new Date(year, month - 1, day);
+};
+
+const toDateValue = (value: Date | undefined): string => {
+    if (!value) {
+        return '';
+    }
+
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+};
+
+type VerificationDatePickerProps = {
+    id: string;
+    label: string;
+    value: string;
+    placeholder: string;
+    onChange: (value: string) => void;
+};
+
+function VerificationDatePicker({
+    id,
+    label,
+    value,
+    placeholder,
+    onChange,
+}: VerificationDatePickerProps) {
+    const [open, setOpen] = useState(false);
+    const selectedDate = parseDateValue(value);
+
+    return (
+        <div className="grid gap-2">
+            <div className="flex items-center justify-between gap-3">
+                <Label htmlFor={id}>{label}</Label>
+                {value !== '' && (
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onChange('')}
+                        className="h-auto px-0 text-[12px] text-slate-500 hover:bg-transparent hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    >
+                        Clear
+                    </Button>
+                )}
+            </div>
+
+            <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                    <Button
+                        id={id}
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                            elevatedIndexTableStyles.selectTrigger,
+                            'w-full justify-between bg-white text-left font-normal shadow-none hover:bg-white dark:bg-slate-950 dark:hover:bg-slate-950',
+                            selectedDate === undefined &&
+                                'text-slate-400 dark:text-slate-500',
+                        )}
+                    >
+                        <span>
+                            {selectedDate
+                                ? format(selectedDate, 'MMMM d, yyyy')
+                                : placeholder}
+                        </span>
+                        <CalendarDays className="size-4 text-slate-500 dark:text-slate-400" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                    align="start"
+                    className="w-auto rounded-md border-slate-200 p-0 dark:border-slate-800 dark:bg-slate-950"
+                >
+                    <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => {
+                            onChange(toDateValue(date));
+
+                            if (date !== undefined) {
+                                setOpen(false);
+                            }
+                        }}
+                    />
+                </PopoverContent>
+            </Popover>
+        </div>
+    );
+}
 
 const decisionContent: Record<
     ReviewDecision,
@@ -209,11 +326,21 @@ export default function RegistrationVerificationIndex({
     statusOptions,
     perPageOptions,
 }: Props) {
+    const { auth } = usePage<{
+        auth: Auth;
+    }>().props;
+    const isSuperAdminViewer = auth.can.viewSystemAdminMenu;
     const [search, setSearch] = useState(filters.search);
     const [sectionId, setSectionId] = useState(
         filters.section_id !== null ? String(filters.section_id) : 'all',
     );
     const [status, setStatus] = useState(filters.status);
+    const [submittedDateFrom, setSubmittedDateFrom] = useState(
+        filters.submitted_date_from,
+    );
+    const [submittedDateTo, setSubmittedDateTo] = useState(
+        filters.submitted_date_to,
+    );
     const [selectedRegistration, setSelectedRegistration] =
         useState<RegistrationRecord | null>(null);
     const form = useForm<ReviewFormData>({
@@ -266,12 +393,16 @@ export default function RegistrationVerificationIndex({
         searchValue,
         sectionValue,
         statusValue,
+        submittedDateFromValue,
+        submittedDateToValue,
         perPage,
         page,
     }: {
         searchValue: string;
         sectionValue: string;
         statusValue: string;
+        submittedDateFromValue: string;
+        submittedDateToValue: string;
         perPage: number;
         page?: number;
     }): VerificationIndexQuery => {
@@ -283,10 +414,30 @@ export default function RegistrationVerificationIndex({
                 : {}),
             ...(normalizedSearch !== '' ? { search: normalizedSearch } : {}),
             status: statusValue,
+            ...(submittedDateFromValue !== ''
+                ? { submitted_date_from: submittedDateFromValue }
+                : {}),
+            ...(submittedDateToValue !== ''
+                ? { submitted_date_to: submittedDateToValue }
+                : {}),
             per_page: perPage,
             ...(page !== undefined && page > 1 ? { page } : {}),
         };
     };
+
+    const activeIndexQuery = buildQuery({
+        searchValue: filters.search,
+        sectionValue:
+            filters.section_id !== null ? String(filters.section_id) : 'all',
+        statusValue: filters.status,
+        submittedDateFromValue: filters.submitted_date_from,
+        submittedDateToValue: filters.submitted_date_to,
+        perPage: filters.per_page,
+        page:
+            registrations.meta.current_page > 1
+                ? registrations.meta.current_page
+                : undefined,
+    });
 
     const visitIndex = (query: VerificationIndexQuery): void => {
         router.get(
@@ -347,6 +498,51 @@ export default function RegistrationVerificationIndex({
                     items={summaryCards}
                 />
 
+                {isSuperAdminViewer && (
+                    <div className="flex justify-end">
+                        <form
+                            onSubmit={(event) => {
+                                event.preventDefault();
+                                visitIndex(
+                                    buildQuery({
+                                        searchValue: search,
+                                        sectionValue: sectionId,
+                                        statusValue: status,
+                                        submittedDateFromValue:
+                                            submittedDateFrom,
+                                        submittedDateToValue: submittedDateTo,
+                                        perPage: filters.per_page,
+                                    }),
+                                );
+                            }}
+                            className="grid w-full gap-4 md:max-w-[44rem] md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end"
+                        >
+                            <VerificationDatePicker
+                                id="verification-submitted-date-from"
+                                label="Submitted from"
+                                value={submittedDateFrom}
+                                placeholder="Select a start date"
+                                onChange={setSubmittedDateFrom}
+                            />
+
+                            <VerificationDatePicker
+                                id="verification-submitted-date-to"
+                                label="Submitted to"
+                                value={submittedDateTo}
+                                placeholder="Select an end date"
+                                onChange={setSubmittedDateTo}
+                            />
+
+                            <Button
+                                type="submit"
+                                className="h-11 rounded-md px-5 md:self-end"
+                            >
+                                Apply dates
+                            </Button>
+                        </form>
+                    </div>
+                )}
+
                 <div className={reviewWorkspaceStyles.shell}>
                     <div className={reviewWorkspaceStyles.band}>
                         <DataTableToolbar
@@ -358,6 +554,9 @@ export default function RegistrationVerificationIndex({
                                         searchValue: search,
                                         sectionValue: sectionId,
                                         statusValue: status,
+                                        submittedDateFromValue:
+                                            submittedDateFrom,
+                                        submittedDateToValue: submittedDateTo,
                                         perPage: filters.per_page,
                                     }),
                                 )
@@ -381,6 +580,10 @@ export default function RegistrationVerificationIndex({
                                                         searchValue: search,
                                                         sectionValue: value,
                                                         statusValue: status,
+                                                        submittedDateFromValue:
+                                                            submittedDateFrom,
+                                                        submittedDateToValue:
+                                                            submittedDateTo,
                                                         perPage:
                                                             filters.per_page,
                                                     }),
@@ -430,13 +633,17 @@ export default function RegistrationVerificationIndex({
                                         onValueChange={(nextStatus) => {
                                             setStatus(nextStatus);
                                             visitIndex(
-                                                buildQuery({
-                                                    searchValue: search,
-                                                    sectionValue: sectionId,
-                                                    statusValue: nextStatus,
-                                                    perPage: filters.per_page,
-                                                }),
-                                            );
+                                                    buildQuery({
+                                                        searchValue: search,
+                                                        sectionValue: sectionId,
+                                                        statusValue: nextStatus,
+                                                        submittedDateFromValue:
+                                                            submittedDateFrom,
+                                                        submittedDateToValue:
+                                                            submittedDateTo,
+                                                        perPage: filters.per_page,
+                                                    }),
+                                                );
                                         }}
                                     >
                                         <SelectTrigger
@@ -803,6 +1010,10 @@ export default function RegistrationVerificationIndex({
                                                 ? String(filters.section_id)
                                                 : 'all',
                                         statusValue: filters.status,
+                                        submittedDateFromValue:
+                                            filters.submitted_date_from,
+                                        submittedDateToValue:
+                                            filters.submitted_date_to,
                                         perPage: value,
                                     }),
                                 )
@@ -816,6 +1027,10 @@ export default function RegistrationVerificationIndex({
                                                 ? String(filters.section_id)
                                                 : 'all',
                                         statusValue: filters.status,
+                                        submittedDateFromValue:
+                                            filters.submitted_date_from,
+                                        submittedDateToValue:
+                                            filters.submitted_date_to,
                                         perPage: filters.per_page,
                                         page: pageNumber,
                                     }),
@@ -1044,6 +1259,9 @@ export default function RegistrationVerificationIndex({
                                     <Link
                                         href={RegistrationAlterationController.edit.url(
                                             selectedRegistration.id,
+                                            {
+                                                query: activeIndexQuery,
+                                            },
                                         )}
                                     >
                                         <PencilLine className="size-4" />

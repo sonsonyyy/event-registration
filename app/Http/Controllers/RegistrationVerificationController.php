@@ -53,13 +53,20 @@ class RegistrationVerificationController extends Controller
             $filters['search'],
             $filters['status'],
             $filters['section_id'],
+            $filters['submitted_date_from'],
+            $filters['submitted_date_to'],
         )
             ->paginate($filters['per_page'])
             ->withQueryString();
 
         return Inertia::render('registrations/verification/index', [
             'scopeSummary' => $this->scopeSummary($user),
-            'summary' => $this->summaryData($user, $filters['section_id']),
+            'summary' => $this->summaryData(
+                $user,
+                $filters['section_id'],
+                $filters['submitted_date_from'],
+                $filters['submitted_date_to'],
+            ),
             'registrations' => [
                 'data' => $registrations->getCollection()
                     ->map(fn (Registration $registration): array => $this->registrationData($registration, $user))
@@ -186,8 +193,14 @@ class RegistrationVerificationController extends Controller
         );
     }
 
-    private function verificationIndexQuery(User $user, string $search, string $status, ?int $sectionId): Builder
-    {
+    private function verificationIndexQuery(
+        User $user,
+        string $search,
+        string $status,
+        ?int $sectionId,
+        string $submittedDateFrom,
+        string $submittedDateTo,
+    ): Builder {
         $query = Registration::query()
             ->where('registration_mode', Registration::MODE_ONLINE)
             ->with([
@@ -220,6 +233,12 @@ class RegistrationVerificationController extends Controller
                 $pastorQuery->where('section_id', $sectionId);
             });
         }
+
+        $this->applySubmittedDateFilters(
+            $query,
+            $submittedDateFrom,
+            $submittedDateTo,
+        );
 
         if ($status === 'all') {
             $query->whereIn('registration_status', Registration::verificationStatuses());
@@ -264,8 +283,12 @@ class RegistrationVerificationController extends Controller
      *
      * @return array{pending_verification: int, needs_correction: int, verified: int, rejected: int}
      */
-    private function summaryData(User $user, ?int $sectionId): array
-    {
+    private function summaryData(
+        User $user,
+        ?int $sectionId,
+        string $submittedDateFrom,
+        string $submittedDateTo,
+    ): array {
         $query = Registration::query()
             ->where('registration_mode', Registration::MODE_ONLINE);
 
@@ -276,6 +299,12 @@ class RegistrationVerificationController extends Controller
                 $pastorQuery->where('section_id', $sectionId);
             });
         }
+
+        $this->applySubmittedDateFilters(
+            $query,
+            $submittedDateFrom,
+            $submittedDateTo,
+        );
 
         return [
             'pending_verification' => (clone $query)
@@ -291,6 +320,20 @@ class RegistrationVerificationController extends Controller
                 ->where('registration_status', Registration::STATUS_REJECTED)
                 ->count(),
         ];
+    }
+
+    private function applySubmittedDateFilters(
+        Builder $query,
+        string $submittedDateFrom,
+        string $submittedDateTo,
+    ): void {
+        if ($submittedDateFrom !== '') {
+            $query->whereDate('submitted_at', '>=', $submittedDateFrom);
+        }
+
+        if ($submittedDateTo !== '') {
+            $query->whereDate('submitted_at', '<=', $submittedDateTo);
+        }
     }
 
     private function scopeSummary(User $user): string

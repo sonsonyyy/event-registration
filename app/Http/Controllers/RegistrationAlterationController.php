@@ -51,6 +51,7 @@ class RegistrationAlterationController extends Controller
             'assignedPastor' => $this->assignedPastorData($registration),
             'events' => $this->eventOptions($request->user(), $registration),
             'registration' => $this->editableRegistrationData($registration),
+            'verificationIndexQuery' => $this->verificationIndexQuery($request),
             'alterationHistory' => $registration->histories
                 ->map(fn (RegistrationHistory $history): array => $this->historyData($history))
                 ->values()
@@ -170,8 +171,8 @@ class RegistrationAlterationController extends Controller
         }
 
         return to_route(
-            'registrations.verification.alter.edit',
-            $updatedRegistration ?? $registration,
+            'registrations.verification.index',
+            $this->verificationIndexQuery($request),
         )->with('success', 'Registration altered successfully.');
     }
 
@@ -461,5 +462,55 @@ class RegistrationAlterationController extends Controller
                 'name' => $review->reviewer->name,
             ] : null,
         ];
+    }
+
+    /**
+     * @return array<string, int|string>
+     */
+    private function verificationIndexQuery(Request $request): array
+    {
+        $query = [];
+
+        if ($request->filled('section_id')) {
+            $query['section_id'] = (int) $request->query('section_id');
+        }
+
+        $search = trim((string) $request->query('search', ''));
+
+        if ($search !== '') {
+            $query['search'] = $search;
+        }
+
+        $status = trim((string) $request->query('status', 'all'));
+
+        if ($status !== '' && $status !== 'all') {
+            $query['status'] = $status;
+        }
+
+        $submittedDateFrom = trim((string) $request->query('submitted_date_from', ''));
+
+        if ($submittedDateFrom !== '') {
+            $query['submitted_date_from'] = $submittedDateFrom;
+        }
+
+        $submittedDateTo = trim((string) $request->query('submitted_date_to', ''));
+
+        if ($submittedDateTo !== '') {
+            $query['submitted_date_to'] = $submittedDateTo;
+        }
+
+        $perPage = (int) $request->query('per_page', 10);
+
+        if ($perPage !== 10) {
+            $query['per_page'] = $perPage;
+        }
+
+        $page = (int) $request->query('page', 1);
+
+        if ($page > 1) {
+            $query['page'] = $page;
+        }
+
+        return $query;
     }
 }

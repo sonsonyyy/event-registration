@@ -106,21 +106,37 @@ type Props = {
     assignedPastor: AssignedPastor;
     events: EventOption[];
     registration: EditableRegistration;
+    verificationIndexQuery: {
+        section_id?: number;
+        search?: string;
+        status?: string;
+        submitted_date_from?: string;
+        submitted_date_to?: string;
+        per_page?: number;
+        page?: number;
+    };
     alterationHistory: AlterationHistoryRecord[];
 };
 
-const breadcrumbs = (registrationId: number): BreadcrumbItem[] => [
+const breadcrumbs = (
+    registrationId: number,
+    verificationIndexQuery: Props['verificationIndexQuery'],
+): BreadcrumbItem[] => [
     {
         title: 'Dashboard',
         href: dashboard(),
     },
     {
         title: 'Verification',
-        href: RegistrationVerificationController.index(),
+        href: RegistrationVerificationController.index.url({
+            query: verificationIndexQuery,
+        }),
     },
     {
         title: `Alter #${registrationId}`,
-        href: RegistrationAlterationController.edit(registrationId),
+        href: RegistrationAlterationController.edit.url(registrationId, {
+            query: verificationIndexQuery,
+        }),
     },
 ];
 
@@ -137,10 +153,13 @@ export default function AlterRegistrationVerification({
     assignedPastor,
     events,
     registration,
+    verificationIndexQuery,
     alterationHistory,
 }: Props) {
     return (
-        <AppLayout breadcrumbs={breadcrumbs(registration.id)}>
+        <AppLayout
+            breadcrumbs={breadcrumbs(registration.id, verificationIndexQuery)}
+        >
             <Head title="Alter Registration" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
@@ -155,8 +174,13 @@ export default function AlterRegistrationVerification({
                     registration={registration}
                     submitAction={RegistrationAlterationController.update(
                         registration.id,
+                        {
+                            query: verificationIndexQuery,
+                        },
                     )}
-                    cancelHref={RegistrationVerificationController.index().url}
+                    cancelHref={RegistrationVerificationController.index.url({
+                        query: verificationIndexQuery,
+                    })}
                     submitLabel="Save alteration"
                     churchCardLabel="Church on record"
                 />

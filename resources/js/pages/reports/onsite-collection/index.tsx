@@ -134,6 +134,7 @@ function CollectionDatePicker({
     placeholder,
     onChange,
 }: CollectionDatePickerProps) {
+    const [open, setOpen] = useState(false);
     const selectedDate = parseDateValue(value);
 
     return (
@@ -153,7 +154,7 @@ function CollectionDatePicker({
                 )}
             </div>
 
-            <Popover>
+            <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                     <Button
                         id={id}
@@ -181,7 +182,13 @@ function CollectionDatePicker({
                     <Calendar
                         mode="single"
                         selected={selectedDate}
-                        onSelect={(date) => onChange(toDateValue(date))}
+                        onSelect={(date) => {
+                            onChange(toDateValue(date));
+
+                            if (date !== undefined) {
+                                setOpen(false);
+                            }
+                        }}
                     />
                 </PopoverContent>
             </Popover>
