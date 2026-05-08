@@ -19,16 +19,16 @@ function Calendar({
         root: "w-fit",
         months: "flex flex-col gap-4 sm:flex-row",
         month: "flex w-full flex-col gap-4",
-        month_caption: "relative flex items-center justify-center pt-1",
-        caption_label: "text-sm font-medium",
-        nav: "absolute inset-x-0 top-1 flex items-center justify-between",
+        month_caption: "relative flex items-center justify-center px-10 pt-1",
+        caption_label: "pointer-events-none text-sm font-medium",
+        nav: "absolute inset-x-2 top-1 z-10 flex items-center justify-between",
         button_previous: cn(
           buttonVariants({ variant: "outline" }),
-          "size-8 bg-white p-0 text-slate-500 shadow-none hover:bg-slate-50 hover:text-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-200"
+          "relative z-10 size-8 rounded-md bg-white p-0 text-slate-500 shadow-none hover:bg-slate-50 hover:text-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-200"
         ),
         button_next: cn(
           buttonVariants({ variant: "outline" }),
-          "size-8 bg-white p-0 text-slate-500 shadow-none hover:bg-slate-50 hover:text-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-200"
+          "relative z-10 size-8 rounded-md bg-white p-0 text-slate-500 shadow-none hover:bg-slate-50 hover:text-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-200"
         ),
         month_grid: "w-full border-collapse",
         weekdays: "mt-4 flex",

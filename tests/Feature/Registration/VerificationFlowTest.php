@@ -198,6 +198,69 @@ test('admins can open uploaded receipts and verify online registrations', functi
     Notification::assertSentTo($registrant, RegistrationVerified::class);
 });
 
+test('super admins can filter the verification queue by submitted date range', function () {
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $superAdmin = User::factory()->superAdmin()->create();
+    $event = verificationEvent([
+        'scope_type' => Event::SCOPE_SECTION,
+        'section_id' => $section->id,
+    ]);
+    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+    ]);
+    $pastor = Pastor::factory()->for($section)->create();
+    $registrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'pastor_id' => $pastor->id,
+    ]);
+
+    createOnlineRegistrationForVerification(
+        $event,
+        $pastor,
+        $registrant,
+        $feeCategory,
+        [
+            'payment_reference' => 'DEP-2026-7001',
+            'submitted_at' => now()->setDate(2026, 3, 10)->setTime(9, 0),
+            'receipt_uploaded_at' => now()->setDate(2026, 3, 10)->setTime(9, 0),
+        ],
+    );
+
+    createOnlineRegistrationForVerification(
+        $event,
+        $pastor,
+        $registrant,
+        $feeCategory,
+        [
+            'payment_reference' => 'DEP-2026-7002',
+            'submitted_at' => now()->setDate(2026, 3, 18)->setTime(15, 0),
+            'receipt_uploaded_at' => now()->setDate(2026, 3, 18)->setTime(15, 0),
+        ],
+    );
+
+    $this->actingAs($superAdmin)
+        ->get(route('registrations.verification.index', [
+            'status' => 'all',
+            'submitted_date_from' => '2026-03-15',
+            'submitted_date_to' => '2026-03-20',
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/verification/index')
+            ->where('filters.submitted_date_from', '2026-03-15')
+            ->where('filters.submitted_date_to', '2026-03-20')
+            ->where('summary.pending_verification', 1)
+            ->where('summary.needs_correction', 0)
+            ->where('summary.verified', 0)
+            ->where('summary.rejected', 0)
+            ->has('registrations.data', 1)
+            ->where('registrations.data.0.payment_reference', 'DEP-2026-7002')
+            ->where('registrations.meta.total', 1));
+});
+
 test('super admins can alter verification registrations and store the previous snapshot', function () {
     Storage::fake('local');
     config()->set('registration.receipts_disk', 'local');
@@ -245,6 +308,8 @@ test('super admins can alter verification registrations and store the previous s
             'verified_by_user_id' => $reviewer->id,
             'payment_reference' => 'DEP-2026-4101',
             'remarks' => 'Original uploaded registration.',
+            'submitted_at' => now()->setDate(2026, 3, 18)->setTime(15, 0),
+            'receipt_uploaded_at' => now()->setDate(2026, 3, 18)->setTime(15, 0),
         ],
         2,
     );
@@ -257,6 +322,8 @@ test('super admins can alter verification registrations and store the previous s
     $this->actingAs($superAdmin)
         ->get(route('registrations.verification.index', [
             'status' => 'all',
+            'submitted_date_from' => '2026-03-15',
+            'submitted_date_to' => '2026-03-20',
         ]))
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
@@ -264,16 +331,33 @@ test('super admins can alter verification registrations and store the previous s
             ->where('registrations.data.0.can_alter', true));
 
     $this->actingAs($superAdmin)
-        ->get(route('registrations.verification.alter.edit', $registration))
+        ->get(route('registrations.verification.alter.edit', [
+            'registration' => $registration,
+            'status' => 'all',
+            'submitted_date_from' => '2026-03-15',
+            'submitted_date_to' => '2026-03-20',
+        ]))
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('registrations/verification/alter')
             ->where('registration.payment_reference', 'DEP-2026-4101')
+            ->where('verificationIndexQuery.submitted_date_from', '2026-03-15')
+            ->where('verificationIndexQuery.submitted_date_to', '2026-03-20')
             ->where('alterationHistory', []));
 
     $this->actingAs($superAdmin)
-        ->from(route('registrations.verification.alter.edit', $registration))
-        ->patch(route('registrations.verification.alter.update', $registration), [
+        ->from(route('registrations.verification.alter.edit', [
+            'registration' => $registration,
+            'status' => 'all',
+            'submitted_date_from' => '2026-03-15',
+            'submitted_date_to' => '2026-03-20',
+        ]))
+        ->patch(route('registrations.verification.alter.update', [
+            'registration' => $registration,
+            'status' => 'all',
+            'submitted_date_from' => '2026-03-15',
+            'submitted_date_to' => '2026-03-20',
+        ]), [
             'event_id' => $event->id,
             'payment_reference' => 'DEP-2026-4199',
             'remarks' => 'Adjusted grouped quantities after verification review.',
@@ -288,7 +372,10 @@ test('super admins can alter verification registrations and store the previous s
                 ],
             ],
         ])
-        ->assertRedirect(route('registrations.verification.alter.edit', $registration))
+        ->assertRedirect(route('registrations.verification.index', [
+            'submitted_date_from' => '2026-03-15',
+            'submitted_date_to' => '2026-03-20',
+        ]))
         ->assertInertiaFlash('toasts.0.title', 'Registration altered successfully.');
 
     $registration->refresh()->load('items.feeCategory', 'histories.alteredByUser');
@@ -467,6 +554,67 @@ test('admins can filter the verification queue by section within their district'
             ->has('registrations.data', 2)
             ->where('registrations.data.0.pastor.section_name', 'Beta Section')
             ->where('registrations.data.1.pastor.section_name', 'Beta Section')
+            ->where('registrations.meta.total', 2));
+});
+
+test('non-super-admin reviewers ignore submitted date filters on the verification queue', function () {
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $event = verificationEvent([
+        'district_id' => $district->id,
+        'department_id' => null,
+    ]);
+    $feeCategory = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular (Online)',
+        'amount' => '800.00',
+    ]);
+    $pastor = Pastor::factory()->for($section)->create();
+    $registrant = User::factory()->onlineRegistrant()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'pastor_id' => $pastor->id,
+    ]);
+
+    createOnlineRegistrationForVerification(
+        $event,
+        $pastor,
+        $registrant,
+        $feeCategory,
+        [
+            'payment_reference' => 'DEP-2026-7101',
+            'submitted_at' => now()->setDate(2026, 3, 10)->setTime(9, 0),
+            'receipt_uploaded_at' => now()->setDate(2026, 3, 10)->setTime(9, 0),
+        ],
+    );
+
+    createOnlineRegistrationForVerification(
+        $event,
+        $pastor,
+        $registrant,
+        $feeCategory,
+        [
+            'payment_reference' => 'DEP-2026-7102',
+            'submitted_at' => now()->setDate(2026, 3, 18)->setTime(15, 0),
+            'receipt_uploaded_at' => now()->setDate(2026, 3, 18)->setTime(15, 0),
+        ],
+    );
+
+    $this->actingAs($admin)
+        ->get(route('registrations.verification.index', [
+            'status' => 'all',
+            'submitted_date_from' => '2026-03-15',
+            'submitted_date_to' => '2026-03-20',
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/verification/index')
+            ->where('filters.submitted_date_from', '')
+            ->where('filters.submitted_date_to', '')
+            ->where('summary.pending_verification', 2)
+            ->has('registrations.data', 2)
             ->where('registrations.meta.total', 2));
 });
 

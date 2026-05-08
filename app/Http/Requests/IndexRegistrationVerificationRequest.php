@@ -40,6 +40,10 @@ class IndexRegistrationVerificationRequest extends FormRequest
                     ...Registration::verificationStatuses(),
                 ]),
             ],
+            ...($this->user()?->isSuperAdmin() ? [
+                'submitted_date_from' => ['nullable', 'date_format:Y-m-d'],
+                'submitted_date_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:submitted_date_from'],
+            ] : []),
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'page' => ['nullable', 'integer', 'min:1'],
         ];
@@ -48,7 +52,14 @@ class IndexRegistrationVerificationRequest extends FormRequest
     /**
      * Get the normalized filter payload.
      *
-     * @return array{section_id: int|null, search: string, status: string, per_page: int}
+     * @return array{
+     *     section_id: int|null,
+     *     search: string,
+     *     status: string,
+     *     submitted_date_from: string,
+     *     submitted_date_to: string,
+     *     per_page: int
+     * }
      */
     public function filters(): array
     {
@@ -58,6 +69,12 @@ class IndexRegistrationVerificationRequest extends FormRequest
                 : null,
             'search' => trim((string) $this->validated('search', '')),
             'status' => (string) $this->validated('status', 'all'),
+            'submitted_date_from' => $this->user()?->isSuperAdmin()
+                ? (string) $this->validated('submitted_date_from', '')
+                : '',
+            'submitted_date_to' => $this->user()?->isSuperAdmin()
+                ? (string) $this->validated('submitted_date_to', '')
+                : '',
             'per_page' => (int) $this->validated('per_page', 10),
         ];
     }
@@ -73,6 +90,9 @@ class IndexRegistrationVerificationRequest extends FormRequest
             'section_id.exists' => 'Choose a valid section filter.',
             'search.max' => 'Search terms must be 255 characters or fewer.',
             'status.in' => 'Choose a valid verification status filter.',
+            'submitted_date_from.date_format' => 'Choose a valid submitted-from date.',
+            'submitted_date_to.date_format' => 'Choose a valid submitted-to date.',
+            'submitted_date_to.after_or_equal' => 'The submitted-to date must be on or after the submitted-from date.',
             'per_page.min' => 'Rows per page must be at least 1.',
             'per_page.max' => 'Rows per page may not be greater than 100.',
             'page.min' => 'Choose a valid page number.',
