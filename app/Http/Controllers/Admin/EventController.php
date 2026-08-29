@@ -9,15 +9,18 @@ use App\Http\Requests\Admin\UpdateEventRequest;
 use App\Models\Department;
 use App\Models\District;
 use App\Models\Event;
+use App\Models\EventBankAccount;
 use App\Models\EventFeeCategory;
 use App\Models\Section;
 use App\Models\User;
 use App\Support\DepartmentScopeAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -93,6 +96,7 @@ class EventController extends Controller
             'departments' => $this->departmentOptions($actor),
             'formDefaults' => $this->formDefaults($actor),
             'feeCategoryStatusOptions' => $this->feeCategoryStatusOptions(),
+            'bankAccountStatusOptions' => $this->bankAccountStatusOptions(),
         ]);
     }
 
@@ -103,14 +107,31 @@ class EventController extends Controller
     {
         $validated = $request->eventData();
         $feeCategories = collect($validated['fee_categories']);
-        unset($validated['fee_categories']);
+        $bankAccounts = collect($validated['bank_accounts'] ?? []);
+        unset($validated['fee_categories'], $validated['bank_accounts']);
 
-        DB::transaction(function () use ($validated, $feeCategories): void {
-            $event = Event::query()->create($validated);
+        $storedQrCodePaths = [];
+        $replacedQrCodePaths = [];
 
-            $this->syncFeeCategories($event, $feeCategories);
-            $event->syncOperationalStatus();
-        });
+        try {
+            DB::transaction(function () use (
+                $validated,
+                $feeCategories,
+                $bankAccounts,
+                &$storedQrCodePaths,
+                &$replacedQrCodePaths,
+            ): void {
+                $event = Event::query()->create($validated);
+
+                $this->syncFeeCategories($event, $feeCategories);
+                $this->syncBankAccounts($event, $bankAccounts, $storedQrCodePaths, $replacedQrCodePaths);
+                $event->syncOperationalStatus();
+            });
+        } catch (\Throwable $throwable) {
+            $this->deleteQrCodePaths($storedQrCodePaths);
+
+            throw $throwable;
+        }
 
         return to_route('admin.events.index')->with('success', 'Event created.');
     }
@@ -132,6 +153,7 @@ class EventController extends Controller
             'feeCategories' => fn ($query) => $query
                 ->withSum('reservedRegistrationItems as reserved_quantity', 'quantity')
                 ->orderBy('id'),
+            'bankAccounts' => fn ($query) => $query->orderBy('id'),
         ]);
         $event->loadSum('reservedRegistrationItems as reserved_quantity', 'quantity');
         $event->syncOperationalStatus();
@@ -145,6 +167,7 @@ class EventController extends Controller
             'departments' => $this->departmentOptions($actor),
             'formDefaults' => $this->formDefaults($actor),
             'feeCategoryStatusOptions' => $this->feeCategoryStatusOptions(),
+            'bankAccountStatusOptions' => $this->bankAccountStatusOptions(),
         ]);
     }
 
@@ -155,14 +178,34 @@ class EventController extends Controller
     {
         $validated = $request->eventData();
         $feeCategories = collect($validated['fee_categories']);
-        unset($validated['fee_categories']);
+        $bankAccounts = collect($validated['bank_accounts'] ?? []);
+        unset($validated['fee_categories'], $validated['bank_accounts']);
 
-        DB::transaction(function () use ($event, $validated, $feeCategories): void {
-            $event->update($validated);
+        $storedQrCodePaths = [];
+        $replacedQrCodePaths = [];
 
-            $this->syncFeeCategories($event, $feeCategories);
-            $event->syncOperationalStatus();
-        });
+        try {
+            DB::transaction(function () use (
+                $event,
+                $validated,
+                $feeCategories,
+                $bankAccounts,
+                &$storedQrCodePaths,
+                &$replacedQrCodePaths,
+            ): void {
+                $event->update($validated);
+
+                $this->syncFeeCategories($event, $feeCategories);
+                $this->syncBankAccounts($event, $bankAccounts, $storedQrCodePaths, $replacedQrCodePaths);
+                $event->syncOperationalStatus();
+            });
+        } catch (\Throwable $throwable) {
+            $this->deleteQrCodePaths($storedQrCodePaths);
+
+            throw $throwable;
+        }
+
+        $this->deleteQrCodePaths($replacedQrCodePaths);
 
         return to_route('admin.events.index')->with('success', 'Event updated.');
     }
@@ -213,6 +256,94 @@ class EventController extends Controller
         $event->feeCategories()
             ->whereNotIn('id', $retainedIds)
             ->delete();
+    }
+
+    /**
+     * Synchronize nested payment bank accounts for the given event.
+     *
+     * @param  Collection<int, array<string, mixed>>  $bankAccounts
+     * @param  array<int, string>  $storedQrCodePaths
+     * @param  array<int, string>  $replacedQrCodePaths
+     */
+    private function syncBankAccounts(
+        Event $event,
+        Collection $bankAccounts,
+        array &$storedQrCodePaths,
+        array &$replacedQrCodePaths,
+    ): void {
+        $existingBankAccounts = $event->bankAccounts()->get()->keyBy('id');
+        $retainedIds = [];
+
+        $bankAccounts->each(function (array $bankAccount) use (
+            $event,
+            $existingBankAccounts,
+            &$retainedIds,
+            &$storedQrCodePaths,
+            &$replacedQrCodePaths,
+        ): void {
+            $payload = [
+                'bank_name' => $bankAccount['bank_name'],
+                'account_name' => $bankAccount['account_name'],
+                'account_number' => $bankAccount['account_number'],
+                'status' => $bankAccount['status'],
+            ];
+            $bankAccountId = isset($bankAccount['id']) ? (int) $bankAccount['id'] : null;
+            $qrCode = $bankAccount['qr_code'] ?? null;
+            $removeQrCode = filter_var($bankAccount['remove_qr_code'] ?? false, FILTER_VALIDATE_BOOL);
+
+            if ($qrCode instanceof UploadedFile) {
+                $payload['qr_code_path'] = $this->storeQrCode($qrCode);
+                $payload['qr_code_original_name'] = $qrCode->getClientOriginalName();
+                $storedQrCodePaths[] = $payload['qr_code_path'];
+            } elseif ($removeQrCode) {
+                $payload['qr_code_path'] = null;
+                $payload['qr_code_original_name'] = null;
+            }
+
+            if ($bankAccountId !== null && $existingBankAccounts->has($bankAccountId)) {
+                /** @var EventBankAccount $existingBankAccount */
+                $existingBankAccount = $existingBankAccounts[$bankAccountId];
+
+                if (
+                    array_key_exists('qr_code_path', $payload)
+                    && $existingBankAccount->qr_code_path !== null
+                    && $existingBankAccount->qr_code_path !== ($payload['qr_code_path'] ?? null)
+                ) {
+                    $replacedQrCodePaths[] = $existingBankAccount->qr_code_path;
+                }
+
+                $existingBankAccount->update($payload);
+                $retainedIds[] = $bankAccountId;
+
+                return;
+            }
+
+            $createdBankAccount = $event->bankAccounts()->create($payload);
+            $retainedIds[] = $createdBankAccount->getKey();
+        });
+
+        $event->bankAccounts()
+            ->whereNotIn('id', $retainedIds)
+            ->delete();
+    }
+
+    private function storeQrCode(UploadedFile $qrCode): string
+    {
+        $directory = trim((string) config('registration.bank_qr_code_directory'), '/');
+        $destination = $directory.'/'.now()->format('Y/m');
+
+        return $qrCode->store($destination, EventBankAccount::qrCodeDiskName());
+    }
+
+    /**
+     * @param  array<int, string>  $paths
+     */
+    private function deleteQrCodePaths(array $paths): void
+    {
+        collect($paths)
+            ->filter()
+            ->unique()
+            ->each(fn (string $path): bool => Storage::disk(EventBankAccount::qrCodeDiskName())->delete($path));
     }
 
     /**
@@ -281,6 +412,27 @@ class EventController extends Controller
                     'remaining_slots' => $feeCategory->remainingSlots(),
                 ],
             )->values(),
+            'bank_accounts' => $event->bankAccounts->map(
+                fn (EventBankAccount $bankAccount): array => $this->bankAccountData($bankAccount),
+            )->values(),
+        ];
+    }
+
+    /**
+     * Transform an event bank account for form and registrant payment options.
+     *
+     * @return array<string, mixed>
+     */
+    private function bankAccountData(EventBankAccount $bankAccount): array
+    {
+        return [
+            'id' => $bankAccount->getKey(),
+            'bank_name' => $bankAccount->bank_name,
+            'account_name' => $bankAccount->account_name,
+            'account_number' => $bankAccount->account_number,
+            'qr_code_url' => $bankAccount->qrCodeUrl(),
+            'qr_code_original_name' => $bankAccount->qr_code_original_name,
+            'status' => $bankAccount->status,
         ];
     }
 
@@ -459,6 +611,19 @@ class EventController extends Controller
         return [
             ['value' => 'active', 'label' => 'Active'],
             ['value' => 'inactive', 'label' => 'Inactive'],
+        ];
+    }
+
+    /**
+     * Build the supported bank account status options.
+     *
+     * @return array<int, array<string, string>>
+     */
+    private function bankAccountStatusOptions(): array
+    {
+        return [
+            ['value' => EventBankAccount::STATUS_ACTIVE, 'label' => 'Active'],
+            ['value' => EventBankAccount::STATUS_INACTIVE, 'label' => 'Inactive'],
         ];
     }
 }

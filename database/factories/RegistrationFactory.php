@@ -28,6 +28,7 @@ class RegistrationFactory extends Factory
             'payment_status' => 'unpaid',
             'registration_status' => 'draft',
             'payment_reference' => null,
+            'event_bank_account_id' => null,
             'receipt_file_path' => null,
             'receipt_original_name' => null,
             'receipt_uploaded_at' => null,

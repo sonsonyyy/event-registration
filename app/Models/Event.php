@@ -70,6 +70,21 @@ class Event extends Model
                         $feeCategory->delete();
                     }
                 });
+
+            $event->bankAccounts()
+                ->withTrashed()
+                ->get()
+                ->each(function (EventBankAccount $bankAccount) use ($event): void {
+                    if ($event->isForceDeleting()) {
+                        $bankAccount->forceDelete();
+
+                        return;
+                    }
+
+                    if (! $bankAccount->trashed()) {
+                        $bankAccount->delete();
+                    }
+                });
         });
     }
 
@@ -92,6 +107,19 @@ class Event extends Model
     public function feeCategories(): HasMany
     {
         return $this->hasMany(EventFeeCategory::class);
+    }
+
+    public function bankAccounts(): HasMany
+    {
+        return $this->hasMany(EventBankAccount::class);
+    }
+
+    public function activeBankAccounts(): HasMany
+    {
+        return $this->bankAccounts()
+            ->where('status', EventBankAccount::STATUS_ACTIVE)
+            ->orderBy('bank_name')
+            ->orderBy('id');
     }
 
     public function eventCheckIns(): HasMany

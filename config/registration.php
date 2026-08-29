@@ -19,4 +19,10 @@ return [
         'ONLINE_REGISTRATION_RECEIPT_URL_TTL_MINUTES',
         5,
     ),
+
+    'bank_qr_code_max_kb' => (int) env('EVENT_BANK_QR_CODE_MAX_KB', 2048),
+
+    'bank_qr_code_disk' => env('EVENT_BANK_QR_CODE_DISK', 'public'),
+
+    'bank_qr_code_directory' => env('EVENT_BANK_QR_CODE_DIRECTORY', 'event-bank-qr-codes'),
 ];

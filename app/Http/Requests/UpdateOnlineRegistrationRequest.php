@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Event;
+use App\Models\EventBankAccount;
 use App\Models\EventFeeCategory;
 use App\Models\Registration;
 use App\Support\DepartmentScopeAccess;
@@ -41,6 +42,12 @@ class UpdateOnlineRegistrationRequest extends FormRequest
                     ->where(fn ($query) => $query->whereNull('deleted_at')),
             ],
             'payment_reference' => ['required', 'string', 'max:255'],
+            'event_bank_account_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('event_bank_accounts', 'id')
+                    ->where(fn ($query) => $query->whereNull('deleted_at')),
+            ],
             'receipt' => [
                 'nullable',
                 'file',
@@ -103,6 +110,8 @@ class UpdateOnlineRegistrationRequest extends FormRequest
                     );
                 }
 
+                $this->validateSelectedBankAccount($validator, $event);
+
                 $lineItems = collect($this->input('line_items', []))
                     ->filter(fn (mixed $lineItem): bool => is_array($lineItem))
                     ->values();
@@ -144,6 +153,8 @@ class UpdateOnlineRegistrationRequest extends FormRequest
             'event_id.exists' => 'Select a valid event.',
             'payment_reference.required' => 'Enter the receipt or reference number.',
             'payment_reference.max' => 'The receipt reference must not exceed 255 characters.',
+            'event_bank_account_id.required' => 'Choose the bank account used for the transfer.',
+            'event_bank_account_id.exists' => 'Choose a valid event bank account.',
             'receipt.file' => 'Upload a valid proof of payment file.',
             'receipt.mimes' => 'Proof of payment must be a JPG, PNG, or PDF file.',
             'remarks.max' => 'Remarks must not exceed 1000 characters.',
@@ -155,6 +166,32 @@ class UpdateOnlineRegistrationRequest extends FormRequest
             'line_items.*.quantity.required' => 'Enter a quantity.',
             'line_items.*.quantity.min' => 'Quantities must be at least 1.',
         ];
+    }
+
+    private function validateSelectedBankAccount(Validator $validator, Event $event): void
+    {
+        $selectedBankAccountId = $this->input('event_bank_account_id');
+        $hasBankAccounts = $event->activeBankAccounts()->exists();
+
+        if ($hasBankAccounts && ! filled($selectedBankAccountId)) {
+            $validator->errors()->add('event_bank_account_id', 'Choose the bank account used for the transfer.');
+
+            return;
+        }
+
+        if (! filled($selectedBankAccountId)) {
+            return;
+        }
+
+        $bankAccountExists = EventBankAccount::query()
+            ->whereKey($selectedBankAccountId)
+            ->where('event_id', $event->getKey())
+            ->where('status', EventBankAccount::STATUS_ACTIVE)
+            ->exists();
+
+        if (! $bankAccountExists) {
+            $validator->errors()->add('event_bank_account_id', 'Choose an active bank account for the selected event.');
+        }
     }
 
     private function selectedEvent(): ?Event

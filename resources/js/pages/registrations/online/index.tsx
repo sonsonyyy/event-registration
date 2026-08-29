@@ -49,6 +49,14 @@ type RegistrationRecord = {
     };
     payment_status: string;
     payment_reference: string | null;
+    event_bank_account: {
+        id: number;
+        bank_name: string;
+        account_name: string;
+        account_number: string;
+        qr_code_url: string | null;
+        status: string;
+    } | null;
     registration_status: string;
     total_quantity: number;
     total_amount: string;
@@ -616,6 +624,7 @@ export default function OnlineRegistrationIndex({
                     }
                     submittedAt={selectedRegistration?.submitted_at}
                     paymentReference={selectedRegistration?.payment_reference}
+                    eventBankAccount={selectedRegistration?.event_bank_account}
                     remarks={selectedRegistration?.remarks}
                     receipt={selectedRegistration?.receipt}
                     items={selectedRegistration?.items ?? []}

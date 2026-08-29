@@ -39,6 +39,15 @@ type EventRecord = {
         reserved_quantity: number;
         remaining_slots: number | null;
     }>;
+    bank_accounts: Array<{
+        id?: number;
+        bank_name: string;
+        account_name: string;
+        account_number: string;
+        qr_code_url: string | null;
+        qr_code_original_name: string | null;
+        status: string;
+    }>;
 };
 
 type Props = {
@@ -69,6 +78,7 @@ type Props = {
         department_id: number | null;
     };
     feeCategoryStatusOptions: SelectOption[];
+    bankAccountStatusOptions: SelectOption[];
 };
 
 export default function EditEvent({
@@ -80,6 +90,7 @@ export default function EditEvent({
     departments,
     formDefaults,
     feeCategoryStatusOptions,
+    bankAccountStatusOptions,
 }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -114,6 +125,7 @@ export default function EditEvent({
                     departments={departments}
                     formDefaults={formDefaults}
                     feeCategoryStatusOptions={feeCategoryStatusOptions}
+                    bankAccountStatusOptions={bankAccountStatusOptions}
                 />
             </div>
         </AppLayout>

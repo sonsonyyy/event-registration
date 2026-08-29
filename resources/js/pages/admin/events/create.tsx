@@ -38,6 +38,7 @@ type Props = {
         department_id: number | null;
     };
     feeCategoryStatusOptions: SelectOption[];
+    bankAccountStatusOptions: SelectOption[];
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -63,6 +64,7 @@ export default function CreateEvent({
     departments,
     formDefaults,
     feeCategoryStatusOptions,
+    bankAccountStatusOptions,
 }: Props) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -81,6 +83,7 @@ export default function CreateEvent({
                     departments={departments}
                     formDefaults={formDefaults}
                     feeCategoryStatusOptions={feeCategoryStatusOptions}
+                    bankAccountStatusOptions={bankAccountStatusOptions}
                 />
             </div>
         </AppLayout>
