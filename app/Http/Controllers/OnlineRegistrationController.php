@@ -7,6 +7,7 @@ use App\Http\Requests\IndexOnlineRegistrationRequest;
 use App\Http\Requests\StoreOnlineRegistrationRequest;
 use App\Http\Requests\UpdateOnlineRegistrationRequest;
 use App\Models\Event;
+use App\Models\EventBankAccount;
 use App\Models\EventFeeCategory;
 use App\Models\Registration;
 use App\Models\RegistrationItem;
@@ -87,6 +88,7 @@ class OnlineRegistrationController extends Controller
 
         $registration = Registration::query()
             ->with([
+                'eventBankAccount',
                 'items.feeCategory',
                 'reviews.reviewer',
             ])
@@ -169,6 +171,7 @@ class OnlineRegistrationController extends Controller
                     'payment_status' => Registration::PAYMENT_STATUS_PAID,
                     'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
                     'payment_reference' => $validated['payment_reference'],
+                    'event_bank_account_id' => $validated['event_bank_account_id'] ?? null,
                     'receipt_file_path' => $receiptPath,
                     'receipt_original_name' => $receipt->getClientOriginalName(),
                     'receipt_uploaded_at' => $receiptUploadedAt,
@@ -275,6 +278,7 @@ class OnlineRegistrationController extends Controller
                 $registration->forceFill([
                     'event_id' => $event->getKey(),
                     'payment_reference' => $validated['payment_reference'],
+                    'event_bank_account_id' => $validated['event_bank_account_id'] ?? null,
                     'remarks' => $validated['remarks'] ?: null,
                     'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
                     'submitted_at' => $submittedAt,
@@ -376,6 +380,7 @@ class OnlineRegistrationController extends Controller
                 $item->fee_category_id => (int) $item->quantity,
             ]) ?? collect();
         $currentFeeCategoryIds = $currentFeeItemQuantities->keys()->all();
+        $currentBankAccountId = $registration?->event_bank_account_id;
 
         return Event::query()
             ->when(
@@ -406,6 +411,18 @@ class OnlineRegistrationController extends Controller
                     )
                     ->withSum('reservedRegistrationItems as reserved_quantity', 'quantity')
                     ->orderBy('category_name'),
+                'bankAccounts' => fn ($query) => $query
+                    ->when(
+                        $currentBankAccountId !== null,
+                        fn ($bankQuery) => $bankQuery->where(function (Builder $builder) use ($currentBankAccountId): void {
+                            $builder
+                                ->where('status', EventBankAccount::STATUS_ACTIVE)
+                                ->orWhere('id', $currentBankAccountId);
+                        }),
+                        fn ($bankQuery) => $bankQuery->where('status', EventBankAccount::STATUS_ACTIVE),
+                    )
+                    ->orderBy('bank_name')
+                    ->orderBy('id'),
             ])
             ->orderBy('date_from')
             ->get()
@@ -443,6 +460,10 @@ class OnlineRegistrationController extends Controller
                     'date_to' => $event->date_to->toDateString(),
                     'registration_close_at' => $event->registration_close_at->toIso8601String(),
                     'remaining_slots' => $this->eventCapacity->availableSlotsForEvent($event, $currentRegistration),
+                    'bank_accounts' => $event->bankAccounts
+                        ->map(fn (EventBankAccount $bankAccount): array => $this->bankAccountData($bankAccount))
+                        ->values()
+                        ->all(),
                     'fee_categories' => $event->feeCategories
                         ->filter(function (EventFeeCategory $feeCategory) use ($currentEventId, $event, $currentFeeItemQuantities): bool {
                             $currentQuantity = $currentEventId !== null && $event->getKey() === $currentEventId
@@ -478,6 +499,21 @@ class OnlineRegistrationController extends Controller
             })
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function bankAccountData(EventBankAccount $bankAccount): array
+    {
+        return [
+            'id' => $bankAccount->getKey(),
+            'bank_name' => $bankAccount->bank_name,
+            'account_name' => $bankAccount->account_name,
+            'account_number' => $bankAccount->account_number,
+            'qr_code_url' => $bankAccount->qrCodeUrl(),
+            'status' => $bankAccount->status,
+        ];
     }
 
     /**
@@ -599,6 +635,7 @@ class OnlineRegistrationController extends Controller
                 'event.department',
                 'latestReview.reviewer',
                 'pastor.section.district',
+                'eventBankAccount',
                 'items.feeCategory',
             ])
             ->withSum('items as total_amount', 'subtotal_amount')
@@ -656,6 +693,9 @@ class OnlineRegistrationController extends Controller
             ],
             'payment_status' => $registration->payment_status,
             'payment_reference' => $registration->payment_reference,
+            'event_bank_account' => $registration->eventBankAccount
+                ? $this->bankAccountData($registration->eventBankAccount)
+                : null,
             'registration_status' => $registration->registration_status,
             'total_quantity' => $registration->totalQuantity(),
             'total_amount' => $registration->totalAmount(),
@@ -693,6 +733,9 @@ class OnlineRegistrationController extends Controller
         return [
             'id' => $registration->getKey(),
             'event_id' => (string) $registration->event_id,
+            'event_bank_account_id' => $registration->event_bank_account_id !== null
+                ? (string) $registration->event_bank_account_id
+                : '',
             'payment_reference' => $registration->payment_reference,
             'registration_status' => $registration->registration_status,
             'remarks' => $registration->remarks,

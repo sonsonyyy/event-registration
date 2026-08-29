@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateRegistrationAlterationRequest;
 use App\Models\Event;
+use App\Models\EventBankAccount;
 use App\Models\EventFeeCategory;
 use App\Models\Registration;
 use App\Models\RegistrationHistory;
@@ -40,6 +41,7 @@ class RegistrationAlterationController extends Controller
         $registration = Registration::query()
             ->with([
                 'event',
+                'eventBankAccount',
                 'histories.alteredByUser',
                 'items.feeCategory',
                 'pastor.section.district',
@@ -135,6 +137,7 @@ class RegistrationAlterationController extends Controller
                 $registration->forceFill([
                     'event_id' => $event->getKey(),
                     'payment_reference' => $validated['payment_reference'],
+                    'event_bank_account_id' => $validated['event_bank_account_id'] ?? null,
                     'remarks' => $validated['remarks'] ?: null,
                     'registration_status' => Registration::STATUS_PENDING_VERIFICATION,
                     'verified_at' => null,
@@ -189,6 +192,7 @@ class RegistrationAlterationController extends Controller
                 $item->fee_category_id => (int) $item->quantity,
             ]) ?? collect();
         $currentFeeCategoryIds = $currentFeeItemQuantities->keys()->all();
+        $currentBankAccountId = $registration?->event_bank_account_id;
 
         return Event::query()
             ->when(
@@ -219,6 +223,18 @@ class RegistrationAlterationController extends Controller
                     )
                     ->withSum('reservedRegistrationItems as reserved_quantity', 'quantity')
                     ->orderBy('category_name'),
+                'bankAccounts' => fn ($query) => $query
+                    ->when(
+                        $currentBankAccountId !== null,
+                        fn ($bankQuery) => $bankQuery->where(function (Builder $builder) use ($currentBankAccountId): void {
+                            $builder
+                                ->where('status', EventBankAccount::STATUS_ACTIVE)
+                                ->orWhere('id', $currentBankAccountId);
+                        }),
+                        fn ($bankQuery) => $bankQuery->where('status', EventBankAccount::STATUS_ACTIVE),
+                    )
+                    ->orderBy('bank_name')
+                    ->orderBy('id'),
             ])
             ->orderBy('date_from')
             ->get()
@@ -256,6 +272,10 @@ class RegistrationAlterationController extends Controller
                     'date_to' => $event->date_to->toDateString(),
                     'registration_close_at' => $event->registration_close_at->toIso8601String(),
                     'remaining_slots' => $this->eventCapacity->availableSlotsForEvent($event, $currentRegistration),
+                    'bank_accounts' => $event->bankAccounts
+                        ->map(fn (EventBankAccount $bankAccount): array => $this->bankAccountData($bankAccount))
+                        ->values()
+                        ->all(),
                     'fee_categories' => $event->feeCategories
                         ->filter(function (EventFeeCategory $feeCategory) use ($currentEventId, $event, $currentFeeItemQuantities): bool {
                             $currentQuantity = $currentEventId !== null && $event->getKey() === $currentEventId
@@ -291,6 +311,21 @@ class RegistrationAlterationController extends Controller
             })
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function bankAccountData(EventBankAccount $bankAccount): array
+    {
+        return [
+            'id' => $bankAccount->getKey(),
+            'bank_name' => $bankAccount->bank_name,
+            'account_name' => $bankAccount->account_name,
+            'account_number' => $bankAccount->account_number,
+            'qr_code_url' => $bankAccount->qrCodeUrl(),
+            'status' => $bankAccount->status,
+        ];
     }
 
     /**
@@ -378,6 +413,9 @@ class RegistrationAlterationController extends Controller
         return [
             'id' => $registration->getKey(),
             'event_id' => (string) $registration->event_id,
+            'event_bank_account_id' => $registration->event_bank_account_id !== null
+                ? (string) $registration->event_bank_account_id
+                : '',
             'payment_reference' => $registration->payment_reference,
             'registration_status' => $registration->registration_status,
             'remarks' => $registration->remarks,
@@ -425,6 +463,7 @@ class RegistrationAlterationController extends Controller
                 'church_name' => $registration['church_name'] ?? null,
                 'pastor_name' => $registration['pastor_name'] ?? null,
                 'payment_reference' => $registration['payment_reference'] ?? null,
+                'event_bank_account' => $registration['event_bank_account'] ?? null,
                 'registration_status' => $registration['registration_status'] ?? null,
                 'remarks' => $registration['remarks'] ?? null,
                 'total_quantity' => (int) ($registration['total_quantity'] ?? 0),

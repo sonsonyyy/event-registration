@@ -55,6 +55,7 @@ class Registration extends Model
         'payment_status',
         'registration_status',
         'payment_reference',
+        'event_bank_account_id',
         'receipt_file_path',
         'receipt_original_name',
         'receipt_uploaded_at',
@@ -97,6 +98,11 @@ class Registration extends Model
     public function receiptUploadedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'receipt_uploaded_by_user_id')->withTrashed();
+    }
+
+    public function eventBankAccount(): BelongsTo
+    {
+        return $this->belongsTo(EventBankAccount::class)->withTrashed();
     }
 
     public function verifiedByUser(): BelongsTo
@@ -318,6 +324,7 @@ class Registration extends Model
     {
         $this->loadMissing([
             'event',
+            'eventBankAccount',
             'items.feeCategory',
             'pastor.section.district',
             'encodedByUser',
@@ -336,6 +343,12 @@ class Registration extends Model
                 'payment_status' => $this->payment_status,
                 'registration_status' => $this->registration_status,
                 'payment_reference' => $this->payment_reference,
+                'event_bank_account_id' => $this->event_bank_account_id,
+                'event_bank_account' => $this->eventBankAccount ? [
+                    'bank_name' => $this->eventBankAccount->bank_name,
+                    'account_name' => $this->eventBankAccount->account_name,
+                    'account_number' => $this->eventBankAccount->account_number,
+                ] : null,
                 'receipt_file_path' => $this->receipt_file_path,
                 'receipt_original_name' => $this->receipt_original_name,
                 'receipt_uploaded_at' => $this->receipt_uploaded_at?->toIso8601String(),

@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\PastorController;
 use App\Http\Controllers\Admin\SectionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EventBankAccountQrCodeController;
 use App\Http\Controllers\EventCheckInController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\NotificationController;
@@ -35,6 +36,7 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('event-bank-accounts/{eventBankAccount}/qr-code', EventBankAccountQrCodeController::class)->name('event-bank-accounts.qr-code');
     Route::get('reports', ReportsController::class)
         ->middleware('can:viewReports')
         ->name('reports.index');

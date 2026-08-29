@@ -1,4 +1,5 @@
 import { Link, useForm, usePage } from '@inertiajs/react';
+import { Plus, QrCode, Trash2, Upload } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { useEffect } from 'react';
 import EventController from '@/actions/App/Http/Controllers/Admin/EventController';
@@ -10,10 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { createClearFormErrorHandlers } from '@/lib/form-errors';
-import {
-    formTextareaClassName,
-    mutedNoticeClassName,
-} from '@/lib/ui-styles';
+import { formTextareaClassName, mutedNoticeClassName } from '@/lib/ui-styles';
 import type { Auth } from '@/types/auth';
 
 type PersistedFeeCategory = {
@@ -26,6 +24,16 @@ type PersistedFeeCategory = {
     remaining_slots: number | null;
 };
 
+type PersistedBankAccount = {
+    id?: number;
+    bank_name: string;
+    account_name: string;
+    account_number: string;
+    qr_code_url: string | null;
+    qr_code_original_name: string | null;
+    status: string;
+};
+
 type FeeCategoryFormValue = {
     id?: number;
     category_name: string;
@@ -34,6 +42,18 @@ type FeeCategoryFormValue = {
     status: string;
     reserved_quantity: number;
     remaining_slots: number | null;
+};
+
+type BankAccountFormValue = {
+    id?: number;
+    bank_name: string;
+    account_name: string;
+    account_number: string;
+    qr_code: File | null;
+    qr_code_url: string | null;
+    qr_code_original_name: string | null;
+    remove_qr_code: boolean;
+    status: string;
 };
 
 type EventRecord = {
@@ -56,6 +76,7 @@ type EventRecord = {
     status_reason: string | null;
     accepting_registrations: boolean;
     fee_categories: PersistedFeeCategory[];
+    bank_accounts: PersistedBankAccount[];
 };
 
 type SelectOption = {
@@ -97,6 +118,7 @@ type Props = {
         department_id: number | null;
     };
     feeCategoryStatusOptions: SelectOption[];
+    bankAccountStatusOptions: SelectOption[];
 };
 
 type EventFormData = {
@@ -113,8 +135,22 @@ type EventFormData = {
     section_id: string;
     department_id: string;
     total_capacity: string;
+    bank_accounts: BankAccountFormValue[];
     fee_categories: FeeCategoryFormValue[];
 };
+
+function emptyBankAccount(): BankAccountFormValue {
+    return {
+        bank_name: '',
+        account_name: '',
+        account_number: '',
+        qr_code: null,
+        qr_code_url: null,
+        qr_code_original_name: null,
+        remove_qr_code: false,
+        status: 'active',
+    };
+}
 
 function emptyFeeCategory(): FeeCategoryFormValue {
     return {
@@ -136,6 +172,7 @@ export default function EventForm({
     departments,
     formDefaults,
     feeCategoryStatusOptions,
+    bankAccountStatusOptions,
 }: Props) {
     const { auth } = usePage<{ auth: Auth }>().props;
     const isEditing = event !== undefined;
@@ -167,11 +204,16 @@ export default function EventForm({
             formDefaults?.department_id?.toString() ??
             (departments.length === 1 ? departments[0].id.toString() : ''),
         total_capacity: event ? event.total_capacity.toString() : '',
-        fee_categories:
-            event?.fee_categories.map((feeCategory) => ({
-                ...feeCategory,
-                slot_limit: feeCategory.slot_limit?.toString() ?? '',
-            })) ?? [emptyFeeCategory()],
+        bank_accounts:
+            event?.bank_accounts.map((bankAccount) => ({
+                ...bankAccount,
+                qr_code: null,
+                remove_qr_code: false,
+            })) ?? [],
+        fee_categories: event?.fee_categories.map((feeCategory) => ({
+            ...feeCategory,
+            slot_limit: feeCategory.slot_limit?.toString() ?? '',
+        })) ?? [emptyFeeCategory()],
     });
 
     const reservedQuantity = event?.reserved_quantity ?? 0;
@@ -189,13 +231,15 @@ export default function EventForm({
             (district) => district.id.toString() === form.data.district_id,
         ) ?? null;
     const selectedSection =
-        sections.find((section) => section.id.toString() === form.data.section_id) ??
-        null;
+        sections.find(
+            (section) => section.id.toString() === form.data.section_id,
+        ) ?? null;
     const selectedDepartment =
         departments.find(
             (department) =>
                 department.id.toString() === form.data.department_id,
         ) ?? null;
+    const canAddBankAccount = form.data.bank_accounts.length < 3;
     const scopeSummary =
         form.data.scope_type === 'section'
             ? `${selectedSection ? `${selectedSection.name} · ${selectedSection.district_name}` : 'Choose a section'} · ${selectedDepartment?.name ?? 'No department'}`
@@ -210,7 +254,10 @@ export default function EventForm({
     }, [districts, form]);
 
     useEffect(() => {
-        if (form.data.scope_type !== 'section' || filteredSections.length !== 1) {
+        if (
+            form.data.scope_type !== 'section' ||
+            filteredSections.length !== 1
+        ) {
             return;
         }
 
@@ -247,7 +294,7 @@ export default function EventForm({
             district_id: value,
             section_id:
                 currentData.scope_type === 'section'
-                    ? nextSection?.id.toString() ?? ''
+                    ? (nextSection?.id.toString() ?? '')
                     : '',
         }));
     };
@@ -259,9 +306,85 @@ export default function EventForm({
 
         form.setData((currentData) => ({
             ...currentData,
-            district_id: section?.district_id.toString() ?? currentData.district_id,
+            district_id:
+                section?.district_id.toString() ?? currentData.district_id,
             section_id: value,
         }));
+    };
+
+    const updateBankAccount = (
+        index: number,
+        field: 'bank_name' | 'account_name' | 'account_number' | 'status',
+        value: string,
+    ): void => {
+        form.setData(
+            'bank_accounts',
+            form.data.bank_accounts.map((bankAccount, bankAccountIndex) =>
+                bankAccountIndex === index
+                    ? {
+                          ...bankAccount,
+                          [field]: value,
+                      }
+                    : bankAccount,
+            ),
+        );
+    };
+
+    const updateBankAccountQrCode = (
+        index: number,
+        file: File | null,
+    ): void => {
+        form.setData(
+            'bank_accounts',
+            form.data.bank_accounts.map((bankAccount, bankAccountIndex) =>
+                bankAccountIndex === index
+                    ? {
+                          ...bankAccount,
+                          qr_code: file,
+                          remove_qr_code: file
+                              ? false
+                              : bankAccount.remove_qr_code,
+                      }
+                    : bankAccount,
+            ),
+        );
+    };
+
+    const clearBankAccountQrCode = (index: number): void => {
+        form.setData(
+            'bank_accounts',
+            form.data.bank_accounts.map((bankAccount, bankAccountIndex) =>
+                bankAccountIndex === index
+                    ? {
+                          ...bankAccount,
+                          qr_code: null,
+                          qr_code_url: null,
+                          qr_code_original_name: null,
+                          remove_qr_code: true,
+                      }
+                    : bankAccount,
+            ),
+        );
+    };
+
+    const addBankAccount = (): void => {
+        if (!canAddBankAccount) {
+            return;
+        }
+
+        form.setData('bank_accounts', [
+            ...form.data.bank_accounts,
+            emptyBankAccount(),
+        ]);
+    };
+
+    const removeBankAccount = (index: number): void => {
+        form.setData(
+            'bank_accounts',
+            form.data.bank_accounts.filter(
+                (_, bankAccountIndex) => bankAccountIndex !== index,
+            ),
+        );
     };
 
     const updateFeeCategory = (
@@ -306,12 +429,15 @@ export default function EventForm({
                 ? EventController.update(event.id)
                 : EventController.store(),
             {
+                forceFormData: true,
                 preserveScroll: true,
             },
         );
     };
 
-    const clearFormErrorHandlers = createClearFormErrorHandlers(form.clearErrors);
+    const clearFormErrorHandlers = createClearFormErrorHandlers(
+        form.clearErrors,
+    );
 
     return (
         <form
@@ -358,10 +484,7 @@ export default function EventForm({
                         name="description"
                         value={form.data.description}
                         onChange={(inputEvent) =>
-                            form.setData(
-                                'description',
-                                inputEvent.target.value,
-                            )
+                            form.setData('description', inputEvent.target.value)
                         }
                         placeholder="Describe the event purpose, audience, and important logistics."
                         className={formTextareaClassName}
@@ -400,7 +523,8 @@ export default function EventForm({
                             placeholder="Select a district"
                             disabled={
                                 form.data.scope_type === 'section' ||
-                                (!isSuperAdminViewer && districts.length === 1) ||
+                                (!isSuperAdminViewer &&
+                                    districts.length === 1) ||
                                 districts.length === 0
                             }
                             options={districts.map((district) => ({
@@ -460,7 +584,8 @@ export default function EventForm({
                 </div>
 
                 <div className={mutedNoticeClassName}>
-                    This event is currently configured as <strong>{scopeSummary}</strong>.
+                    This event is currently configured as{' '}
+                    <strong>{scopeSummary}</strong>.
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
@@ -489,10 +614,7 @@ export default function EventForm({
                             type="date"
                             value={form.data.date_to}
                             onChange={(inputEvent) =>
-                                form.setData(
-                                    'date_to',
-                                    inputEvent.target.value,
-                                )
+                                form.setData('date_to', inputEvent.target.value)
                             }
                         />
                         <InputError message={form.errors.date_to} />
@@ -514,7 +636,9 @@ export default function EventForm({
                                 )
                             }
                         />
-                        <InputError message={form.errors.registration_open_at} />
+                        <InputError
+                            message={form.errors.registration_open_at}
+                        />
                     </div>
 
                     <div className="grid gap-2">
@@ -533,7 +657,9 @@ export default function EventForm({
                                 )
                             }
                         />
-                        <InputError message={form.errors.registration_close_at} />
+                        <InputError
+                            message={form.errors.registration_close_at}
+                        />
                     </div>
                 </div>
 
@@ -619,6 +745,264 @@ export default function EventForm({
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div className="space-y-1">
                         <h3 className="text-base font-semibold tracking-tight">
+                            Payment bank accounts
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                            Add up to 3 active transfer destinations for online
+                            registrants.
+                        </p>
+                    </div>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-md"
+                        onClick={addBankAccount}
+                        disabled={!canAddBankAccount}
+                    >
+                        <Plus className="size-4" />
+                        Add bank account
+                    </Button>
+                </div>
+
+                {form.errors.bank_accounts && (
+                    <InputError message={form.errors.bank_accounts} />
+                )}
+
+                {form.data.bank_accounts.length === 0 ? (
+                    <div className={mutedNoticeClassName}>
+                        No bank accounts attached yet. Registrants can still
+                        upload proof of payment without selecting a transfer
+                        destination.
+                    </div>
+                ) : (
+                    form.data.bank_accounts.map((bankAccount, index) => (
+                        <div
+                            key={`${bankAccount.id ?? 'new'}-${index}`}
+                            className="rounded-md border border-sidebar-border/70 bg-background p-4"
+                        >
+                            {bankAccount.id !== undefined && (
+                                <input
+                                    type="hidden"
+                                    value={bankAccount.id}
+                                    name={`bank_accounts.${index}.id`}
+                                />
+                            )}
+
+                            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                                <div className="space-y-1">
+                                    <h3 className="font-medium">
+                                        Bank account {index + 1}
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        These details are shown to online
+                                        registrants before they upload payment
+                                        proof.
+                                    </p>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeBankAccount(index)}
+                                >
+                                    <Trash2 className="size-4" />
+                                    Remove
+                                </Button>
+                            </div>
+
+                            <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px]">
+                                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+                                    <div className="grid gap-2">
+                                        <Label
+                                            htmlFor={`bank_accounts.${index}.bank_name`}
+                                        >
+                                            Bank name
+                                        </Label>
+                                        <Input
+                                            id={`bank_accounts.${index}.bank_name`}
+                                            value={bankAccount.bank_name}
+                                            onChange={(inputEvent) =>
+                                                updateBankAccount(
+                                                    index,
+                                                    'bank_name',
+                                                    inputEvent.target.value,
+                                                )
+                                            }
+                                            placeholder="Bank or wallet name"
+                                        />
+                                        <InputError
+                                            message={
+                                                form.errors[
+                                                    `bank_accounts.${index}.bank_name`
+                                                ]
+                                            }
+                                        />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label
+                                            htmlFor={`bank_accounts.${index}.account_name`}
+                                        >
+                                            Account name
+                                        </Label>
+                                        <Input
+                                            id={`bank_accounts.${index}.account_name`}
+                                            value={bankAccount.account_name}
+                                            onChange={(inputEvent) =>
+                                                updateBankAccount(
+                                                    index,
+                                                    'account_name',
+                                                    inputEvent.target.value,
+                                                )
+                                            }
+                                            placeholder="Account holder"
+                                        />
+                                        <InputError
+                                            message={
+                                                form.errors[
+                                                    `bank_accounts.${index}.account_name`
+                                                ]
+                                            }
+                                        />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label
+                                            htmlFor={`bank_accounts.${index}.account_number`}
+                                        >
+                                            Account number
+                                        </Label>
+                                        <Input
+                                            id={`bank_accounts.${index}.account_number`}
+                                            value={bankAccount.account_number}
+                                            onChange={(inputEvent) =>
+                                                updateBankAccount(
+                                                    index,
+                                                    'account_number',
+                                                    inputEvent.target.value,
+                                                )
+                                            }
+                                            placeholder="Account or mobile number"
+                                        />
+                                        <InputError
+                                            message={
+                                                form.errors[
+                                                    `bank_accounts.${index}.account_number`
+                                                ]
+                                            }
+                                        />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label
+                                            htmlFor={`bank_accounts.${index}.status`}
+                                        >
+                                            Status
+                                        </Label>
+                                        <FormSelect
+                                            id={`bank_accounts.${index}.status`}
+                                            name={`bank_accounts.${index}.status`}
+                                            value={bankAccount.status}
+                                            onValueChange={(value) =>
+                                                updateBankAccount(
+                                                    index,
+                                                    'status',
+                                                    value,
+                                                )
+                                            }
+                                            placeholder="Select status"
+                                            options={bankAccountStatusOptions.map(
+                                                (option) => ({
+                                                    value: option.value,
+                                                    label: option.label,
+                                                }),
+                                            )}
+                                        />
+                                        <InputError
+                                            message={
+                                                form.errors[
+                                                    `bank_accounts.${index}.status`
+                                                ]
+                                            }
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-3">
+                                    <Label
+                                        htmlFor={`bank_accounts.${index}.qr_code`}
+                                    >
+                                        QR code image
+                                    </Label>
+                                    <Input
+                                        id={`bank_accounts.${index}.qr_code`}
+                                        type="file"
+                                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                        onChange={(inputEvent) =>
+                                            updateBankAccountQrCode(
+                                                index,
+                                                inputEvent.target.files?.[0] ??
+                                                    null,
+                                            )
+                                        }
+                                    />
+                                    <InputError
+                                        message={
+                                            form.errors[
+                                                `bank_accounts.${index}.qr_code`
+                                            ]
+                                        }
+                                    />
+
+                                    {bankAccount.qr_code_url ? (
+                                        <div className="overflow-hidden rounded-md border border-sidebar-border/70 bg-white p-3">
+                                            <img
+                                                src={bankAccount.qr_code_url}
+                                                alt={`${bankAccount.bank_name || 'Bank'} QR code`}
+                                                className="mx-auto aspect-square max-h-40 object-contain"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="flex aspect-square max-h-40 items-center justify-center rounded-md border border-dashed border-sidebar-border/80 bg-muted/30 text-muted-foreground">
+                                            <QrCode className="size-9" />
+                                        </div>
+                                    )}
+
+                                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                        <Upload className="size-3.5" />
+                                        <span>
+                                            {bankAccount.qr_code?.name ??
+                                                bankAccount.qr_code_original_name ??
+                                                'Optional JPG, PNG, or WebP'}
+                                        </span>
+                                        {(bankAccount.qr_code ||
+                                            bankAccount.qr_code_url) && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-7 rounded-md px-2 text-xs"
+                                                onClick={() =>
+                                                    clearBankAccountQrCode(
+                                                        index,
+                                                    )
+                                                }
+                                            >
+                                                Clear QR
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </section>
+
+            <section className="space-y-4 border-t border-sidebar-border/70 pt-8">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div className="space-y-1">
+                        <h3 className="text-base font-semibold tracking-tight">
                             Fee categories
                         </h3>
                         <p className="text-sm text-muted-foreground">
@@ -645,10 +1029,8 @@ export default function EventForm({
                         feeCategory.slot_limit === ''
                             ? null
                             : Math.max(
-                                  Number.parseInt(
-                                      feeCategory.slot_limit,
-                                      10,
-                                  ) - feeCategory.reserved_quantity,
+                                  Number.parseInt(feeCategory.slot_limit, 10) -
+                                      feeCategory.reserved_quantity,
                                   0,
                               );
                     const canRemove =
@@ -666,8 +1048,9 @@ export default function EventForm({
                                         Fee category {index + 1}
                                     </h3>
                                     <p className="text-sm text-muted-foreground">
-                                        Optional slot limits let you reserve part of
-                                        the event capacity for a specific fee type.
+                                        Optional slot limits let you reserve
+                                        part of the event capacity for a
+                                        specific fee type.
                                     </p>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
@@ -793,7 +1176,9 @@ export default function EventForm({
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor={`fee_categories.${index}.status`}>
+                                    <Label
+                                        htmlFor={`fee_categories.${index}.status`}
+                                    >
                                         Status
                                     </Label>
                                     <FormSelect

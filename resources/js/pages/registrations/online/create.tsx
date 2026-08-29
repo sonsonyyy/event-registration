@@ -16,6 +16,15 @@ type FeeCategoryOption = {
     status: string;
 };
 
+type BankAccountOption = {
+    id: number;
+    bank_name: string;
+    account_name: string;
+    account_number: string;
+    qr_code_url: string | null;
+    status: string;
+};
+
 type EventOption = {
     id: number;
     name: string;
@@ -25,6 +34,7 @@ type EventOption = {
     date_to: string;
     registration_close_at: string;
     remaining_slots: number;
+    bank_accounts: BankAccountOption[];
     fee_categories: FeeCategoryOption[];
 };
 
@@ -61,7 +71,8 @@ export default function CreateOnlineRegistration({
     assignedPastor,
     events,
 }: Props) {
-    const hasUnavailableDependencies = assignedPastor === null || events.length === 0;
+    const hasUnavailableDependencies =
+        assignedPastor === null || events.length === 0;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -87,9 +98,8 @@ export default function CreateOnlineRegistration({
                             )}
                             {events.length === 0 && (
                                 <p>
-                                    No open events with available fee
-                                    categories are ready for online
-                                    registration.
+                                    No open events with available fee categories
+                                    are ready for online registration.
                                 </p>
                             )}
                         </CardContent>

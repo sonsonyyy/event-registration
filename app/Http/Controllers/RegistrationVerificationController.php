@@ -113,6 +113,7 @@ class RegistrationVerificationController extends Controller
             $registration = Registration::query()
                 ->with([
                     'event',
+                    'eventBankAccount',
                     'items.feeCategory',
                     'encodedByUser.role',
                     'pastor.section.district',
@@ -206,6 +207,7 @@ class RegistrationVerificationController extends Controller
             ->with([
                 'encodedByUser',
                 'event',
+                'eventBankAccount',
                 'items.feeCategory',
                 'latestReview.reviewer',
                 'pastor.section.district',
@@ -442,6 +444,14 @@ class RegistrationVerificationController extends Controller
                 'email' => $registration->encodedByUser->email,
             ] : null,
             'payment_reference' => $registration->payment_reference,
+            'event_bank_account' => $registration->eventBankAccount ? [
+                'id' => $registration->eventBankAccount->getKey(),
+                'bank_name' => $registration->eventBankAccount->bank_name,
+                'account_name' => $registration->eventBankAccount->account_name,
+                'account_number' => $registration->eventBankAccount->account_number,
+                'qr_code_url' => $registration->eventBankAccount->qrCodeUrl(),
+                'status' => $registration->eventBankAccount->status,
+            ] : null,
             'registration_status' => $registration->registration_status,
             'can_review' => $registration->canBeReviewed(),
             'can_alter' => $registration->canBeAlteredForVerification()

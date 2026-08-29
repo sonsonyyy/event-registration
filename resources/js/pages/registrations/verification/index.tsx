@@ -94,6 +94,14 @@ type RegistrationRecord = {
         email: string;
     } | null;
     payment_reference: string | null;
+    event_bank_account: {
+        id: number;
+        bank_name: string;
+        account_name: string;
+        account_number: string;
+        qr_code_url: string | null;
+        status: string;
+    } | null;
     registration_status: string;
     can_review: boolean;
     can_alter: boolean;
@@ -633,17 +641,17 @@ export default function RegistrationVerificationIndex({
                                         onValueChange={(nextStatus) => {
                                             setStatus(nextStatus);
                                             visitIndex(
-                                                    buildQuery({
-                                                        searchValue: search,
-                                                        sectionValue: sectionId,
-                                                        statusValue: nextStatus,
-                                                        submittedDateFromValue:
-                                                            submittedDateFrom,
-                                                        submittedDateToValue:
-                                                            submittedDateTo,
-                                                        perPage: filters.per_page,
-                                                    }),
-                                                );
+                                                buildQuery({
+                                                    searchValue: search,
+                                                    sectionValue: sectionId,
+                                                    statusValue: nextStatus,
+                                                    submittedDateFromValue:
+                                                        submittedDateFrom,
+                                                    submittedDateToValue:
+                                                        submittedDateTo,
+                                                    perPage: filters.per_page,
+                                                }),
+                                            );
                                         }}
                                     >
                                         <SelectTrigger
@@ -1109,6 +1117,7 @@ export default function RegistrationVerificationIndex({
                     verifiedAt={selectedRegistration?.verified_at}
                     verifiedBy={selectedRegistration?.verified_by}
                     paymentReference={selectedRegistration?.payment_reference}
+                    eventBankAccount={selectedRegistration?.event_bank_account}
                     remarks={selectedRegistration?.remarks}
                     receipt={selectedRegistration?.receipt}
                     items={selectedRegistration?.items ?? []}

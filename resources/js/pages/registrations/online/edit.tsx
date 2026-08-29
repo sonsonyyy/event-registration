@@ -15,6 +15,15 @@ type FeeCategoryOption = {
     status: string;
 };
 
+type BankAccountOption = {
+    id: number;
+    bank_name: string;
+    account_name: string;
+    account_number: string;
+    qr_code_url: string | null;
+    status: string;
+};
+
 type EventOption = {
     id: number;
     name: string;
@@ -24,6 +33,7 @@ type EventOption = {
     date_to: string;
     registration_close_at: string;
     remaining_slots: number;
+    bank_accounts: BankAccountOption[];
     fee_categories: FeeCategoryOption[];
 };
 
@@ -51,6 +61,7 @@ type ReviewRecord = {
 type EditableRegistration = {
     id: number;
     event_id: string;
+    event_bank_account_id: string;
     payment_reference: string | null;
     registration_status: string;
     remarks: string | null;

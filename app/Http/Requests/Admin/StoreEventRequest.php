@@ -5,6 +5,7 @@ namespace App\Http\Requests\Admin;
 use App\Models\Department;
 use App\Models\District;
 use App\Models\Event;
+use App\Models\EventBankAccount;
 use App\Models\Section;
 use App\Support\DepartmentScopeAccess;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -60,6 +61,18 @@ class StoreEventRequest extends FormRequest
             'fee_categories.*.amount' => ['required', 'numeric', 'min:0.01'],
             'fee_categories.*.slot_limit' => ['nullable', 'integer', 'min:1'],
             'fee_categories.*.status' => ['required', Rule::in(['active', 'inactive'])],
+            'bank_accounts' => ['nullable', 'array', 'max:3'],
+            'bank_accounts.*.bank_name' => ['required', 'string', 'max:255'],
+            'bank_accounts.*.account_name' => ['required', 'string', 'max:255'],
+            'bank_accounts.*.account_number' => ['required', 'string', 'max:255'],
+            'bank_accounts.*.status' => ['required', Rule::in(EventBankAccount::statuses())],
+            'bank_accounts.*.qr_code' => [
+                'nullable',
+                'file',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:'.(int) config('registration.bank_qr_code_max_kb'),
+            ],
         ];
     }
 
@@ -123,6 +136,14 @@ class StoreEventRequest extends FormRequest
                     $validator->errors()->add('fee_categories', 'Combined fee category slot limits cannot exceed the event capacity.');
                 }
 
+                $bankAccounts = collect($this->input('bank_accounts', []))
+                    ->filter(fn (mixed $bankAccount): bool => is_array($bankAccount))
+                    ->values();
+
+                if ($bankAccounts->where('status', EventBankAccount::STATUS_ACTIVE)->count() > 3) {
+                    $validator->errors()->add('bank_accounts', 'An event can have a maximum of 3 active bank accounts.');
+                }
+
                 $feeCategories->each(function (array $category, int $index) use ($totalCapacity, $validator): void {
                     $slotLimit = $category['slot_limit'] ?? null;
 
@@ -171,6 +192,16 @@ class StoreEventRequest extends FormRequest
             'fee_categories.*.slot_limit.min' => 'Fee category slot limits must be at least 1 when provided.',
             'fee_categories.*.status.required' => 'Choose a fee category status.',
             'fee_categories.*.status.in' => 'Choose a valid fee category status.',
+            'bank_accounts.max' => 'An event can have a maximum of 3 bank accounts.',
+            'bank_accounts.*.bank_name.required' => 'Enter the bank name.',
+            'bank_accounts.*.account_name.required' => 'Enter the account name.',
+            'bank_accounts.*.account_number.required' => 'Enter the account number.',
+            'bank_accounts.*.status.required' => 'Choose a bank account status.',
+            'bank_accounts.*.status.in' => 'Choose a valid bank account status.',
+            'bank_accounts.*.qr_code.file' => 'Upload a valid QR code image.',
+            'bank_accounts.*.qr_code.image' => 'The QR code must be an image file.',
+            'bank_accounts.*.qr_code.mimes' => 'QR code images must be JPG, PNG, or WebP files.',
+            'bank_accounts.*.qr_code.max' => 'The QR code image is too large.',
         ];
     }
 

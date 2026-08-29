@@ -13,6 +13,13 @@ type ReceiptRecord = {
     url?: string | null;
 };
 
+type BankAccountRecord = {
+    bank_name: string;
+    account_name: string;
+    account_number: string;
+    qr_code_url?: string | null;
+} | null;
+
 type ReviewRecord = {
     id: number;
     decision: string;
@@ -62,6 +69,7 @@ type RegistrationRecordDialogProps = {
         name: string;
     } | null;
     paymentReference?: string | null;
+    eventBankAccount?: BankAccountRecord;
     remarks?: string | null;
     receipt?: ReceiptRecord | null;
     items: ItemRecord[];
@@ -103,6 +111,7 @@ export default function RegistrationRecordDialog({
     verifiedAt,
     verifiedBy = null,
     paymentReference = null,
+    eventBankAccount = null,
     remarks = null,
     receipt = null,
     items,
@@ -157,7 +166,9 @@ export default function RegistrationRecordDialog({
                             label: 'Event',
                             value: (
                                 <>
-                                    <div className="font-medium">{event.name}</div>
+                                    <div className="font-medium">
+                                        {event.name}
+                                    </div>
                                     {event.venue && (
                                         <div className="text-slate-500 dark:text-slate-400">
                                             {event.venue}
@@ -179,7 +190,10 @@ export default function RegistrationRecordDialog({
                                     {(pastor.section_name ||
                                         pastor.district_name) && (
                                         <div className="text-slate-500 dark:text-slate-400">
-                                            {[pastor.section_name, pastor.district_name]
+                                            {[
+                                                pastor.section_name,
+                                                pastor.district_name,
+                                            ]
                                                 .filter(Boolean)
                                                 .join(', ')}
                                         </div>
@@ -227,7 +241,12 @@ export default function RegistrationRecordDialog({
                             label: 'Verified',
                             value: (
                                 <>
-                                    <div>{formatDateTime(verifiedAt, 'Not verified')}</div>
+                                    <div>
+                                        {formatDateTime(
+                                            verifiedAt,
+                                            'Not verified',
+                                        )}
+                                    </div>
                                     {verifiedBy && (
                                         <div className="text-slate-500 dark:text-slate-400">
                                             {verifiedBy.name}
@@ -262,25 +281,61 @@ export default function RegistrationRecordDialog({
                                   },
                               ]
                             : []),
+                        ...(eventBankAccount
+                            ? [
+                                  {
+                                      label: 'Transfer destination',
+                                      value: (
+                                          <>
+                                              <div className="font-medium">
+                                                  {eventBankAccount.bank_name}
+                                              </div>
+                                              <div className="text-slate-500 dark:text-slate-400">
+                                                  {
+                                                      eventBankAccount.account_name
+                                                  }
+                                              </div>
+                                              <div className="break-words text-slate-500 dark:text-slate-400">
+                                                  {
+                                                      eventBankAccount.account_number
+                                                  }
+                                              </div>
+                                          </>
+                                      ),
+                                  },
+                              ]
+                            : []),
                     ],
-                    content: receipt?.url ? (
-                        <div>
-                            <Button
-                                asChild
-                                size="sm"
-                                variant="outline"
-                                className="h-9 rounded-md px-3 text-[13px] sm:text-sm"
-                            >
-                                <a
-                                    href={receipt.url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                >
-                                    View receipt
-                                </a>
-                            </Button>
-                        </div>
-                    ) : null,
+                    content:
+                        receipt?.url || eventBankAccount?.qr_code_url ? (
+                            <div className="flex flex-wrap items-start gap-3">
+                                {receipt?.url && (
+                                    <Button
+                                        asChild
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-9 rounded-md px-3 text-[13px] sm:text-sm"
+                                    >
+                                        <a
+                                            href={receipt.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                        >
+                                            View receipt
+                                        </a>
+                                    </Button>
+                                )}
+                                {eventBankAccount?.qr_code_url && (
+                                    <div className="overflow-hidden rounded-md border border-slate-200 bg-white p-2 dark:border-slate-800">
+                                        <img
+                                            src={eventBankAccount.qr_code_url}
+                                            alt={`${eventBankAccount.bank_name} QR code`}
+                                            className="aspect-square h-28 object-contain"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        ) : null,
                 },
                 {
                     title: 'Line Items',
@@ -299,10 +354,15 @@ export default function RegistrationRecordDialog({
                                             {item.quantity} delegates
                                         </div>
                                     </div>
-                                    <div className="text-[13px] leading-6 text-slate-600 sm:text-sm dark:text-slate-300 md:text-right">
-                                        <div>{formatCurrency(item.unit_amount)} each</div>
+                                    <div className="text-[13px] leading-6 text-slate-600 sm:text-sm md:text-right dark:text-slate-300">
+                                        <div>
+                                            {formatCurrency(item.unit_amount)}{' '}
+                                            each
+                                        </div>
                                         <div className="font-medium text-slate-900 dark:text-slate-100">
-                                            {formatCurrency(item.subtotal_amount)}
+                                            {formatCurrency(
+                                                item.subtotal_amount,
+                                            )}
                                         </div>
                                     </div>
                                 </div>
