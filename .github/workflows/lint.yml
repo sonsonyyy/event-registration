@@ -29,7 +29,7 @@ jobs:
           php-version: '8.4'
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: 'npm'
@@ -38,6 +38,9 @@ jobs:
         run: |
           composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
           npm ci
+
+      - name: Generate Wayfinder Types
+        run: php artisan wayfinder:generate --with-form --no-interaction
 
       - name: Run Pint
         run: composer lint:check
