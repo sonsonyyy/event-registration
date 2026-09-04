@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import {
     Select,
     SelectContent,
@@ -5,7 +6,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { useRef } from 'react';
 import { cn } from '@/lib/utils';
 
 const emptyOptionValue = '__empty__';
@@ -47,8 +47,7 @@ export default function FormSelect({
     const fieldErrorKey = name ?? id;
 
     const handleValueChange = (nextValue: string): void => {
-        const resolvedValue =
-            nextValue === emptyOptionValue ? '' : nextValue;
+        const resolvedValue = nextValue === emptyOptionValue ? '' : nextValue;
 
         onValueChange(resolvedValue);
 
@@ -84,7 +83,10 @@ export default function FormSelect({
             >
                 <SelectTrigger
                     id={id}
-                    className={cn('w-full bg-background text-left', triggerClassName)}
+                    className={cn(
+                        'w-full bg-background text-left',
+                        triggerClassName,
+                    )}
                 >
                     <SelectValue placeholder={placeholder} />
                 </SelectTrigger>

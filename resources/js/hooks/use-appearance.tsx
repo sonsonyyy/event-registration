@@ -55,7 +55,7 @@ export function useAppearance(): UseAppearanceReturn {
 
     const resolvedAppearance: ResolvedAppearance = 'light';
 
-    const updateAppearance = (_mode: Appearance): void => {
+    const updateAppearance = (): void => {
         currentAppearance = 'light';
         localStorage.setItem('appearance', 'light');
         setCookie('appearance', 'light');

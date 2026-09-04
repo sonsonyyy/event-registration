@@ -1,11 +1,8 @@
 import { usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { Toaster } from '@/components/ui/sonner';
-import { showToast, type AppToastPayload } from '@/lib/toast';
-
-type FlashToasterProps = {
-    includeStatus?: boolean;
-};
+import { showToast } from '@/lib/toast';
+import type { AppToastPayload } from '@/lib/toast';
 
 type InertiaFlashEventPayload = {
     toasts?: Array<
@@ -17,13 +14,13 @@ type InertiaFlashEventPayload = {
 
 const processedInertiaToastKeys = new Set<string>();
 
-export default function FlashToaster({
-    includeStatus: _includeStatus = false,
-}: FlashToasterProps) {
+export default function FlashToaster() {
     const page = usePage();
 
     useEffect(() => {
-        const queueInertiaFlashToasts = (flash: InertiaFlashEventPayload): void => {
+        const queueInertiaFlashToasts = (
+            flash: InertiaFlashEventPayload,
+        ): void => {
             const flashToasts = Array.isArray(flash.toasts) ? flash.toasts : [];
 
             if (flashToasts.length === 0) {
@@ -31,13 +28,16 @@ export default function FlashToaster({
             }
 
             flashToasts.forEach((toast) => {
-                if (typeof toast.title !== 'string' || toast.title.trim() === '') {
+                if (
+                    typeof toast.title !== 'string' ||
+                    toast.title.trim() === ''
+                ) {
                     return;
                 }
 
                 const toastKey =
-                    toast.key
-                    ?? `${toast.variant ?? 'info'}:${toast.title}:${toast.description ?? ''}`;
+                    toast.key ??
+                    `${toast.variant ?? 'info'}:${toast.title}:${toast.description ?? ''}`;
 
                 if (processedInertiaToastKeys.has(toastKey)) {
                     return;
@@ -57,8 +57,9 @@ export default function FlashToaster({
         queueInertiaFlashToasts(page.flash as InertiaFlashEventPayload);
 
         const handleInertiaFlash = (event: Event): void => {
-            const detail = (event as CustomEvent<{ flash: InertiaFlashEventPayload }>)
-                .detail;
+            const detail = (
+                event as CustomEvent<{ flash: InertiaFlashEventPayload }>
+            ).detail;
 
             queueInertiaFlashToasts(detail.flash);
         };

@@ -4,14 +4,18 @@ import PastorController from '@/actions/App/Http/Controllers/Admin/PastorControl
 import FormSelect from '@/components/form-select';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { createClearFormErrorHandlers } from '@/lib/form-errors';
-import {
-    formTextareaClassName,
-} from '@/lib/ui-styles';
+import { formTextareaClassName } from '@/lib/ui-styles';
 
 type Pastor = {
     id: number;
@@ -76,10 +80,16 @@ export default function PastorForm({
         );
     };
 
-    const clearFormErrorHandlers = createClearFormErrorHandlers(form.clearErrors);
+    const clearFormErrorHandlers = createClearFormErrorHandlers(
+        form.clearErrors,
+    );
 
     const formContent = (
-        <form className="space-y-6" onSubmit={submit} {...clearFormErrorHandlers}>
+        <form
+            className="space-y-6"
+            onSubmit={submit}
+            {...clearFormErrorHandlers}
+        >
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px]">
                 <div className="grid gap-2">
                     <Label htmlFor="section_id">Section</Label>
@@ -106,9 +116,7 @@ export default function PastorForm({
                         id="status"
                         name="status"
                         value={form.data.status}
-                        onValueChange={(value) =>
-                            form.setData('status', value)
-                        }
+                        onValueChange={(value) => form.setData('status', value)}
                         placeholder="Select status"
                         options={statusOptions.map((option) => ({
                             value: option.value,
@@ -127,10 +135,7 @@ export default function PastorForm({
                         name="pastor_name"
                         value={form.data.pastor_name}
                         onChange={(event) =>
-                            form.setData(
-                                'pastor_name',
-                                event.target.value,
-                            )
+                            form.setData('pastor_name', event.target.value)
                         }
                         autoFocus
                         placeholder="Pastor Jane Doe"
@@ -145,10 +150,7 @@ export default function PastorForm({
                         name="church_name"
                         value={form.data.church_name}
                         onChange={(event) =>
-                            form.setData(
-                                'church_name',
-                                event.target.value,
-                            )
+                            form.setData('church_name', event.target.value)
                         }
                         placeholder="Grace Community Church"
                     />
@@ -166,10 +168,7 @@ export default function PastorForm({
                         name="contact_number"
                         value={form.data.contact_number}
                         onChange={(event) =>
-                            form.setData(
-                                'contact_number',
-                                event.target.value,
-                            )
+                            form.setData('contact_number', event.target.value)
                         }
                         placeholder="Optional church contact number"
                     />
@@ -209,15 +208,11 @@ export default function PastorForm({
 
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                 <Button variant="outline" asChild>
-                    <Link href={PastorController.index()}>
-                        Cancel
-                    </Link>
+                    <Link href={PastorController.index()}>Cancel</Link>
                 </Button>
                 <Button type="submit" disabled={form.processing}>
                     {form.processing && <Spinner />}
-                    {isEditing
-                        ? 'Save changes'
-                        : 'Create pastor record'}
+                    {isEditing ? 'Save changes' : 'Create pastor record'}
                 </Button>
             </div>
         </form>

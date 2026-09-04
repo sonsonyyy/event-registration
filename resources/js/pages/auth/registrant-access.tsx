@@ -9,12 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { createClearFormErrorHandlers } from '@/lib/form-errors';
-import {
-    formControlClassName,
-    warningNoticeClassName,
-} from '@/lib/ui-styles';
 import AuthLayout from '@/layouts/auth-layout';
+import { createClearFormErrorHandlers } from '@/lib/form-errors';
+import { formControlClassName, warningNoticeClassName } from '@/lib/ui-styles';
 import { login } from '@/routes';
 
 type SectionOption = {
@@ -49,10 +46,7 @@ type RegistrantAccessFormData = {
     password_confirmation: string;
 };
 
-export default function RegistrantAccess({
-    sections,
-    pastors,
-}: Props) {
+export default function RegistrantAccess({ sections, pastors }: Props) {
     const form = useForm<RegistrantAccessFormData>({
         name: '',
         email: '',
@@ -64,13 +58,13 @@ export default function RegistrantAccess({
 
     const filteredPastors = form.data.section_id
         ? pastors.filter(
-              (pastor) =>
-                  pastor.section_id.toString() === form.data.section_id,
+              (pastor) => pastor.section_id.toString() === form.data.section_id,
           )
         : pastors;
     const selectedPastor =
-        pastors.find((pastor) => pastor.id.toString() === form.data.pastor_id) ??
-        null;
+        pastors.find(
+            (pastor) => pastor.id.toString() === form.data.pastor_id,
+        ) ?? null;
 
     const changeSection = (value: string): void => {
         const matchingPastor = pastors.find(
@@ -104,7 +98,9 @@ export default function RegistrantAccess({
         });
     };
 
-    const clearFormErrorHandlers = createClearFormErrorHandlers(form.clearErrors);
+    const clearFormErrorHandlers = createClearFormErrorHandlers(
+        form.clearErrors,
+    );
 
     return (
         <AuthLayout
@@ -270,7 +266,10 @@ export default function RegistrantAccess({
 
                 {pastors.length === 0 && (
                     <div className={warningNoticeClassName}>
-                        No church accounts are currently available for additional self-service signup. Contact your administrator if your church still needs registrant access.
+                        No church accounts are currently available for
+                        additional self-service signup. Contact your
+                        administrator if your church still needs registrant
+                        access.
                     </div>
                 )}
             </form>

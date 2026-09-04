@@ -1,14 +1,9 @@
 import { Check, ChevronDown, Search } from 'lucide-react';
-import {
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-    type KeyboardEvent,
-} from 'react';
+import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
 import { formControlClassName } from '@/lib/ui-styles';
+import { cn } from '@/lib/utils';
 
 const emptyOptionValue = '__empty__';
 
@@ -58,7 +53,8 @@ export default function SearchableFormSelect({
     const [search, setSearch] = useState('');
 
     const normalizedSearch = search.trim().toLowerCase();
-    const selectedOption = options.find((option) => option.value === value) ?? null;
+    const selectedOption =
+        options.find((option) => option.value === value) ?? null;
 
     const resolvedOptions = useMemo(() => {
         const searchableOptions = emptyLabel
@@ -76,33 +72,33 @@ export default function SearchableFormSelect({
         }
 
         return searchableOptions.filter((option) => {
-            const haystacks = [
-                option.label,
-                ...(option.keywords ?? []),
-            ].map((item) => item.toLowerCase());
+            const haystacks = [option.label, ...(option.keywords ?? [])].map(
+                (item) => item.toLowerCase(),
+            );
 
             return haystacks.some((item) => item.includes(normalizedSearch));
         });
     }, [emptyLabel, normalizedSearch, options]);
 
+    const closeSelect = useCallback((): void => {
+        setSearch('');
+        setIsOpen(false);
+    }, []);
+
     useEffect(() => {
-        if (! isOpen) {
-            setSearch('');
-
-            return;
+        if (isOpen) {
+            searchInputRef.current?.focus();
         }
-
-        searchInputRef.current?.focus();
     }, [isOpen]);
 
     useEffect(() => {
-        if (! isOpen) {
+        if (!isOpen) {
             return;
         }
 
         const handlePointerDown = (event: MouseEvent): void => {
-            if (! wrapperRef.current?.contains(event.target as Node)) {
-                setIsOpen(false);
+            if (!wrapperRef.current?.contains(event.target as Node)) {
+                closeSelect();
             }
         };
 
@@ -111,16 +107,20 @@ export default function SearchableFormSelect({
         return () => {
             document.removeEventListener('mousedown', handlePointerDown);
         };
-    }, [isOpen]);
+    }, [closeSelect, isOpen]);
 
     const dispatchHiddenInputEvents = (nextValue: string): void => {
-        if (! hiddenInputRef.current) {
+        if (!hiddenInputRef.current) {
             return;
         }
 
         hiddenInputRef.current.value = nextValue;
-        hiddenInputRef.current.dispatchEvent(new Event('input', { bubbles: true }));
-        hiddenInputRef.current.dispatchEvent(new Event('change', { bubbles: true }));
+        hiddenInputRef.current.dispatchEvent(
+            new Event('input', { bubbles: true }),
+        );
+        hiddenInputRef.current.dispatchEvent(
+            new Event('change', { bubbles: true }),
+        );
     };
 
     const handleValueChange = (nextValue: string): void => {
@@ -128,24 +128,32 @@ export default function SearchableFormSelect({
 
         onValueChange(resolvedValue);
         dispatchHiddenInputEvents(resolvedValue);
-        setIsOpen(false);
+        closeSelect();
     };
 
-    const handleTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
-        if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+    const handleTriggerKeyDown = (
+        event: KeyboardEvent<HTMLButtonElement>,
+    ): void => {
+        if (
+            event.key === 'ArrowDown' ||
+            event.key === 'Enter' ||
+            event.key === ' '
+        ) {
             event.preventDefault();
             setIsOpen(true);
         }
 
         if (event.key === 'Escape') {
-            setIsOpen(false);
+            closeSelect();
         }
     };
 
-    const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
+    const handleSearchKeyDown = (
+        event: KeyboardEvent<HTMLInputElement>,
+    ): void => {
         if (event.key === 'Escape') {
             event.preventDefault();
-            setIsOpen(false);
+            closeSelect();
         }
     };
 
@@ -168,7 +176,13 @@ export default function SearchableFormSelect({
                 aria-haspopup="listbox"
                 aria-expanded={isOpen}
                 disabled={disabled}
-                onClick={() => setIsOpen((current) => ! current)}
+                onClick={() => {
+                    if (isOpen) {
+                        closeSelect();
+                    } else {
+                        setIsOpen(true);
+                    }
+                }}
                 onKeyDown={handleTriggerKeyDown}
                 className={cn(
                     formControlClassName,
@@ -211,15 +225,19 @@ export default function SearchableFormSelect({
                         ) : (
                             <div className="space-y-1">
                                 {resolvedOptions.map((option) => {
-                                    const isSelected = option.value === value
-                                        || (option.value === emptyOptionValue && value === '');
+                                    const isSelected =
+                                        option.value === value ||
+                                        (option.value === emptyOptionValue &&
+                                            value === '');
 
                                     return (
                                         <button
                                             key={option.value}
                                             type="button"
                                             disabled={option.disabled}
-                                            onClick={() => handleValueChange(option.value)}
+                                            onClick={() =>
+                                                handleValueChange(option.value)
+                                            }
                                             className={cn(
                                                 'flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm text-slate-900 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-100 dark:hover:bg-slate-800',
                                                 optionClassName,
@@ -231,7 +249,9 @@ export default function SearchableFormSelect({
                                             <Check
                                                 className={cn(
                                                     'size-4 shrink-0 text-[#184d47]',
-                                                    isSelected ? 'opacity-100' : 'opacity-0',
+                                                    isSelected
+                                                        ? 'opacity-100'
+                                                        : 'opacity-0',
                                                 )}
                                             />
                                         </button>

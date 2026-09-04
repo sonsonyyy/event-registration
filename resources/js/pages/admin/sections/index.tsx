@@ -78,7 +78,9 @@ export default function SectionIndex({ sections }: Props) {
                         <div className={elevatedIndexTableStyles.headerActions}>
                             <Button
                                 asChild
-                                className={elevatedIndexTableStyles.primaryButton}
+                                className={
+                                    elevatedIndexTableStyles.primaryButton
+                                }
                             >
                                 <Link href={SectionController.create()}>
                                     New section
@@ -90,29 +92,45 @@ export default function SectionIndex({ sections }: Props) {
                     <div className="overflow-x-auto">
                         <table className={elevatedIndexTableStyles.table}>
                             <thead className={elevatedIndexTableStyles.thead}>
-                                <tr className={elevatedIndexTableStyles.headerRow}>
+                                <tr
+                                    className={
+                                        elevatedIndexTableStyles.headerRow
+                                    }
+                                >
                                     <th
                                         className={
                                             elevatedIndexTableStyles.firstHeaderCell
                                         }
                                     >
-                                    Section
+                                        Section
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    District
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        District
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Pastors
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Pastors
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Status
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Status
                                     </th>
                                     <th
                                         className={
                                             elevatedIndexTableStyles.lastHeaderCellRight
                                         }
                                     >
-                                    Actions
+                                        Actions
                                     </th>
                                 </tr>
                             </thead>
@@ -138,8 +156,9 @@ export default function SectionIndex({ sections }: Props) {
                                                         elevatedIndexTableStyles.emptyDescription
                                                     }
                                                 >
-                                                    Create the first section to group
-                                                    pastors under a district.
+                                                    Create the first section to
+                                                    group pastors under a
+                                                    district.
                                                 </div>
                                             </div>
                                         </td>
@@ -148,74 +167,116 @@ export default function SectionIndex({ sections }: Props) {
                                     sections.map((section) => (
                                         <tr
                                             key={section.id}
-                                            className={elevatedIndexTableStyles.row}
+                                            className={
+                                                elevatedIndexTableStyles.row
+                                            }
                                         >
-                                            <td className={elevatedIndexTableStyles.firstCell}>
-                                            <div className={elevatedIndexTableStyles.primaryText}>
-                                                {section.name}
-                                            </div>
-                                            <div className={elevatedIndexTableStyles.secondaryText}>
-                                                {section.description ||
-                                                    'No description provided.'}
-                                            </div>
-                                            </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <div className={elevatedIndexTableStyles.primaryText}>
-                                                {section.district.name}
-                                            </div>
-                                            </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <div className={elevatedIndexTableStyles.primaryText}>
-                                                {section.pastors_count}
-                                            </div>
-                                            <div className={elevatedIndexTableStyles.secondaryText}>
-                                                pastor records
-                                            </div>
-                                            </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <DataTableBadge
-                                                tone={resolveDataTableTone(
-                                                    section.status,
-                                                    {
-                                                        active: 'emerald',
-                                                        inactive: 'rose',
-                                                    },
-                                                )}
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.firstCell
+                                                }
                                             >
-                                                {section.status}
-                                            </DataTableBadge>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                >
+                                                    {section.name}
+                                                </div>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.secondaryText
+                                                    }
+                                                >
+                                                    {section.description ||
+                                                        'No description provided.'}
+                                                </div>
+                                            </td>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                >
+                                                    {section.district.name}
+                                                </div>
+                                            </td>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                >
+                                                    {section.pastors_count}
+                                                </div>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.secondaryText
+                                                    }
+                                                >
+                                                    pastor records
+                                                </div>
+                                            </td>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <DataTableBadge
+                                                    tone={resolveDataTableTone(
+                                                        section.status,
+                                                        {
+                                                            active: 'emerald',
+                                                            inactive: 'rose',
+                                                        },
+                                                    )}
+                                                >
+                                                    {section.status}
+                                                </DataTableBadge>
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
                                             >
-                                            <div className={elevatedIndexTableStyles.actionGroup}>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="rounded-md"
-                                                    asChild
-                                                >
-                                                    <Link
-                                                        href={SectionController.edit(
-                                                            section.id,
-                                                        )}
-                                                    >
-                                                        Edit
-                                                    </Link>
-                                                </Button>
-                                                <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    className="rounded-md"
-                                                    onClick={() =>
-                                                        setSectionToDelete(
-                                                            section,
-                                                        )
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.actionGroup
                                                     }
                                                 >
-                                                    Archive
-                                                </Button>
-                                            </div>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="rounded-md"
+                                                        asChild
+                                                    >
+                                                        <Link
+                                                            href={SectionController.edit(
+                                                                section.id,
+                                                            )}
+                                                        >
+                                                            Edit
+                                                        </Link>
+                                                    </Button>
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        className="rounded-md"
+                                                        onClick={() =>
+                                                            setSectionToDelete(
+                                                                section,
+                                                            )
+                                                        }
+                                                    >
+                                                        Archive
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))

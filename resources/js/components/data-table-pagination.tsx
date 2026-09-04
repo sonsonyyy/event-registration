@@ -116,10 +116,11 @@ export default function DataTablePagination({
                             type="button"
                             variant="outline"
                             size="sm"
-                            className={cn('rounded-md', previousButtonClassName)}
-                            onClick={() =>
-                                onPageChange(meta.current_page - 1)
-                            }
+                            className={cn(
+                                'rounded-md',
+                                previousButtonClassName,
+                            )}
+                            onClick={() => onPageChange(meta.current_page - 1)}
                             disabled={meta.current_page <= 1}
                         >
                             <ChevronLeft className="size-4" />
@@ -133,7 +134,10 @@ export default function DataTablePagination({
                                     type="button"
                                     variant="ghost"
                                     size="sm"
-                                    className={cn('rounded-md', ellipsisClassName)}
+                                    className={cn(
+                                        'rounded-md',
+                                        ellipsisClassName,
+                                    )}
                                     disabled
                                 >
                                     <MoreHorizontal className="size-4" />
@@ -166,9 +170,7 @@ export default function DataTablePagination({
                             variant="outline"
                             size="sm"
                             className={cn('rounded-md', nextButtonClassName)}
-                            onClick={() =>
-                                onPageChange(meta.current_page + 1)
-                            }
+                            onClick={() => onPageChange(meta.current_page + 1)}
                             disabled={meta.current_page >= meta.last_page}
                         >
                             Next

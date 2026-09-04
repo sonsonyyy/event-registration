@@ -38,11 +38,7 @@ type Props = {
     statusOptions: StatusOption[];
 };
 
-export default function EditPastor({
-    pastor,
-    sections,
-    statusOptions,
-}: Props) {
+export default function EditPastor({ pastor, sections, statusOptions }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Dashboard',

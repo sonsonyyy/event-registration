@@ -74,7 +74,9 @@ export default function DepartmentIndex({ departments }: Props) {
                         <div className={elevatedIndexTableStyles.headerActions}>
                             <Button
                                 asChild
-                                className={elevatedIndexTableStyles.primaryButton}
+                                className={
+                                    elevatedIndexTableStyles.primaryButton
+                                }
                             >
                                 <Link href={DepartmentController.create()}>
                                     New department
@@ -86,17 +88,37 @@ export default function DepartmentIndex({ departments }: Props) {
                     <div className="overflow-x-auto">
                         <table className={elevatedIndexTableStyles.table}>
                             <thead className={elevatedIndexTableStyles.thead}>
-                                <tr className={elevatedIndexTableStyles.headerRow}>
-                                    <th className={elevatedIndexTableStyles.firstHeaderCell}>
+                                <tr
+                                    className={
+                                        elevatedIndexTableStyles.headerRow
+                                    }
+                                >
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.firstHeaderCell
+                                        }
+                                    >
                                         Department
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
                                         Status
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
                                         Users
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
                                         Events
                                     </th>
                                     <th
@@ -113,10 +135,16 @@ export default function DepartmentIndex({ departments }: Props) {
                                     <tr>
                                         <td
                                             colSpan={5}
-                                            className={elevatedIndexTableStyles.emptyCell}
+                                            className={
+                                                elevatedIndexTableStyles.emptyCell
+                                            }
                                         >
                                             <div className="space-y-2">
-                                                <div className={elevatedIndexTableStyles.emptyTitle}>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.emptyTitle
+                                                    }
+                                                >
                                                     No departments yet.
                                                 </div>
                                                 <div
@@ -124,7 +152,9 @@ export default function DepartmentIndex({ departments }: Props) {
                                                         elevatedIndexTableStyles.emptyDescription
                                                     }
                                                 >
-                                                    Create a department before assigning it to leaders or events.
+                                                    Create a department before
+                                                    assigning it to leaders or
+                                                    events.
                                                 </div>
                                             </div>
                                         </td>
@@ -133,18 +163,36 @@ export default function DepartmentIndex({ departments }: Props) {
                                     departments.map((department) => (
                                         <tr
                                             key={department.id}
-                                            className={elevatedIndexTableStyles.row}
+                                            className={
+                                                elevatedIndexTableStyles.row
+                                            }
                                         >
-                                            <td className={elevatedIndexTableStyles.firstCell}>
-                                                <div className={elevatedIndexTableStyles.primaryText}>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.firstCell
+                                                }
+                                            >
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                >
                                                     {department.name}
                                                 </div>
-                                                <div className={elevatedIndexTableStyles.secondaryText}>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.secondaryText
+                                                    }
+                                                >
                                                     {department.description ||
                                                         'No description provided.'}
                                                 </div>
                                             </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
                                                 <DataTableBadge
                                                     tone={resolveDataTableTone(
                                                         department.status,
@@ -157,26 +205,56 @@ export default function DepartmentIndex({ departments }: Props) {
                                                     {department.status}
                                                 </DataTableBadge>
                                             </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                                <div className={elevatedIndexTableStyles.primaryText}>
-                                                    {department.assigned_users_count}
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                >
+                                                    {
+                                                        department.assigned_users_count
+                                                    }
                                                 </div>
-                                                <div className={elevatedIndexTableStyles.secondaryText}>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.secondaryText
+                                                    }
+                                                >
                                                     assigned users
                                                 </div>
                                             </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                                <div className={elevatedIndexTableStyles.primaryText}>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                >
                                                     {department.events_count}
                                                 </div>
-                                                <div className={elevatedIndexTableStyles.secondaryText}>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.secondaryText
+                                                    }
+                                                >
                                                     linked events
                                                 </div>
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
                                             >
-                                                <div className={elevatedIndexTableStyles.actionGroup}>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.actionGroup
+                                                    }
+                                                >
                                                     <Button
                                                         variant="outline"
                                                         size="sm"

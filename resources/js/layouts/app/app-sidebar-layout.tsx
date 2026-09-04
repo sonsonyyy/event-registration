@@ -1,8 +1,8 @@
 import { AppContent } from '@/components/app-content';
-import FlashToaster from '@/components/flash-toaster';
 import { AppShell } from '@/components/app-shell';
 import { AppSidebar } from '@/components/app-sidebar';
 import { AppSidebarHeader } from '@/components/app-sidebar-header';
+import FlashToaster from '@/components/flash-toaster';
 import { NotificationListener } from '@/components/notification-listener';
 import type { AppLayoutProps } from '@/types';
 

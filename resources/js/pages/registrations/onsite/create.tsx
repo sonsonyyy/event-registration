@@ -57,11 +57,9 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function CreateOnsiteRegistration({
-    events,
-    pastors,
-}: Props) {
-    const hasUnavailableDependencies = events.length === 0 || pastors.length === 0;
+export default function CreateOnsiteRegistration({ events, pastors }: Props) {
+    const hasUnavailableDependencies =
+        events.length === 0 || pastors.length === 0;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -95,10 +93,7 @@ export default function CreateOnsiteRegistration({
                     </Card>
                 )}
 
-                <OnsiteRegistrationForm
-                    events={events}
-                    pastors={pastors}
-                />
+                <OnsiteRegistrationForm events={events} pastors={pastors} />
             </div>
         </AppLayout>
     );

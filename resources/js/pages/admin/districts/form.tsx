@@ -4,14 +4,18 @@ import DistrictController from '@/actions/App/Http/Controllers/Admin/DistrictCon
 import FormSelect from '@/components/form-select';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { createClearFormErrorHandlers } from '@/lib/form-errors';
-import {
-    formTextareaClassName,
-} from '@/lib/ui-styles';
+import { formTextareaClassName } from '@/lib/ui-styles';
 
 type District = {
     id: number;
@@ -56,10 +60,16 @@ export default function DistrictForm({
         );
     };
 
-    const clearFormErrorHandlers = createClearFormErrorHandlers(form.clearErrors);
+    const clearFormErrorHandlers = createClearFormErrorHandlers(
+        form.clearErrors,
+    );
 
     const formContent = (
-        <form className="space-y-6" onSubmit={submit} {...clearFormErrorHandlers}>
+        <form
+            className="space-y-6"
+            onSubmit={submit}
+            {...clearFormErrorHandlers}
+        >
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px]">
                 <div className="grid gap-2">
                     <Label htmlFor="name">District name</Label>
@@ -82,9 +92,7 @@ export default function DistrictForm({
                         id="status"
                         name="status"
                         value={form.data.status}
-                        onValueChange={(value) =>
-                            form.setData('status', value)
-                        }
+                        onValueChange={(value) => form.setData('status', value)}
                         placeholder="Select status"
                         options={statusOptions.map((option) => ({
                             value: option.value,
@@ -102,10 +110,7 @@ export default function DistrictForm({
                     name="description"
                     value={form.data.description}
                     onChange={(event) =>
-                        form.setData(
-                            'description',
-                            event.target.value,
-                        )
+                        form.setData('description', event.target.value)
                     }
                     placeholder="Optional district notes for the admin team."
                     className={formTextareaClassName}
@@ -115,9 +120,7 @@ export default function DistrictForm({
 
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                 <Button variant="outline" asChild>
-                    <Link href={DistrictController.index()}>
-                        Cancel
-                    </Link>
+                    <Link href={DistrictController.index()}>Cancel</Link>
                 </Button>
                 <Button type="submit" disabled={form.processing}>
                     {form.processing && <Spinner />}

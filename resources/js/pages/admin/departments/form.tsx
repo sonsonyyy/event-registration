@@ -4,7 +4,13 @@ import DepartmentController from '@/actions/App/Http/Controllers/Admin/Departmen
 import FormSelect from '@/components/form-select';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -54,10 +60,16 @@ export default function DepartmentForm({
         );
     };
 
-    const clearFormErrorHandlers = createClearFormErrorHandlers(form.clearErrors);
+    const clearFormErrorHandlers = createClearFormErrorHandlers(
+        form.clearErrors,
+    );
 
     const formContent = (
-        <form className="space-y-6" onSubmit={submit} {...clearFormErrorHandlers}>
+        <form
+            className="space-y-6"
+            onSubmit={submit}
+            {...clearFormErrorHandlers}
+        >
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px]">
                 <div className="grid gap-2">
                     <Label htmlFor="name">Department name</Label>
@@ -65,7 +77,9 @@ export default function DepartmentForm({
                         id="name"
                         name="name"
                         value={form.data.name}
-                        onChange={(event) => form.setData('name', event.target.value)}
+                        onChange={(event) =>
+                            form.setData('name', event.target.value)
+                        }
                         autoFocus
                         placeholder="Youth Ministries"
                     />
@@ -95,7 +109,9 @@ export default function DepartmentForm({
                     id="description"
                     name="description"
                     value={form.data.description}
-                    onChange={(event) => form.setData('description', event.target.value)}
+                    onChange={(event) =>
+                        form.setData('description', event.target.value)
+                    }
                     placeholder="Optional notes about the department coverage, officers, or event ownership."
                     className={formTextareaClassName}
                 />
@@ -125,7 +141,8 @@ export default function DepartmentForm({
                     {isEditing ? 'Edit department' : 'Department details'}
                 </CardTitle>
                 <CardDescription>
-                    Keep department records consistent before assigning them to users and events.
+                    Keep department records consistent before assigning them to
+                    users and events.
                 </CardDescription>
             </CardHeader>
             <CardContent>{formContent}</CardContent>

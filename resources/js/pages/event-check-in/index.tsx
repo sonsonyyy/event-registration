@@ -23,7 +23,13 @@ import InputError from '@/components/input-error';
 import SummaryStatCards from '@/components/summary-stat-cards';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import {
     Drawer,
     DrawerContent,
@@ -370,7 +376,8 @@ export default function EventCheckInIndex({
         }
 
         const claimStateChanged =
-            refreshedChurch.claimed_quantity !== selectedChurch.claimed_quantity ||
+            refreshedChurch.claimed_quantity !==
+                selectedChurch.claimed_quantity ||
             refreshedChurch.remaining_quantity !==
                 selectedChurch.remaining_quantity ||
             refreshedChurch.claim_status !== selectedChurch.claim_status ||
@@ -378,7 +385,7 @@ export default function EventCheckInIndex({
             refreshedChurch.claim_history.length !==
                 selectedChurch.claim_history.length;
 
-        if (! claimStateChanged) {
+        if (!claimStateChanged) {
             return;
         }
 
@@ -394,7 +401,9 @@ export default function EventCheckInIndex({
         visitIndex(
             buildQuery({
                 eventValue:
-                    filters.event_id !== null ? String(filters.event_id) : 'none',
+                    filters.event_id !== null
+                        ? String(filters.event_id)
+                        : 'none',
                 sectionValue: sectionId,
                 searchValue: search,
                 claimStatusValue: claimStatus,
@@ -407,7 +416,9 @@ export default function EventCheckInIndex({
         visitIndex(
             buildQuery({
                 eventValue:
-                    filters.event_id !== null ? String(filters.event_id) : 'none',
+                    filters.event_id !== null
+                        ? String(filters.event_id)
+                        : 'none',
                 sectionValue:
                     filters.section_id !== null
                         ? String(filters.section_id)
@@ -423,7 +434,9 @@ export default function EventCheckInIndex({
         visitIndex(
             buildQuery({
                 eventValue:
-                    filters.event_id !== null ? String(filters.event_id) : 'none',
+                    filters.event_id !== null
+                        ? String(filters.event_id)
+                        : 'none',
                 sectionValue:
                     filters.section_id !== null
                         ? String(filters.section_id)
@@ -574,18 +587,24 @@ export default function EventCheckInIndex({
                             >
                                 <SelectTrigger
                                     id="event_id"
-                                    className={elevatedIndexTableStyles.selectTrigger}
+                                    className={
+                                        elevatedIndexTableStyles.selectTrigger
+                                    }
                                 >
                                     <SelectValue placeholder="Select an event" />
                                 </SelectTrigger>
                                 <SelectContent
-                                    className={elevatedIndexTableStyles.selectContent}
+                                    className={
+                                        elevatedIndexTableStyles.selectContent
+                                    }
                                 >
                                     {events.length === 0 ? (
                                         <SelectItem
                                             value="none"
                                             disabled
-                                            className={elevatedIndexTableStyles.selectItem}
+                                            className={
+                                                elevatedIndexTableStyles.selectItem
+                                            }
                                         >
                                             No accessible events
                                         </SelectItem>
@@ -594,7 +613,9 @@ export default function EventCheckInIndex({
                                             <SelectItem
                                                 key={event.id}
                                                 value={String(event.id)}
-                                                className={elevatedIndexTableStyles.selectItem}
+                                                className={
+                                                    elevatedIndexTableStyles.selectItem
+                                                }
                                             >
                                                 {event.name}
                                             </SelectItem>
@@ -623,16 +644,15 @@ export default function EventCheckInIndex({
                         <CardContent className="space-y-3">
                             {feeCategorySummary.length === 0 ? (
                                 <div className="rounded-md border border-dashed border-slate-300 px-4 py-6 text-sm text-muted-foreground dark:border-slate-700">
-                                    Select an event with claimable
-                                    registrations to view fee-category
-                                    progress.
+                                    Select an event with claimable registrations
+                                    to view fee-category progress.
                                 </div>
                             ) : (
                                 <div className="space-y-2">
                                     {feeCategorySummary.map((category) => (
                                         <div
                                             key={category.id}
-                                            className="grid gap-2 rounded-md border border-slate-200/80 bg-slate-50/70 px-3 py-3 text-sm dark:border-slate-800 dark:bg-slate-900/40 lg:grid-cols-[minmax(0,1.25fr)_repeat(3,minmax(0,11rem))]"
+                                            className="grid gap-2 rounded-md border border-slate-200/80 bg-slate-50/70 px-3 py-3 text-sm lg:grid-cols-[minmax(0,1.25fr)_repeat(3,minmax(0,11rem))] dark:border-slate-800 dark:bg-slate-900/40"
                                         >
                                             <div className="font-medium text-slate-900 dark:text-slate-100">
                                                 {category.category_name}
@@ -668,7 +688,9 @@ export default function EventCheckInIndex({
                                     elevatedIndexTableStyles.searchWrapper
                                 }
                                 inputClassName={elevatedIndexTableStyles.input}
-                                actionClassName={elevatedIndexTableStyles.action}
+                                actionClassName={
+                                    elevatedIndexTableStyles.action
+                                }
                                 action={
                                     <div
                                         className={
@@ -758,11 +780,9 @@ export default function EventCheckInIndex({
                                                                       filters.event_id,
                                                                   )
                                                                 : 'none',
-                                                        sectionValue:
-                                                            sectionId,
+                                                        sectionValue: sectionId,
                                                         searchValue: search,
-                                                        claimStatusValue:
-                                                            value,
+                                                        claimStatusValue: value,
                                                         perPage:
                                                             filters.per_page,
                                                     }),
@@ -785,9 +805,7 @@ export default function EventCheckInIndex({
                                                     (option) => (
                                                         <SelectItem
                                                             key={option.value}
-                                                            value={
-                                                                option.value
-                                                            }
+                                                            value={option.value}
                                                             className={
                                                                 elevatedIndexTableStyles.selectItem
                                                             }
@@ -882,11 +900,11 @@ export default function EventCheckInIndex({
                                                         null
                                                             ? 'Select an event to begin booth operations.'
                                                             : filters.search ===
-                                                                  '' &&
-                                                              filters.claim_status ===
-                                                                  'all'
-                                                            ? 'No claimable churches matched the current scope.'
-                                                            : 'No churches matched the current filters.'}
+                                                                    '' &&
+                                                                filters.claim_status ===
+                                                                    'all'
+                                                              ? 'No claimable churches matched the current scope.'
+                                                              : 'No churches matched the current filters.'}
                                                     </div>
                                                     <div
                                                         className={
@@ -894,9 +912,8 @@ export default function EventCheckInIndex({
                                                         }
                                                     >
                                                         Refine the event,
-                                                        section, or claim
-                                                        status filters to
-                                                        continue.
+                                                        section, or claim status
+                                                        filters to continue.
                                                     </div>
                                                 </div>
                                             </td>
@@ -946,9 +963,7 @@ export default function EventCheckInIndex({
                                                 <td
                                                     className={`${elevatedIndexTableStyles.cell} text-right font-medium text-slate-900 dark:text-slate-100`}
                                                 >
-                                                    {
-                                                        church.registered_quantity
-                                                    }
+                                                    {church.registered_quantity}
                                                 </td>
                                                 <td
                                                     className={`${elevatedIndexTableStyles.cell} text-right font-medium text-slate-900 dark:text-slate-100`}
@@ -958,9 +973,7 @@ export default function EventCheckInIndex({
                                                 <td
                                                     className={`${elevatedIndexTableStyles.cell} text-right font-medium text-slate-900 dark:text-slate-100`}
                                                 >
-                                                    {
-                                                        church.remaining_quantity
-                                                    }
+                                                    {church.remaining_quantity}
                                                 </td>
                                                 <td
                                                     className={`${elevatedIndexTableStyles.cell} text-center`}
@@ -1090,7 +1103,7 @@ export default function EventCheckInIndex({
                             <div className="flex-1 space-y-5 overflow-y-auto p-4 sm:p-5">
                                 <div className="grid gap-3 sm:grid-cols-3">
                                     <div className="rounded-md border border-slate-200/80 bg-slate-50/70 px-3 py-3 dark:border-slate-800 dark:bg-slate-900/40">
-                                        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                                        <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                                             Registered
                                         </div>
                                         <div className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
@@ -1098,7 +1111,7 @@ export default function EventCheckInIndex({
                                         </div>
                                     </div>
                                     <div className="rounded-md border border-slate-200/80 bg-slate-50/70 px-3 py-3 dark:border-slate-800 dark:bg-slate-900/40">
-                                        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                                        <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                                             Claimed
                                         </div>
                                         <div className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
@@ -1106,7 +1119,7 @@ export default function EventCheckInIndex({
                                         </div>
                                     </div>
                                     <div className="rounded-md border border-slate-200/80 bg-slate-50/70 px-3 py-3 dark:border-slate-800 dark:bg-slate-900/40">
-                                        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                                        <div className="text-[11px] font-semibold tracking-[0.16em] text-slate-500 uppercase dark:text-slate-400">
                                             Remaining
                                         </div>
                                         <div className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
@@ -1130,11 +1143,9 @@ export default function EventCheckInIndex({
                                                     className="rounded-md border border-slate-200/80 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-900/40"
                                                 >
                                                     <div className="font-medium text-slate-900 dark:text-slate-100">
-                                                        {
-                                                            category.category_name
-                                                        }
+                                                        {category.category_name}
                                                     </div>
-                                                    <div className="mt-2 grid gap-2 text-[12px] text-slate-600 dark:text-slate-300 sm:grid-cols-3">
+                                                    <div className="mt-2 grid gap-2 text-[12px] text-slate-600 sm:grid-cols-3 dark:text-slate-300">
                                                         <div>
                                                             Registered:{' '}
                                                             {
@@ -1207,8 +1218,8 @@ export default function EventCheckInIndex({
                                                             <Label
                                                                 htmlFor={`line_items.${index}.remarks`}
                                                             >
-                                                                Remarks for
-                                                                this category
+                                                                Remarks for this
+                                                                category
                                                             </Label>
                                                             <Input
                                                                 id={`line_items.${index}.remarks`}
@@ -1217,7 +1228,8 @@ export default function EventCheckInIndex({
                                                                     form.data
                                                                         .line_items[
                                                                         index
-                                                                    ]?.remarks ??
+                                                                    ]
+                                                                        ?.remarks ??
                                                                     ''
                                                                 }
                                                                 onChange={(

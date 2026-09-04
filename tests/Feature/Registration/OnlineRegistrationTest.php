@@ -892,6 +892,7 @@ function onlineRegistrationEvent(array $attributes = []): Event
     return Event::factory()->create([
         'name' => 'CLD Youth Conference 2026',
         'status' => Event::STATUS_OPEN,
+        'district_id' => District::query()->value('id') ?? District::factory(),
         'total_capacity' => 200,
         'registration_open_at' => now()->subDay(),
         'registration_close_at' => now()->addDays(30),

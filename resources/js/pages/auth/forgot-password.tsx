@@ -6,8 +6,8 @@ import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import AuthLayout from '@/layouts/auth-layout';
+import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import { login } from '@/routes';
 import { email } from '@/routes/password';
 

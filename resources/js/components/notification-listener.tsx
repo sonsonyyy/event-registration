@@ -1,6 +1,6 @@
-import { useEchoNotification } from '@laravel/echo-react';
 import { router, usePage } from '@inertiajs/react';
-import { startTransition, useEffectEvent } from 'react';
+import { useEchoNotification } from '@laravel/echo-react';
+import { startTransition, useCallback } from 'react';
 import type { Auth } from '@/types';
 
 function RealtimeNotificationSubscription({
@@ -8,17 +8,15 @@ function RealtimeNotificationSubscription({
 }: {
     channelName: string;
 }) {
-    const refreshNotifications = useEffectEvent((): void => {
+    const refreshNotifications = useCallback((): void => {
         startTransition(() => {
             router.reload({
                 only: ['notifications'],
             });
         });
-    });
+    }, []);
 
-    useEchoNotification(channelName, () => {
-        refreshNotifications();
-    });
+    useEchoNotification(channelName, refreshNotifications);
 
     return null;
 }

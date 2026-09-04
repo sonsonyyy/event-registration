@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import PastorController from '@/actions/App/Http/Controllers/Admin/PastorController';
 import ConfirmActionDialog from '@/components/confirm-action-dialog';
 import {
@@ -72,19 +72,14 @@ export default function PastorIndex({
     sections,
     perPageOptions,
 }: Props) {
-    const [search, setSearch] = useState(filters.search);
-    const [sectionId, setSectionId] = useState(
-        filters.section_id !== null ? String(filters.section_id) : 'all',
-    );
+    const [searchDraft, setSearchDraft] = useState<string | null>(null);
+    const [sectionIdDraft, setSectionIdDraft] = useState<string | null>(null);
     const [pastorToDelete, setPastorToDelete] = useState<Pastor | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
-
-    useEffect(() => {
-        setSearch(filters.search);
-        setSectionId(
-            filters.section_id !== null ? String(filters.section_id) : 'all',
-        );
-    }, [filters.search, filters.section_id]);
+    const search = searchDraft ?? filters.search;
+    const sectionId =
+        sectionIdDraft ??
+        (filters.section_id !== null ? String(filters.section_id) : 'all');
 
     const destroyPastor = (): void => {
         if (pastorToDelete === null) {
@@ -108,11 +103,19 @@ export default function PastorIndex({
         per_page: number;
         page?: number;
     }): void => {
-        router.get(PastorController.index.url({ query }), {}, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        router.get(
+            PastorController.index.url({ query }),
+            {},
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+                onFinish: () => {
+                    setSearchDraft(null);
+                    setSectionIdDraft(null);
+                },
+            },
+        );
     };
 
     const submitSearch = (): void => {
@@ -161,7 +164,7 @@ export default function PastorIndex({
                     <div className={elevatedIndexTableStyles.band}>
                         <DataTableToolbar
                             searchValue={search}
-                            onSearchValueChange={setSearch}
+                            onSearchValueChange={setSearchDraft}
                             onSubmit={submitSearch}
                             placeholder="Search church, pastor, contact number, or email"
                             className={elevatedIndexTableStyles.toolbar}
@@ -170,12 +173,12 @@ export default function PastorIndex({
                             }
                             inputClassName={elevatedIndexTableStyles.input}
                             actionClassName={elevatedIndexTableStyles.action}
-                            action={(
+                            action={
                                 <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
                                     <Select
                                         value={sectionId}
                                         onValueChange={(value) => {
-                                            setSectionId(value);
+                                            setSectionIdDraft(value);
                                             visitIndex({
                                                 ...(value !== 'all'
                                                     ? {
@@ -239,36 +242,52 @@ export default function PastorIndex({
                                         </Link>
                                     </Button>
                                 </div>
-                            )}
+                            }
                         />
                     </div>
 
                     <div className="overflow-x-auto">
                         <table className={elevatedIndexTableStyles.table}>
                             <thead className={elevatedIndexTableStyles.thead}>
-                                <tr className={elevatedIndexTableStyles.headerRow}>
+                                <tr
+                                    className={
+                                        elevatedIndexTableStyles.headerRow
+                                    }
+                                >
                                     <th
                                         className={
                                             elevatedIndexTableStyles.firstHeaderCell
                                         }
                                     >
-                                    Church
+                                        Church
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Section
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Section
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Contact
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Contact
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Status
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Status
                                     </th>
                                     <th
                                         className={
                                             elevatedIndexTableStyles.lastHeaderCellRight
                                         }
                                     >
-                                    Actions
+                                        Actions
                                     </th>
                                 </tr>
                             </thead>
@@ -287,8 +306,8 @@ export default function PastorIndex({
                                                         elevatedIndexTableStyles.emptyTitle
                                                     }
                                                 >
-                                                    {filters.search === ''
-                                                        && filters.section_id === null
+                                                    {filters.search === '' &&
+                                                    filters.section_id === null
                                                         ? 'No pastor records yet.'
                                                         : 'No pastors matched the current filters.'}
                                                 </div>
@@ -297,8 +316,8 @@ export default function PastorIndex({
                                                         elevatedIndexTableStyles.emptyDescription
                                                     }
                                                 >
-                                                    {filters.search === ''
-                                                        && filters.section_id === null
+                                                    {filters.search === '' &&
+                                                    filters.section_id === null
                                                         ? 'Create the first pastor and church record to populate the directory.'
                                                         : 'Try another church name, pastor name, contact number, email address, or section.'}
                                                 </div>
@@ -309,84 +328,130 @@ export default function PastorIndex({
                                     pastors.data.map((pastor) => (
                                         <tr
                                             key={pastor.id}
-                                            className={elevatedIndexTableStyles.row}
+                                            className={
+                                                elevatedIndexTableStyles.row
+                                            }
                                         >
-                                            <td className={elevatedIndexTableStyles.firstCell}>
-                                            <div className={elevatedIndexTableStyles.primaryText}>
-                                                {pastor.church_name}
-                                            </div>
-                                            <div className={elevatedIndexTableStyles.secondaryText}>
-                                                {pastor.pastor_name}
-                                            </div>
-                                            <div className={elevatedIndexTableStyles.detailText}>
-                                                {pastor.address ||
-                                                    'No address provided.'}
-                                            </div>
-                                            </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <div className={elevatedIndexTableStyles.primaryText}>
-                                                {pastor.section.name}
-                                            </div>
-                                            <div className={elevatedIndexTableStyles.metaText}>
-                                                {pastor.district.name}
-                                            </div>
-                                            </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <div className={elevatedIndexTableStyles.strongText}>
-                                                {pastor.contact_number ||
-                                                    'No contact number'}
-                                            </div>
-                                            <div
-                                                className={`${elevatedIndexTableStyles.secondaryText} break-all`}
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.firstCell
+                                                }
                                             >
-                                                {pastor.email ||
-                                                    'No email address'}
-                                            </div>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                >
+                                                    {pastor.church_name}
+                                                </div>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.secondaryText
+                                                    }
+                                                >
+                                                    {pastor.pastor_name}
+                                                </div>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.detailText
+                                                    }
+                                                >
+                                                    {pastor.address ||
+                                                        'No address provided.'}
+                                                </div>
                                             </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <DataTableBadge
-                                                tone={resolveDataTableTone(
-                                                    pastor.status,
-                                                    {
-                                                        active: 'emerald',
-                                                        inactive: 'rose',
-                                                    },
-                                                )}
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
                                             >
-                                                {pastor.status}
-                                            </DataTableBadge>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                >
+                                                    {pastor.section.name}
+                                                </div>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.metaText
+                                                    }
+                                                >
+                                                    {pastor.district.name}
+                                                </div>
+                                            </td>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.strongText
+                                                    }
+                                                >
+                                                    {pastor.contact_number ||
+                                                        'No contact number'}
+                                                </div>
+                                                <div
+                                                    className={`${elevatedIndexTableStyles.secondaryText} break-all`}
+                                                >
+                                                    {pastor.email ||
+                                                        'No email address'}
+                                                </div>
+                                            </td>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <DataTableBadge
+                                                    tone={resolveDataTableTone(
+                                                        pastor.status,
+                                                        {
+                                                            active: 'emerald',
+                                                            inactive: 'rose',
+                                                        },
+                                                    )}
+                                                >
+                                                    {pastor.status}
+                                                </DataTableBadge>
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
                                             >
-                                            <div className={elevatedIndexTableStyles.actionGroup}>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="rounded-md"
-                                                    asChild
-                                                >
-                                                    <Link
-                                                        href={PastorController.edit(
-                                                            pastor.id,
-                                                        )}
-                                                    >
-                                                        Edit
-                                                    </Link>
-                                                </Button>
-                                                <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    className="rounded-md"
-                                                    onClick={() =>
-                                                        setPastorToDelete(
-                                                            pastor,
-                                                        )
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.actionGroup
                                                     }
                                                 >
-                                                    Archive
-                                                </Button>
-                                            </div>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="rounded-md"
+                                                        asChild
+                                                    >
+                                                        <Link
+                                                            href={PastorController.edit(
+                                                                pastor.id,
+                                                            )}
+                                                        >
+                                                            Edit
+                                                        </Link>
+                                                    </Button>
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        className="rounded-md"
+                                                        onClick={() =>
+                                                            setPastorToDelete(
+                                                                pastor,
+                                                            )
+                                                        }
+                                                    >
+                                                        Archive
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -425,7 +490,9 @@ export default function PastorIndex({
                             inactivePageButtonClassName={
                                 elevatedIndexTableStyles.inactivePageButton
                             }
-                            ellipsisClassName={elevatedIndexTableStyles.ellipsis}
+                            ellipsisClassName={
+                                elevatedIndexTableStyles.ellipsis
+                            }
                         />
                     </div>
                 </div>
