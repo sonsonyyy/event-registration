@@ -32,13 +32,18 @@ export default function AssignedChurchCard({
                                 {label}
                             </div>
                             <div className="text-lg font-semibold text-slate-900">
-                                {assignedPastor?.church_name ?? 'No church assigned'}
+                                {assignedPastor?.church_name ??
+                                    'No church assigned'}
                             </div>
                             <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
                                 {assignedPastor ? (
                                     <>
-                                        <span>{assignedPastor.pastor_name}</span>
-                                        <span className="text-slate-400">•</span>
+                                        <span>
+                                            {assignedPastor.pastor_name}
+                                        </span>
+                                        <span className="text-slate-400">
+                                            •
+                                        </span>
                                         <span>
                                             {assignedPastor.section_name},{' '}
                                             {assignedPastor.district_name}
@@ -46,7 +51,8 @@ export default function AssignedChurchCard({
                                     </>
                                 ) : (
                                     <span>
-                                        Your account must be assigned to a church before you can register online.
+                                        Your account must be assigned to a
+                                        church before you can register online.
                                     </span>
                                 )}
                             </div>

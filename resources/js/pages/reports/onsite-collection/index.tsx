@@ -326,19 +326,21 @@ export default function OnsiteCollectionReportIndex({
                                                 All collectors
                                             </SelectItem>
                                         )}
-                                        {onsiteCollectionUsers.map((collector) => (
-                                            <SelectItem
-                                                key={collector.id}
-                                                value={String(collector.id)}
-                                                className={
-                                                    elevatedIndexTableStyles.selectItem
-                                                }
-                                            >
-                                                {onsiteCollectionCollectorLocked
-                                                    ? auth.user.name
-                                                    : collector.name}
-                                            </SelectItem>
-                                        ))}
+                                        {onsiteCollectionUsers.map(
+                                            (collector) => (
+                                                <SelectItem
+                                                    key={collector.id}
+                                                    value={String(collector.id)}
+                                                    className={
+                                                        elevatedIndexTableStyles.selectItem
+                                                    }
+                                                >
+                                                    {onsiteCollectionCollectorLocked
+                                                        ? auth.user.name
+                                                        : collector.name}
+                                                </SelectItem>
+                                            ),
+                                        )}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -400,7 +402,10 @@ export default function OnsiteCollectionReportIndex({
                                     Total quantity
                                 </div>
                                 <div className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
-                                    {onsiteCollectionReport.totals.total_quantity}
+                                    {
+                                        onsiteCollectionReport.totals
+                                            .total_quantity
+                                    }
                                 </div>
                             </div>
                             <div className="rounded-md border border-slate-200/80 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
@@ -420,7 +425,11 @@ export default function OnsiteCollectionReportIndex({
                     <div className="overflow-x-auto">
                         <table className={onsiteCollectionTableClassName}>
                             <thead className={elevatedIndexTableStyles.thead}>
-                                <tr className={elevatedIndexTableStyles.headerRow}>
+                                <tr
+                                    className={
+                                        elevatedIndexTableStyles.headerRow
+                                    }
+                                >
                                     <th
                                         className={
                                             elevatedIndexTableStyles.firstHeaderCell
@@ -533,101 +542,103 @@ export default function OnsiteCollectionReportIndex({
                                         </td>
                                     </tr>
                                 ) : (
-                                    onsiteCollectionReport.data.map((record) => (
-                                        <tr
-                                            key={record.transaction_id}
-                                            className={
-                                                elevatedIndexTableStyles.row
-                                            }
-                                        >
-                                            <td
+                                    onsiteCollectionReport.data.map(
+                                        (record) => (
+                                            <tr
+                                                key={record.transaction_id}
                                                 className={
-                                                    elevatedIndexTableStyles.firstCell
+                                                    elevatedIndexTableStyles.row
                                                 }
                                             >
-                                                <div className="font-medium text-foreground">
-                                                    {formatTransactionDate(
-                                                        record.transaction_date,
-                                                    )}
-                                                </div>
-                                                <div
+                                                <td
                                                     className={
-                                                        elevatedIndexTableStyles.secondaryText
+                                                        elevatedIndexTableStyles.firstCell
                                                     }
                                                 >
-                                                    Transaction #
-                                                    {record.transaction_id}
-                                                </div>
-                                            </td>
-                                            <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
-                                            >
-                                                <div className="font-medium text-foreground">
-                                                    {record.collector.name}
-                                                </div>
-                                            </td>
-                                            <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
-                                            >
-                                                <div className="font-medium text-foreground">
-                                                    {record.event.name}
-                                                </div>
-                                                {record.remarks && (
+                                                    <div className="font-medium text-foreground">
+                                                        {formatTransactionDate(
+                                                            record.transaction_date,
+                                                        )}
+                                                    </div>
                                                     <div
                                                         className={
                                                             elevatedIndexTableStyles.secondaryText
                                                         }
                                                     >
-                                                        {record.remarks}
+                                                        Transaction #
+                                                        {record.transaction_id}
                                                     </div>
-                                                )}
-                                            </td>
-                                            <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
-                                            >
-                                                <div className="font-medium text-foreground">
-                                                    {record.church_name}
-                                                </div>
-                                                <div
+                                                </td>
+                                                <td
                                                     className={
-                                                        elevatedIndexTableStyles.secondaryText
+                                                        elevatedIndexTableStyles.cell
                                                     }
                                                 >
-                                                    {record.pastor_name}
-                                                </div>
-                                            </td>
-                                            <td
-                                                className={`${elevatedIndexTableStyles.cell} text-sm text-muted-foreground`}
-                                            >
-                                                <div className="font-medium text-foreground/90">
-                                                    {record.section_name ??
-                                                        'Unassigned'}
-                                                </div>
-                                                <div className="mt-2">
-                                                    {record.district_name ??
-                                                        'No district assigned'}
-                                                </div>
-                                            </td>
-                                            <td
-                                                className={`${elevatedIndexTableStyles.cell} text-right font-medium text-foreground`}
-                                            >
-                                                {record.total_quantity}
-                                            </td>
-                                            <td
-                                                className={`${elevatedIndexTableStyles.lastCellRight} text-right font-medium text-foreground`}
-                                            >
-                                                {formatCurrency(
-                                                    record.total_amount,
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
+                                                    <div className="font-medium text-foreground">
+                                                        {record.collector.name}
+                                                    </div>
+                                                </td>
+                                                <td
+                                                    className={
+                                                        elevatedIndexTableStyles.cell
+                                                    }
+                                                >
+                                                    <div className="font-medium text-foreground">
+                                                        {record.event.name}
+                                                    </div>
+                                                    {record.remarks && (
+                                                        <div
+                                                            className={
+                                                                elevatedIndexTableStyles.secondaryText
+                                                            }
+                                                        >
+                                                            {record.remarks}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td
+                                                    className={
+                                                        elevatedIndexTableStyles.cell
+                                                    }
+                                                >
+                                                    <div className="font-medium text-foreground">
+                                                        {record.church_name}
+                                                    </div>
+                                                    <div
+                                                        className={
+                                                            elevatedIndexTableStyles.secondaryText
+                                                        }
+                                                    >
+                                                        {record.pastor_name}
+                                                    </div>
+                                                </td>
+                                                <td
+                                                    className={`${elevatedIndexTableStyles.cell} text-sm text-muted-foreground`}
+                                                >
+                                                    <div className="font-medium text-foreground/90">
+                                                        {record.section_name ??
+                                                            'Unassigned'}
+                                                    </div>
+                                                    <div className="mt-2">
+                                                        {record.district_name ??
+                                                            'No district assigned'}
+                                                    </div>
+                                                </td>
+                                                <td
+                                                    className={`${elevatedIndexTableStyles.cell} text-right font-medium text-foreground`}
+                                                >
+                                                    {record.total_quantity}
+                                                </td>
+                                                <td
+                                                    className={`${elevatedIndexTableStyles.lastCellRight} text-right font-medium text-foreground`}
+                                                >
+                                                    {formatCurrency(
+                                                        record.total_amount,
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ),
+                                    )
                                 )}
                             </tbody>
                             {onsiteCollectionFilters.generated &&

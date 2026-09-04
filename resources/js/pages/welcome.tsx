@@ -18,10 +18,7 @@ import AppLogo from '@/components/app-logo';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-    formatSystemDateRange,
-    formatSystemDateTime,
-} from '@/lib/date-time';
+import { formatSystemDateRange, formatSystemDateTime } from '@/lib/date-time';
 import { dashboard, login } from '@/routes';
 
 type FeeCategoryRecord = {
@@ -116,7 +113,10 @@ function PublicEventCard({
                                 Event dates
                             </div>
                             <div className="mt-2 text-sm font-semibold text-slate-900">
-                                {formatSystemDateRange(event.date_from, event.date_to)}
+                                {formatSystemDateRange(
+                                    event.date_from,
+                                    event.date_to,
+                                )}
                             </div>
                         </div>
 
@@ -137,7 +137,10 @@ function PublicEventCard({
                                 Fee categories
                             </div>
                             <div className="text-xs text-slate-500">
-                                Registration closes {formatSystemDateTime(event.registration_close_at)}
+                                Registration closes{' '}
+                                {formatSystemDateTime(
+                                    event.registration_close_at,
+                                )}
                             </div>
                         </div>
                         <div className="mt-4 grid gap-3">
@@ -151,7 +154,8 @@ function PublicEventCard({
                                             {feeCategory.category_name}
                                         </div>
                                         <div className="text-sm text-slate-500">
-                                            {feeCategory.remaining_slots === null
+                                            {feeCategory.remaining_slots ===
+                                            null
                                                 ? 'No category slot limit'
                                                 : `${feeCategory.remaining_slots} category slots left`}
                                         </div>
@@ -205,7 +209,9 @@ function PublicEventsCarousel({
 
         const updateActiveIndex = (): void => {
             const slides = Array.from(
-                container.querySelectorAll<HTMLElement>('[data-event-slide-index]'),
+                container.querySelectorAll<HTMLElement>(
+                    '[data-event-slide-index]',
+                ),
             );
 
             if (slides.length === 0) {
@@ -214,7 +220,8 @@ function PublicEventsCarousel({
                 return;
             }
 
-            const containerCenter = container.scrollLeft + container.clientWidth / 2;
+            const containerCenter =
+                container.scrollLeft + container.clientWidth / 2;
 
             const currentIndex = slides.reduce((closestIndex, slide, index) => {
                 const closestSlide = slides[closestIndex];
@@ -222,7 +229,9 @@ function PublicEventsCarousel({
                     slide.offsetLeft + slide.clientWidth / 2 - containerCenter,
                 );
                 const closestDistance = Math.abs(
-                    closestSlide.offsetLeft + closestSlide.clientWidth / 2 - containerCenter,
+                    closestSlide.offsetLeft +
+                        closestSlide.clientWidth / 2 -
+                        containerCenter,
                 );
 
                 return currentDistance < closestDistance ? index : closestIndex;
@@ -233,7 +242,9 @@ function PublicEventsCarousel({
 
         updateActiveIndex();
 
-        container.addEventListener('scroll', updateActiveIndex, { passive: true });
+        container.addEventListener('scroll', updateActiveIndex, {
+            passive: true,
+        });
         window.addEventListener('resize', updateActiveIndex);
 
         return () => {
@@ -260,7 +271,10 @@ function PublicEventsCarousel({
         container.scrollTo({
             left:
                 targetSlide.offsetLeft -
-                Math.max((container.clientWidth - targetSlide.clientWidth) / 2, 0),
+                Math.max(
+                    (container.clientWidth - targetSlide.clientWidth) / 2,
+                    0,
+                ),
             behavior: 'smooth',
         });
     };
@@ -279,7 +293,9 @@ function PublicEventsCarousel({
         }
 
         const timeout = window.setTimeout(() => {
-            scrollToIndex(activeIndex === events.length - 1 ? 0 : activeIndex + 1);
+            scrollToIndex(
+                activeIndex === events.length - 1 ? 0 : activeIndex + 1,
+            );
         }, 3000);
 
         return () => {
@@ -305,7 +321,7 @@ function PublicEventsCarousel({
 
                 <div
                     ref={containerRef}
-                    className="flex items-stretch snap-x snap-mandatory gap-5 overflow-x-auto px-[6%] pb-2 md:px-[8%] xl:px-[11%] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    className="flex snap-x snap-mandatory items-stretch gap-5 overflow-x-auto px-[6%] pb-2 [scrollbar-width:none] md:px-[8%] xl:px-[11%] [&::-webkit-scrollbar]:hidden"
                 >
                     {events.map((event, index) => (
                         <div
@@ -426,11 +442,18 @@ export default function Welcome() {
                                 href={RegistrantAccessController.create()}
                                 className="inline-flex max-w-full items-center gap-2 rounded-md px-2.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-white/60 hover:text-slate-900 sm:px-3 sm:text-sm"
                             >
-                                <span className="sm:hidden">Request Access</span>
-                                <span className="hidden sm:inline">Request Church Access</span>
+                                <span className="sm:hidden">
+                                    Request Access
+                                </span>
+                                <span className="hidden sm:inline">
+                                    Request Church Access
+                                </span>
                             </Link>
                             {auth.user ? (
-                                <Button asChild className="h-10 rounded-md px-4 text-xs sm:px-5 sm:text-sm">
+                                <Button
+                                    asChild
+                                    className="h-10 rounded-md px-4 text-xs sm:px-5 sm:text-sm"
+                                >
                                     <Link href={dashboard()}>Dashboard</Link>
                                 </Button>
                             ) : (
@@ -455,22 +478,37 @@ export default function Welcome() {
 
                                     <div className="space-y-4">
                                         <h1 className="max-w-3xl text-3xl font-extrabold tracking-[-0.04em] text-balance sm:text-5xl lg:text-6xl">
-                                            Professional event registration for district and department gatherings.
+                                            Professional event registration for
+                                            district and department gatherings.
                                         </h1>
                                         <p className="max-w-2xl text-sm leading-7 text-slate-600 sm:text-lg">
-                                            View open events, monitor remaining slots, and manage registration submissions with receipt upload and verification tracking.
+                                            View open events, monitor remaining
+                                            slots, and manage registration
+                                            submissions with receipt upload and
+                                            verification tracking.
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className="flex flex-col gap-3 sm:flex-row">
-                                    <Button asChild size="lg" className="h-11 rounded-md px-5 text-sm sm:h-12 sm:px-6">
+                                    <Button
+                                        asChild
+                                        size="lg"
+                                        className="h-11 rounded-md px-5 text-sm sm:h-12 sm:px-6"
+                                    >
                                         <Link href={primaryActionHref}>
                                             {primaryActionLabel}
                                         </Link>
                                     </Button>
-                                    <Button variant="outline" asChild size="lg" className="h-11 rounded-md px-5 text-sm sm:h-12 sm:px-6">
-                                        <a href="#available-events">Browse available events</a>
+                                    <Button
+                                        variant="outline"
+                                        asChild
+                                        size="lg"
+                                        className="h-11 rounded-md px-5 text-sm sm:h-12 sm:px-6"
+                                    >
+                                        <a href="#available-events">
+                                            Browse available events
+                                        </a>
                                     </Button>
                                 </div>
 
@@ -494,7 +532,8 @@ export default function Welcome() {
                                                 Online flow
                                             </div>
                                             <div className="text-sm leading-6 text-slate-600">
-                                                Receipt upload and verification-ready submissions
+                                                Receipt upload and
+                                                verification-ready submissions
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -515,7 +554,10 @@ export default function Welcome() {
 
                                     <div className="space-y-4 px-6 py-6 text-sm leading-6 text-[#d3e5df]">
                                         <p>
-                                            Online registration is available only to authorized registrant accounts assigned to a church or pastor record.
+                                            Online registration is available
+                                            only to authorized registrant
+                                            accounts assigned to a church or
+                                            pastor record.
                                         </p>
                                         <ul className="space-y-3">
                                             <li className="flex items-start gap-3 rounded-md border border-white/10 bg-white/5 px-4 py-3">
@@ -523,7 +565,10 @@ export default function Welcome() {
                                                     <ClipboardList className="size-4" />
                                                 </div>
                                                 <div>
-                                                    Select an open event and add multiple fee-category quantities in one transaction.
+                                                    Select an open event and add
+                                                    multiple fee-category
+                                                    quantities in one
+                                                    transaction.
                                                 </div>
                                             </li>
                                             <li className="flex items-start gap-3 rounded-md border border-white/10 bg-white/5 px-4 py-3">
@@ -531,7 +576,9 @@ export default function Welcome() {
                                                     <Upload className="size-4" />
                                                 </div>
                                                 <div>
-                                                    Upload proof of payment in JPG, PNG, or PDF format during submission.
+                                                    Upload proof of payment in
+                                                    JPG, PNG, or PDF format
+                                                    during submission.
                                                 </div>
                                             </li>
                                             <li className="flex items-start gap-3 rounded-md border border-white/10 bg-white/5 px-4 py-3">
@@ -539,19 +586,28 @@ export default function Welcome() {
                                                     <ShieldCheck className="size-4" />
                                                 </div>
                                                 <div>
-                                                    Track pending verification, verified, and rejected registrations from your history page.
+                                                    Track pending verification,
+                                                    verified, and rejected
+                                                    registrations from your
+                                                    history page.
                                                 </div>
                                             </li>
                                         </ul>
                                         <div className="rounded-md border border-[#3c655e] bg-[#184d47] px-4 py-4 text-[#eff8f5]">
-                                            Use your assigned registrant account to continue. Guests are redirected to the login page before they can register.
+                                            Use your assigned registrant account
+                                            to continue. Guests are redirected
+                                            to the login page before they can
+                                            register.
                                         </div>
                                     </div>
                                 </CardContent>
                             </Card>
                         </section>
 
-                        <section id="available-events" className="mx-auto flex w-full max-w-6xl flex-col items-center space-y-6">
+                        <section
+                            id="available-events"
+                            className="mx-auto flex w-full max-w-6xl flex-col items-center space-y-6"
+                        >
                             <div className="space-y-2 text-center">
                                 <p className="text-sm font-semibold tracking-[0.2em] text-[#184d47] uppercase">
                                     Available events
@@ -560,7 +616,9 @@ export default function Welcome() {
                                     Open registrations
                                 </h2>
                                 <p className="max-w-2xl text-sm leading-6 text-slate-600">
-                                    Events shown here are open, within their registration window, and still have capacity available.
+                                    Events shown here are open, within their
+                                    registration window, and still have capacity
+                                    available.
                                 </p>
                             </div>
 
@@ -571,7 +629,8 @@ export default function Welcome() {
                                             No events are currently open.
                                         </div>
                                         <p className="text-sm text-slate-600">
-                                            Check back once the next event is published for registration.
+                                            Check back once the next event is
+                                            published for registration.
                                         </p>
                                     </CardContent>
                                 </Card>
@@ -592,7 +651,10 @@ export default function Welcome() {
                             )}
                         </section>
 
-                        <section id="how-to-register" className="mx-auto flex w-full max-w-6xl flex-col items-center space-y-6">
+                        <section
+                            id="how-to-register"
+                            className="mx-auto flex w-full max-w-6xl flex-col items-center space-y-6"
+                        >
                             <div className="space-y-2 text-center">
                                 <p className="text-sm font-semibold tracking-[0.2em] text-[#184d47] uppercase">
                                     How to register
@@ -601,7 +663,8 @@ export default function Welcome() {
                                     Registration flow
                                 </h2>
                                 <p className="max-w-2xl text-sm leading-6 text-slate-600">
-                                    Follow the church registration process from account request through final verification.
+                                    Follow the church registration process from
+                                    account request through final verification.
                                 </p>
                             </div>
 
@@ -634,7 +697,10 @@ export default function Welcome() {
                             </div>
                         </section>
 
-                        <section id="faqs" className="mx-auto flex w-full max-w-6xl flex-col items-center space-y-6">
+                        <section
+                            id="faqs"
+                            className="mx-auto flex w-full max-w-6xl flex-col items-center space-y-6"
+                        >
                             <div className="space-y-2 text-center">
                                 <p className="text-sm font-semibold tracking-[0.2em] text-[#184d47] uppercase">
                                     Registration guide
@@ -643,7 +709,8 @@ export default function Welcome() {
                                     Frequently asked questions
                                 </h2>
                                 <p className="max-w-2xl text-sm leading-6 text-slate-600">
-                                    A quick guide for registrant accounts and online event submissions.
+                                    A quick guide for registrant accounts and
+                                    online event submissions.
                                 </p>
                             </div>
 
@@ -677,7 +744,10 @@ export default function Welcome() {
                                     Event Registration Platform
                                 </div>
                                 <p className="max-w-xl text-sm leading-6 text-slate-600">
-                                    Centralized event registration for church representatives, reviewers, and onsite event staff across participating districts and departments.
+                                    Centralized event registration for church
+                                    representatives, reviewers, and onsite event
+                                    staff across participating districts and
+                                    departments.
                                 </p>
                                 <p className="text-xs tracking-[0.14em] text-slate-500 uppercase">
                                     © {currentYear} Event Registration Platform
@@ -689,13 +759,22 @@ export default function Welcome() {
                                     Quick links
                                 </div>
                                 <div className="flex flex-col gap-2 text-sm text-slate-600">
-                                    <a href="#available-events" className="transition-colors hover:text-slate-900">
+                                    <a
+                                        href="#available-events"
+                                        className="transition-colors hover:text-slate-900"
+                                    >
                                         Events
                                     </a>
-                                    <a href="#how-to-register" className="transition-colors hover:text-slate-900">
+                                    <a
+                                        href="#how-to-register"
+                                        className="transition-colors hover:text-slate-900"
+                                    >
                                         How to Register
                                     </a>
-                                    <a href="#faqs" className="transition-colors hover:text-slate-900">
+                                    <a
+                                        href="#faqs"
+                                        className="transition-colors hover:text-slate-900"
+                                    >
                                         FAQs
                                     </a>
                                 </div>
@@ -706,7 +785,9 @@ export default function Welcome() {
                                     Need access?
                                 </div>
                                 <p className="text-sm leading-6 text-slate-600">
-                                    Coordinate with your assigned administrators for account approval and registration support.
+                                    Coordinate with your assigned administrators
+                                    for account approval and registration
+                                    support.
                                 </p>
                                 <Link
                                     href={RegistrantAccessController.create()}

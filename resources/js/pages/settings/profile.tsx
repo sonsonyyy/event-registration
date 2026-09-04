@@ -149,7 +149,7 @@ export default function Profile({
                                                 'Approved'
                                                     ? 'success'
                                                     : account.approval_status_label ===
-                                                          'Pending'
+                                                        'Pending'
                                                       ? 'warning'
                                                       : 'neutral'
                                             }
@@ -186,7 +186,7 @@ export default function Profile({
                         <div className="space-y-4">
                             <div className="flex items-center gap-2 text-slate-900">
                                 <UserRound className="size-4 text-[#184d47]" />
-                                <h3 className="text-sm font-semibold tracking-[0.18em] uppercase text-[#184d47]">
+                                <h3 className="text-sm font-semibold tracking-[0.18em] text-[#184d47] uppercase">
                                     Account details
                                 </h3>
                             </div>
@@ -205,7 +205,7 @@ export default function Profile({
                         <div className="space-y-4">
                             <div className="flex items-center gap-2 text-slate-900">
                                 <Building2 className="size-4 text-[#184d47]" />
-                                <h3 className="text-sm font-semibold tracking-[0.18em] uppercase text-[#184d47]">
+                                <h3 className="text-sm font-semibold tracking-[0.18em] text-[#184d47] uppercase">
                                     Scope assignment
                                 </h3>
                             </div>
@@ -224,7 +224,7 @@ export default function Profile({
                         <div className="space-y-4">
                             <div className="flex items-center gap-2 text-slate-900">
                                 <CalendarDays className="size-4 text-[#184d47]" />
-                                <h3 className="text-sm font-semibold tracking-[0.18em] uppercase text-[#184d47]">
+                                <h3 className="text-sm font-semibold tracking-[0.18em] text-[#184d47] uppercase">
                                     Identity
                                 </h3>
                             </div>
@@ -257,25 +257,28 @@ export default function Profile({
                             </div>
                         </div>
 
-                        {mustVerifyEmail && auth.user.email_verified_at === null && (
-                            <div>
-                                <ActionStatusToast
-                                    show={status === 'verification-link-sent'}
-                                    title="Verification email sent."
-                                />
-                                <p className="-mt-1 text-sm text-muted-foreground">
-                                    Your email address is unverified.{' '}
-                                    <Link
-                                        href={send()}
-                                        as="button"
-                                        className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
-                                    >
-                                        Click here to resend the verification
-                                        email.
-                                    </Link>
-                                </p>
-                            </div>
-                        )}
+                        {mustVerifyEmail &&
+                            auth.user.email_verified_at === null && (
+                                <div>
+                                    <ActionStatusToast
+                                        show={
+                                            status === 'verification-link-sent'
+                                        }
+                                        title="Verification email sent."
+                                    />
+                                    <p className="-mt-1 text-sm text-muted-foreground">
+                                        Your email address is unverified.{' '}
+                                        <Link
+                                            href={send()}
+                                            as="button"
+                                            className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                                        >
+                                            Click here to resend the
+                                            verification email.
+                                        </Link>
+                                    </p>
+                                </div>
+                            )}
                     </div>
                 </div>
             </SettingsLayout>

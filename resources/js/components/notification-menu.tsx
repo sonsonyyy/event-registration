@@ -63,13 +63,15 @@ export function NotificationMenu() {
             <DropdownMenuTrigger asChild>
                 <button
                     type="button"
-                    className="relative inline-flex h-10 w-10 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                    className="relative inline-flex h-10 w-10 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-hidden"
                     aria-label="Open notifications"
                 >
                     <Bell className="size-4.5" />
                     {notifications.unread_count > 0 && (
-                        <span className="absolute top-1.5 right-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-sidebar-primary px-1 text-[10px] font-medium leading-none text-sidebar-primary-foreground">
-                            {notifications.unread_count > 9 ? '9+' : notifications.unread_count}
+                        <span className="absolute top-1.5 right-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-sidebar-primary px-1 text-[10px] leading-none font-medium text-sidebar-primary-foreground">
+                            {notifications.unread_count > 9
+                                ? '9+'
+                                : notifications.unread_count}
                         </span>
                     )}
                 </button>
@@ -147,7 +149,9 @@ export function NotificationMenu() {
                                         </p>
                                         <span className="shrink-0 text-[10px] text-muted-foreground sm:text-[11px]">
                                             {notification.created_at
-                                                ? formatSystemDateTime(notification.created_at)
+                                                ? formatSystemDateTime(
+                                                      notification.created_at,
+                                                  )
                                                 : ''}
                                         </span>
                                     </div>

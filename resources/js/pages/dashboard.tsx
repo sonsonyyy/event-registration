@@ -12,10 +12,7 @@ import SummaryStatCards from '@/components/summary-stat-cards';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import {
-    formatSystemDateRange,
-    formatSystemDateTime,
-} from '@/lib/date-time';
+import { formatSystemDateRange, formatSystemDateTime } from '@/lib/date-time';
 import { dashboard as dashboardRoute } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
@@ -78,7 +75,7 @@ type Props = {
 };
 
 const formatDateTime = (value: string | null): string => {
-    if (! value) {
+    if (!value) {
         return 'Not submitted';
     }
 
@@ -133,37 +130,32 @@ const metricCardAppearance = (
         case 'pending verification':
             return {
                 cardClassName: reviewWorkspaceStyles.summaryCardPending,
-                iconWrapperClassName:
-                    reviewWorkspaceStyles.summaryIconPending,
+                iconWrapperClassName: reviewWorkspaceStyles.summaryIconPending,
                 icon: Clock3,
             };
         case 'active users':
             return {
                 cardClassName: reviewWorkspaceStyles.summaryCardApproved,
-                iconWrapperClassName:
-                    reviewWorkspaceStyles.summaryIconApproved,
+                iconWrapperClassName: reviewWorkspaceStyles.summaryIconApproved,
                 icon: Users,
             };
         case 'active churches':
         case 'assigned churches':
             return {
                 cardClassName: reviewWorkspaceStyles.summaryCardApproved,
-                iconWrapperClassName:
-                    reviewWorkspaceStyles.summaryIconApproved,
+                iconWrapperClassName: reviewWorkspaceStyles.summaryIconApproved,
                 icon: Building2,
             };
         case 'open events':
             return {
                 cardClassName: reviewWorkspaceStyles.summaryCardApproved,
-                iconWrapperClassName:
-                    reviewWorkspaceStyles.summaryIconApproved,
+                iconWrapperClassName: reviewWorkspaceStyles.summaryIconApproved,
                 icon: CalendarRange,
             };
         default:
             return {
                 cardClassName: reviewWorkspaceStyles.summaryCardApproved,
-                iconWrapperClassName:
-                    reviewWorkspaceStyles.summaryIconApproved,
+                iconWrapperClassName: reviewWorkspaceStyles.summaryIconApproved,
                 icon: BadgeCheck,
             };
     }
@@ -193,10 +185,10 @@ export default function Dashboard({ dashboard }: Props) {
                                 <div className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">
                                     Account status
                                 </div>
-                                <div className="text-lg font-semibold tracking-[-0.03em] text-slate-900 dark:text-slate-100 sm:text-xl">
+                                <div className="text-lg font-semibold tracking-[-0.03em] text-slate-900 sm:text-xl dark:text-slate-100">
                                     {dashboard.account_notice.title}
                                 </div>
-                                <p className="max-w-3xl text-[13px] leading-5 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-6">
+                                <p className="max-w-3xl text-[13px] leading-5 text-slate-600 sm:text-sm sm:leading-6 dark:text-slate-300">
                                     {dashboard.account_notice.description}
                                 </p>
                             </div>
@@ -224,7 +216,7 @@ export default function Dashboard({ dashboard }: Props) {
                 </div>
 
                 <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-                    <Card className="overflow-hidden border border-[#d3ddd8] border-t-4 border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8">
+                    <Card className="overflow-hidden border border-t-4 border-[#d3ddd8] border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8">
                         <CardContent className="p-0">
                             <div className="border-b border-[#e2ebe6] px-5 py-5">
                                 <div className="space-y-2">
@@ -235,7 +227,8 @@ export default function Dashboard({ dashboard }: Props) {
                                         Available registrations
                                     </div>
                                     <p className="text-[13px] leading-5 text-slate-600 sm:text-sm sm:leading-6">
-                                        Current event capacity and registration windows available from your dashboard.
+                                        Current event capacity and registration
+                                        windows available from your dashboard.
                                     </p>
                                 </div>
                             </div>
@@ -257,7 +250,10 @@ export default function Dashboard({ dashboard }: Props) {
                                                         {event.name}
                                                     </div>
                                                     <div className="text-[13px] text-slate-600">
-                                                        {formatSystemDateRange(event.date_from, event.date_to)}
+                                                        {formatSystemDateRange(
+                                                            event.date_from,
+                                                            event.date_to,
+                                                        )}
                                                     </div>
                                                     <div className="text-[12px] text-slate-500 sm:text-[13px]">
                                                         {event.venue}
@@ -266,10 +262,14 @@ export default function Dashboard({ dashboard }: Props) {
 
                                                 <div className="space-y-1.5 text-left md:text-right">
                                                     <div className="text-[13px] font-semibold text-[#184d47] sm:text-sm">
-                                                        {event.remaining_slots} slots left
+                                                        {event.remaining_slots}{' '}
+                                                        slots left
                                                     </div>
                                                     <div className="text-[12px] text-slate-500 sm:text-[13px]">
-                                                        Closes {formatDateTime(event.registration_close_at)}
+                                                        Closes{' '}
+                                                        {formatDateTime(
+                                                            event.registration_close_at,
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -280,7 +280,7 @@ export default function Dashboard({ dashboard }: Props) {
                         </CardContent>
                     </Card>
 
-                    <Card className="overflow-hidden border border-[#d3ddd8] border-t-4 border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8">
+                    <Card className="overflow-hidden border border-t-4 border-[#d3ddd8] border-t-[#184d47] bg-white py-0 shadow-xl shadow-[#184d47]/8">
                         <CardContent className="p-0">
                             <div className="border-b border-[#e2ebe6] px-5 py-5">
                                 <div className="space-y-2">
@@ -291,7 +291,8 @@ export default function Dashboard({ dashboard }: Props) {
                                         Latest registrations
                                     </div>
                                     <p className="text-[13px] leading-5 text-slate-600 sm:text-sm sm:leading-6">
-                                        Recent registration activity visible within your access scope.
+                                        Recent registration activity visible
+                                        within your access scope.
                                     </p>
                                 </div>
                             </div>
@@ -299,73 +300,98 @@ export default function Dashboard({ dashboard }: Props) {
                             <div className="px-5 py-1.5">
                                 {dashboard.recent_registrations.length === 0 ? (
                                     <div className="py-8 text-[13px] text-slate-600 sm:text-sm">
-                                        No recent registrations are available for your current scope.
+                                        No recent registrations are available
+                                        for your current scope.
                                     </div>
                                 ) : (
                                     <div className="divide-y divide-[#e2ebe6]">
-                                        {dashboard.recent_registrations.map((registration) => (
-                                            <div
-                                                key={registration.id}
-                                                className="space-y-2.5 py-3.5"
-                                            >
-                                                <div className="flex items-start justify-between gap-4">
-                                                    <div className="space-y-1">
-                                                        <div className="text-[15px] font-semibold text-slate-900 sm:text-base">
-                                                            {registration.event_name}
+                                        {dashboard.recent_registrations.map(
+                                            (registration) => (
+                                                <div
+                                                    key={registration.id}
+                                                    className="space-y-2.5 py-3.5"
+                                                >
+                                                    <div className="flex items-start justify-between gap-4">
+                                                        <div className="space-y-1">
+                                                            <div className="text-[15px] font-semibold text-slate-900 sm:text-base">
+                                                                {
+                                                                    registration.event_name
+                                                                }
+                                                            </div>
+                                                            <div className="text-[13px] text-slate-600">
+                                                                {
+                                                                    registration.church_name
+                                                                }
+                                                            </div>
                                                         </div>
-                                                        <div className="text-[13px] text-slate-600">
-                                                            {registration.church_name}
+                                                        <div className="text-[12px] text-slate-500 sm:text-[13px]">
+                                                            #{registration.id}
                                                         </div>
                                                     </div>
-                                                    <div className="text-[12px] text-slate-500 sm:text-[13px]">
-                                                        #{registration.id}
-                                                    </div>
-                                                </div>
 
-                                                <div className="flex flex-wrap gap-2">
-                                                    <Badge variant="default">
-                                                        {registrationModeLabel(registration.registration_mode)}
-                                                    </Badge>
-                                                    <Badge
-                                                        variant={registrationStatusVariant(
-                                                            registration.registration_status,
-                                                        )}
-                                                        className="capitalize"
-                                                    >
-                                                        {registration.registration_status}
-                                                    </Badge>
-                                                    <Badge
-                                                        variant={paymentStatusVariant(
-                                                            registration.payment_status,
-                                                        )}
-                                                        className="capitalize"
-                                                    >
-                                                        {registration.payment_status}
-                                                    </Badge>
-                                                </div>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <Badge variant="default">
+                                                            {registrationModeLabel(
+                                                                registration.registration_mode,
+                                                            )}
+                                                        </Badge>
+                                                        <Badge
+                                                            variant={registrationStatusVariant(
+                                                                registration.registration_status,
+                                                            )}
+                                                            className="capitalize"
+                                                        >
+                                                            {
+                                                                registration.registration_status
+                                                            }
+                                                        </Badge>
+                                                        <Badge
+                                                            variant={paymentStatusVariant(
+                                                                registration.payment_status,
+                                                            )}
+                                                            className="capitalize"
+                                                        >
+                                                            {
+                                                                registration.payment_status
+                                                            }
+                                                        </Badge>
+                                                    </div>
 
-                                                <div className="grid gap-1.5 text-[13px] text-slate-600 sm:text-sm">
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <span>Submitted</span>
-                                                        <span className="font-medium text-slate-900">
-                                                            {formatDateTime(registration.submitted_at)}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <span>Total quantity</span>
-                                                        <span className="font-medium text-slate-900">
-                                                            {registration.total_quantity}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <span>Total amount</span>
-                                                        <span className="font-medium text-slate-900">
-                                                            {formatCurrency(registration.total_amount)}
-                                                        </span>
+                                                    <div className="grid gap-1.5 text-[13px] text-slate-600 sm:text-sm">
+                                                        <div className="flex items-center justify-between gap-4">
+                                                            <span>
+                                                                Submitted
+                                                            </span>
+                                                            <span className="font-medium text-slate-900">
+                                                                {formatDateTime(
+                                                                    registration.submitted_at,
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between gap-4">
+                                                            <span>
+                                                                Total quantity
+                                                            </span>
+                                                            <span className="font-medium text-slate-900">
+                                                                {
+                                                                    registration.total_quantity
+                                                                }
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between gap-4">
+                                                            <span>
+                                                                Total amount
+                                                            </span>
+                                                            <span className="font-medium text-slate-900">
+                                                                {formatCurrency(
+                                                                    registration.total_amount,
+                                                                )}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ),
+                                        )}
                                     </div>
                                 )}
                             </div>

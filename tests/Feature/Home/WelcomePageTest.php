@@ -5,7 +5,6 @@ use App\Models\EventFeeCategory;
 use App\Models\Registration;
 use App\Models\RegistrationItem;
 use App\Models\User;
-use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('authenticated users are redirected away from the welcome page', function () {
@@ -36,7 +35,7 @@ test('environment banner is hidden in production', function () {
 test('welcome page lists open events that can still accept registrations', function () {
     config()->set('app.asset_url', 'http://assets.test');
 
-    $registrationCloseAt = Carbon::create(2026, 4, 12, 23, 59, 59, config('app.timezone'));
+    $registrationCloseAt = now()->addDays(14)->endOfDay();
 
     $availableEvent = Event::factory()->create([
         'name' => 'CLD Youth Conference 2026',

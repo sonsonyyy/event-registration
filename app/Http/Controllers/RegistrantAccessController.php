@@ -75,8 +75,8 @@ class RegistrantAccessController extends Controller
                 'id' => $section->getKey(),
                 'name' => $section->name,
                 'description' => $section->description,
-                'district_id' => $section->district_id, # will be hidden in the UI but included here for ease of access when building the options
-                'district_name' => $section->district?->name, # will be hidden in the UI but included here for ease of access when building the options
+                'district_id' => $section->district_id, // will be hidden in the UI but included here for ease of access when building the options
+                'district_name' => $section->district?->name, // will be hidden in the UI but included here for ease of access when building the options
             ])
             ->values()
             ->all();

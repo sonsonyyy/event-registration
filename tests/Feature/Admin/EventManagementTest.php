@@ -386,16 +386,20 @@ test('admins can update district-wide events and synchronize fee categories', fu
     $removedFeeCategory = EventFeeCategory::factory()->for($event)->create([
         'category_name' => 'One-day Pass',
     ]);
+    $eventStart = now()->addMonths(2);
+    $eventEnd = $eventStart->copy()->addDays(2);
+    $registrationOpenAt = now()->subDay();
+    $registrationCloseAt = $eventStart->copy()->subDay();
 
     $this->actingAs($admin)
         ->patch(route('admin.events.update', $event), [
             'name' => 'Updated District Camp',
             'description' => 'Updated description',
             'venue' => 'Updated Venue',
-            'date_from' => '2026-07-01',
-            'date_to' => '2026-07-03',
-            'registration_open_at' => '2026-06-15T09:00',
-            'registration_close_at' => '2026-06-30T18:00',
+            'date_from' => $eventStart->toDateString(),
+            'date_to' => $eventEnd->toDateString(),
+            'registration_open_at' => $registrationOpenAt->format('Y-m-d\TH:i'),
+            'registration_close_at' => $registrationCloseAt->format('Y-m-d\TH:i'),
             'total_capacity' => 250,
             'status' => Event::STATUS_OPEN,
             'scope_type' => Event::SCOPE_DISTRICT,
@@ -637,14 +641,19 @@ test('full or expired open events are automatically surfaced as closed with no r
 
 function eventPayload(array $overrides = []): array
 {
+    $eventStart = now()->addMonths(2);
+    $eventEnd = $eventStart->copy()->addDays(2);
+    $registrationOpenAt = now()->subDay();
+    $registrationCloseAt = $eventStart->copy()->subDay();
+
     return array_replace_recursive([
         'name' => 'District Youth Camp',
         'description' => 'Three-day district gathering.',
         'venue' => 'Main Convention Hall',
-        'date_from' => '2026-06-20',
-        'date_to' => '2026-06-22',
-        'registration_open_at' => '2026-06-01T08:00',
-        'registration_close_at' => '2026-06-18T18:00',
+        'date_from' => $eventStart->toDateString(),
+        'date_to' => $eventEnd->toDateString(),
+        'registration_open_at' => $registrationOpenAt->format('Y-m-d\TH:i'),
+        'registration_close_at' => $registrationCloseAt->format('Y-m-d\TH:i'),
         'total_capacity' => 500,
         'status' => Event::STATUS_OPEN,
         'scope_type' => Event::SCOPE_DISTRICT,

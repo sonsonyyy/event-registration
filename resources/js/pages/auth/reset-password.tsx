@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import AuthLayout from '@/layouts/auth-layout';
+import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import { update } from '@/routes/password';
 
 type Props = {

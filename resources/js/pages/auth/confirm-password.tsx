@@ -4,8 +4,8 @@ import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import AuthLayout from '@/layouts/auth-layout';
+import { createClearFormErrorHandlers } from '@/lib/form-errors';
 import { store } from '@/routes/password/confirm';
 
 export default function ConfirmPassword() {

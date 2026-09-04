@@ -105,7 +105,8 @@ type UserFormData = {
 
 const roleDescriptions: Record<string, string> = {
     Admin: 'Administrative access. Department is optional and scope can remain general for now.',
-    Manager: 'Section oversight account. Assign a section and optionally attach a department.',
+    Manager:
+        'Section oversight account. Assign a section and optionally attach a department.',
     'Registration Staff':
         'Can encode onsite registrations. Assign a district, then optionally narrow access by section or department.',
     'Online Registrant':
@@ -135,7 +136,8 @@ export default function UserForm({
         email: userRecord?.email ?? '',
         password: '',
         password_confirmation: '',
-        role_id: userRecord?.role_id?.toString() ?? roles[0]?.id.toString() ?? '',
+        role_id:
+            userRecord?.role_id?.toString() ?? roles[0]?.id.toString() ?? '',
         district_id: userRecord?.district_id?.toString() ?? '',
         department_id: userRecord?.department_id?.toString() ?? '',
         section_id: userRecord?.section_id?.toString() ?? '',
@@ -155,8 +157,7 @@ export default function UserForm({
         : sections;
     const filteredPastors = form.data.section_id
         ? pastors.filter(
-              (pastor) =>
-                  pastor.section_id.toString() === form.data.section_id,
+              (pastor) => pastor.section_id.toString() === form.data.section_id,
           )
         : form.data.district_id
           ? pastors.filter(
@@ -231,19 +232,16 @@ export default function UserForm({
     }, [filteredPastors, form, form.data.pastor_id, requiresPastor]);
 
     const changeRole = (value: string): void => {
-        const roleName = roles.find((role) => role.id.toString() === value)?.name;
+        const roleName = roles.find(
+            (role) => role.id.toString() === value,
+        )?.name;
 
         form.setData((currentData) => ({
             ...currentData,
             role_id: value,
-            section_id:
-                roleName === 'Admin'
-                    ? ''
-                    : currentData.section_id,
+            section_id: roleName === 'Admin' ? '' : currentData.section_id,
             pastor_id:
-                roleName === 'Online Registrant'
-                    ? currentData.pastor_id
-                    : '',
+                roleName === 'Online Registrant' ? currentData.pastor_id : '',
         }));
     };
 
@@ -279,20 +277,20 @@ export default function UserForm({
 
         form.setData((currentData) => ({
             ...currentData,
-            district_id: section?.district_id.toString() ?? currentData.district_id,
+            district_id:
+                section?.district_id.toString() ?? currentData.district_id,
             section_id: value,
             pastor_id: nextPastor?.id.toString() ?? '',
         }));
     };
 
     const changePastor = (value: string): void => {
-        const pastor = pastors.find(
-            (option) => option.id.toString() === value,
-        );
+        const pastor = pastors.find((option) => option.id.toString() === value);
 
         form.setData((currentData) => ({
             ...currentData,
-            district_id: pastor?.district_id.toString() ?? currentData.district_id,
+            district_id:
+                pastor?.district_id.toString() ?? currentData.district_id,
             section_id: pastor?.section_id.toString() ?? currentData.section_id,
             pastor_id: value,
         }));
@@ -311,7 +309,9 @@ export default function UserForm({
         );
     };
 
-    const clearFormErrorHandlers = createClearFormErrorHandlers(form.clearErrors);
+    const clearFormErrorHandlers = createClearFormErrorHandlers(
+        form.clearErrors,
+    );
 
     const formContent = (
         <form
@@ -477,9 +477,7 @@ export default function UserForm({
                         value={form.data.district_id}
                         onValueChange={changeDistrict}
                         placeholder="Select a district"
-                        disabled={
-                            !isSuperAdminViewer && districts.length === 1
-                        }
+                        disabled={!isSuperAdminViewer && districts.length === 1}
                         emptyLabel="No district scope"
                         options={districts.map((district) => ({
                             value: district.id.toString(),
@@ -629,10 +627,12 @@ export default function UserForm({
     return (
         <Card className="border-sidebar-border/70">
             <CardHeader>
-                <CardTitle>{isEditing ? 'Edit user' : 'User details'}</CardTitle>
+                <CardTitle>
+                    {isEditing ? 'Edit user' : 'User details'}
+                </CardTitle>
                 <CardDescription>
-                    Assign the correct role, status, department, and hierarchy scope
-                    for this account.
+                    Assign the correct role, status, department, and hierarchy
+                    scope for this account.
                 </CardDescription>
             </CardHeader>
             <CardContent>{formContent}</CardContent>

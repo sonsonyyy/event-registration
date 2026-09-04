@@ -61,7 +61,12 @@ export default function Password() {
                         }}
                         className="space-y-6"
                     >
-                        {({ errors, processing, recentlySuccessful, clearErrors }) => (
+                        {({
+                            errors,
+                            processing,
+                            recentlySuccessful,
+                            clearErrors,
+                        }) => (
                             <div
                                 className="space-y-6"
                                 {...createClearFormErrorHandlers(clearErrors)}

@@ -1356,7 +1356,6 @@ export default function ReportsIndex({
                         )}
                     </>
                 )}
-
             </div>
         </AppLayout>
     );

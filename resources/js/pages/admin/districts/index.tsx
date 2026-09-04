@@ -74,7 +74,9 @@ export default function DistrictIndex({ districts }: Props) {
                         <div className={elevatedIndexTableStyles.headerActions}>
                             <Button
                                 asChild
-                                className={elevatedIndexTableStyles.primaryButton}
+                                className={
+                                    elevatedIndexTableStyles.primaryButton
+                                }
                             >
                                 <Link href={DistrictController.create()}>
                                     New district
@@ -86,26 +88,38 @@ export default function DistrictIndex({ districts }: Props) {
                     <div className="overflow-x-auto">
                         <table className={elevatedIndexTableStyles.table}>
                             <thead className={elevatedIndexTableStyles.thead}>
-                                <tr className={elevatedIndexTableStyles.headerRow}>
+                                <tr
+                                    className={
+                                        elevatedIndexTableStyles.headerRow
+                                    }
+                                >
                                     <th
                                         className={
                                             elevatedIndexTableStyles.firstHeaderCell
                                         }
                                     >
-                                    District
+                                        District
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Status
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Status
                                     </th>
-                                    <th className={elevatedIndexTableStyles.headerCell}>
-                                    Sections
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Sections
                                     </th>
                                     <th
                                         className={
                                             elevatedIndexTableStyles.lastHeaderCellRight
                                         }
                                     >
-                                    Actions
+                                        Actions
                                     </th>
                                 </tr>
                             </thead>
@@ -131,8 +145,9 @@ export default function DistrictIndex({ districts }: Props) {
                                                         elevatedIndexTableStyles.emptyDescription
                                                     }
                                                 >
-                                                    Create the first district to start
-                                                    organizing sections and pastors.
+                                                    Create the first district to
+                                                    start organizing sections
+                                                    and pastors.
                                                 </div>
                                             </div>
                                         </td>
@@ -141,69 +156,103 @@ export default function DistrictIndex({ districts }: Props) {
                                     districts.map((district) => (
                                         <tr
                                             key={district.id}
-                                            className={elevatedIndexTableStyles.row}
+                                            className={
+                                                elevatedIndexTableStyles.row
+                                            }
                                         >
-                                            <td className={elevatedIndexTableStyles.firstCell}>
-                                            <div className={elevatedIndexTableStyles.primaryText}>
-                                                {district.name}
-                                            </div>
-                                            <div className={elevatedIndexTableStyles.secondaryText}>
-                                                {district.description ||
-                                                    'No description provided.'}
-                                            </div>
-                                            </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <DataTableBadge
-                                                tone={resolveDataTableTone(
-                                                    district.status,
-                                                    {
-                                                        active: 'emerald',
-                                                        inactive: 'rose',
-                                                    },
-                                                )}
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.firstCell
+                                                }
                                             >
-                                                {district.status}
-                                            </DataTableBadge>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                >
+                                                    {district.name}
+                                                </div>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.secondaryText
+                                                    }
+                                                >
+                                                    {district.description ||
+                                                        'No description provided.'}
+                                                </div>
                                             </td>
-                                            <td className={elevatedIndexTableStyles.cell}>
-                                            <div className={elevatedIndexTableStyles.primaryText}>
-                                                {district.sections_count}
-                                            </div>
-                                            <div className={elevatedIndexTableStyles.secondaryText}>
-                                                sections
-                                            </div>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <DataTableBadge
+                                                    tone={resolveDataTableTone(
+                                                        district.status,
+                                                        {
+                                                            active: 'emerald',
+                                                            inactive: 'rose',
+                                                        },
+                                                    )}
+                                                >
+                                                    {district.status}
+                                                </DataTableBadge>
+                                            </td>
+                                            <td
+                                                className={
+                                                    elevatedIndexTableStyles.cell
+                                                }
+                                            >
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                >
+                                                    {district.sections_count}
+                                                </div>
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.secondaryText
+                                                    }
+                                                >
+                                                    sections
+                                                </div>
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
                                             >
-                                            <div className={elevatedIndexTableStyles.actionGroup}>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="rounded-md"
-                                                    asChild
-                                                >
-                                                    <Link
-                                                        href={DistrictController.edit(
-                                                            district.id,
-                                                        )}
-                                                    >
-                                                        Edit
-                                                    </Link>
-                                                </Button>
-                                                <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    className="rounded-md"
-                                                    onClick={() =>
-                                                        setDistrictToDelete(
-                                                            district,
-                                                        )
+                                                <div
+                                                    className={
+                                                        elevatedIndexTableStyles.actionGroup
                                                     }
                                                 >
-                                                    Archive
-                                                </Button>
-                                            </div>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="rounded-md"
+                                                        asChild
+                                                    >
+                                                        <Link
+                                                            href={DistrictController.edit(
+                                                                district.id,
+                                                            )}
+                                                        >
+                                                            Edit
+                                                        </Link>
+                                                    </Button>
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        className="rounded-md"
+                                                        onClick={() =>
+                                                            setDistrictToDelete(
+                                                                district,
+                                                            )
+                                                        }
+                                                    >
+                                                        Archive
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))

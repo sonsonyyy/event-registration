@@ -12,9 +12,9 @@ function resolveFieldErrorKey(target: EventTarget | null): string | null {
     }
 
     if (
-        target instanceof HTMLInputElement
-        || target instanceof HTMLTextAreaElement
-        || target instanceof HTMLSelectElement
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
     ) {
         return target.name || target.id || null;
     }
@@ -22,9 +22,7 @@ function resolveFieldErrorKey(target: EventTarget | null): string | null {
     return target.getAttribute('name') || target.getAttribute('id') || null;
 }
 
-export function createClearFormErrorHandlers(
-    clearErrors: unknown,
-): {
+export function createClearFormErrorHandlers(clearErrors: unknown): {
     onInput: FormEventHandler<HTMLElement>;
     onChange: FormEventHandler<HTMLElement>;
 } {
