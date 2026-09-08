@@ -3,13 +3,9 @@ import {
     ChevronLeft,
     ChevronRight,
     CalendarDays,
-    ClipboardList,
     CircleCheckBig,
     LogIn,
     MapPin,
-    ReceiptText,
-    ShieldCheck,
-    Upload,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import OnlineRegistrationController from '@/actions/App/Http/Controllers/OnlineRegistrationController';
@@ -407,16 +403,16 @@ export default function Welcome() {
             </Head>
 
             <div
-                className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(193,223,214,0.45),_transparent_34%),linear-gradient(180deg,_#f7f5ef_0%,_#fffdf8_48%,_#f2efe7_100%)] text-slate-900"
+                className="min-h-screen bg-[radial-gradient(circle_at_18%_18%,_rgba(24,77,71,0.18),_transparent_30%),radial-gradient(circle_at_84%_12%,_rgba(14,116,144,0.12),_transparent_26%),linear-gradient(315deg,_rgba(24,77,71,0.11),_transparent_64%),linear-gradient(135deg,_#f8faf9_0%,_#e8f1ee_42%,_#f5f0e7_100%)] text-slate-900"
                 style={{ fontFamily: 'Manrope, sans-serif' }}
             >
                 <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-6 text-[0.9375rem] sm:px-6 sm:text-base lg:px-8">
-                    <header className="flex flex-wrap items-center justify-between gap-3 py-2 sm:flex-nowrap">
-                        <div className="flex items-center gap-3">
+                    <header className="grid gap-3 py-2 md:grid-cols-[1fr_auto_1fr] md:items-center">
+                        <div className="flex items-center justify-center md:justify-start">
                             <AppLogo />
                         </div>
 
-                        <div className="hidden items-center gap-6 md:flex">
+                        <nav className="hidden items-center justify-center gap-6 md:flex">
                             <a
                                 href="#available-events"
                                 className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900"
@@ -435,9 +431,9 @@ export default function Welcome() {
                             >
                                 FAQs
                             </a>
-                        </div>
+                        </nav>
 
-                        <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2 sm:gap-3">
+                        <div className="flex max-w-full flex-wrap items-center justify-center gap-2 sm:gap-3 md:justify-end">
                             <Link
                                 href={RegistrantAccessController.create()}
                                 className="inline-flex max-w-full items-center gap-2 rounded-md px-2.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-white/60 hover:text-slate-900 sm:px-3 sm:text-sm"
@@ -469,28 +465,22 @@ export default function Welcome() {
                     </header>
 
                     <main className="flex flex-1 flex-col gap-10 pt-8 pb-12 lg:gap-16 lg:pt-16">
-                        <section className="grid gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] lg:items-start">
-                            <div className="max-w-3xl space-y-8">
-                                <div className="space-y-5">
-                                    <Badge className="rounded-full bg-[#184d47] px-4 py-1.5 text-xs font-semibold tracking-[0.18em] text-white uppercase hover:bg-[#184d47]">
-                                        District Event Registration Platform
-                                    </Badge>
-
-                                    <div className="space-y-4">
-                                        <h1 className="max-w-3xl text-3xl font-extrabold tracking-[-0.04em] text-balance sm:text-5xl lg:text-6xl">
-                                            Professional event registration for
-                                            district and department gatherings.
-                                        </h1>
-                                        <p className="max-w-2xl text-sm leading-7 text-slate-600 sm:text-lg">
-                                            View open events, monitor remaining
-                                            slots, and manage registration
-                                            submissions with receipt upload and
-                                            verification tracking.
-                                        </p>
-                                    </div>
+                        <section className="mx-auto flex w-full max-w-4xl flex-col items-center text-center">
+                            <div className="flex w-full flex-col items-center gap-8">
+                                <div className="space-y-4">
+                                    <h1 className="mx-auto max-w-3xl text-3xl font-extrabold tracking-[-0.04em] text-balance sm:text-5xl lg:text-6xl">
+                                        Professional event registration for
+                                        district and department gatherings.
+                                    </h1>
+                                    <p className="mx-auto max-w-2xl text-sm leading-7 text-slate-600 sm:text-lg">
+                                        View open events, monitor remaining
+                                        slots, and manage registration
+                                        submissions with receipt upload and
+                                        verification tracking.
+                                    </p>
                                 </div>
 
-                                <div className="flex flex-col gap-3 sm:flex-row">
+                                <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                                     <Button
                                         asChild
                                         size="lg"
@@ -511,97 +501,7 @@ export default function Welcome() {
                                         </a>
                                     </Button>
                                 </div>
-
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <Card className="border-white/70 bg-white/75 py-5 shadow-lg shadow-[#184d47]/5 backdrop-blur">
-                                        <CardContent className="space-y-2 px-5">
-                                            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                                                <CalendarDays className="size-4 text-[#184d47]" />
-                                                Open events
-                                            </div>
-                                            <div className="text-3xl font-extrabold tracking-[-0.04em]">
-                                                {events.length}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-
-                                    <Card className="border-white/70 bg-white/75 py-5 shadow-lg shadow-[#184d47]/5 backdrop-blur">
-                                        <CardContent className="space-y-2 px-5">
-                                            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                                                <ShieldCheck className="size-4 text-[#184d47]" />
-                                                Online flow
-                                            </div>
-                                            <div className="text-sm leading-6 text-slate-600">
-                                                Receipt upload and
-                                                verification-ready submissions
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
                             </div>
-
-                            <Card className="overflow-hidden border-[#d7ddd2] bg-[#123630] py-0 text-white shadow-2xl shadow-[#123630]/20">
-                                <CardContent className="p-0">
-                                    <div className="border-b border-white/10 px-6 py-5">
-                                        <div className="flex items-center gap-2 text-sm font-semibold text-[#b6d6cd]">
-                                            <ReceiptText className="size-4" />
-                                            Registrant access
-                                        </div>
-                                        <h2 className="mt-3 text-2xl font-bold tracking-[-0.03em]">
-                                            Authorized online registration
-                                        </h2>
-                                    </div>
-
-                                    <div className="space-y-4 px-6 py-6 text-sm leading-6 text-[#d3e5df]">
-                                        <p>
-                                            Online registration is available
-                                            only to authorized registrant
-                                            accounts assigned to a church or
-                                            pastor record.
-                                        </p>
-                                        <ul className="space-y-3">
-                                            <li className="flex items-start gap-3 rounded-md border border-white/10 bg-white/5 px-4 py-3">
-                                                <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md bg-white/10 text-[#b6d6cd]">
-                                                    <ClipboardList className="size-4" />
-                                                </div>
-                                                <div>
-                                                    Select an open event and add
-                                                    multiple fee-category
-                                                    quantities in one
-                                                    transaction.
-                                                </div>
-                                            </li>
-                                            <li className="flex items-start gap-3 rounded-md border border-white/10 bg-white/5 px-4 py-3">
-                                                <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md bg-white/10 text-[#b6d6cd]">
-                                                    <Upload className="size-4" />
-                                                </div>
-                                                <div>
-                                                    Upload proof of payment in
-                                                    JPG, PNG, or PDF format
-                                                    during submission.
-                                                </div>
-                                            </li>
-                                            <li className="flex items-start gap-3 rounded-md border border-white/10 bg-white/5 px-4 py-3">
-                                                <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md bg-white/10 text-[#b6d6cd]">
-                                                    <ShieldCheck className="size-4" />
-                                                </div>
-                                                <div>
-                                                    Track pending verification,
-                                                    verified, and rejected
-                                                    registrations from your
-                                                    history page.
-                                                </div>
-                                            </li>
-                                        </ul>
-                                        <div className="rounded-md border border-[#3c655e] bg-[#184d47] px-4 py-4 text-[#eff8f5]">
-                                            Use your assigned registrant account
-                                            to continue. Guests are redirected
-                                            to the login page before they can
-                                            register.
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
                         </section>
 
                         <section
