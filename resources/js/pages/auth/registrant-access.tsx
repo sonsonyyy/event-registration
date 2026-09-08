@@ -105,7 +105,7 @@ export default function RegistrantAccess({ sections, pastors }: Props) {
     return (
         <AuthLayout
             title="Request a registrant account"
-            description="Church representatives can request online registration access here. Each church may have up to two registrant accounts, and approval is still required before registration tools are unlocked."
+            description="Approval is required before registration features are unlocked."
             singleCard
         >
             <Head title="Request Registrant Access">
@@ -246,7 +246,7 @@ export default function RegistrantAccess({ sections, pastors }: Props) {
 
                 <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-sm text-slate-600">
-                        Already have an approved account?{' '}
+                        Already have an account?{' '}
                         <Link
                             href={login()}
                             className="font-semibold text-[#184d47] hover:text-[#143f3a]"

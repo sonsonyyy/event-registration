@@ -26,6 +26,20 @@ test('login screen receives the registrant access status key', function () {
             ->where('status', 'registrant-access-submitted'));
 });
 
+test('auth entry screens share the app branding data', function () {
+    $this->get(route('login'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('auth/login')
+            ->where('name', config('app.name')));
+
+    $this->get(route('registrant-access.create'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('auth/registrant-access')
+            ->where('name', config('app.name')));
+});
+
 test('users can authenticate using the login screen', function () {
     $user = User::factory()->create();
 
