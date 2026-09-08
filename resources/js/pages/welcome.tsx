@@ -469,14 +469,13 @@ export default function Welcome() {
                             <div className="flex w-full flex-col items-center gap-8">
                                 <div className="space-y-4">
                                     <h1 className="mx-auto max-w-3xl text-3xl font-extrabold tracking-[-0.04em] text-balance sm:text-5xl lg:text-6xl">
-                                        Professional event registration for
-                                        district and department gatherings.
+                                        Register for CLD Events
                                     </h1>
                                     <p className="mx-auto max-w-2xl text-sm leading-7 text-slate-600 sm:text-lg">
-                                        View open events, monitor remaining
-                                        slots, and manage registration
-                                        submissions with receipt upload and
-                                        verification tracking.
+                                        Browse open district and department events,
+                                        choose the right fee categories for your church,
+                                        upload payment proof, and track each submission from
+                                        review to verified registration.
                                     </p>
                                 </div>
 
