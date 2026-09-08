@@ -317,8 +317,8 @@ export default function Welcome() {
                 style={{ fontFamily: 'Manrope, sans-serif' }}
             >
                 <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-6 text-[0.9375rem] sm:px-6 sm:text-base lg:px-8">
-                    <header className="grid gap-3 py-2 md:grid-cols-[1fr_auto_1fr] md:items-center">
-                        <div className="flex items-center justify-center md:justify-start">
+                    <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-2 md:grid md:grid-cols-[1fr_auto_1fr] md:gap-3">
+                        <div className="flex min-w-0 flex-1 items-center justify-start md:flex-none">
                             <AppLogo />
                         </div>
 
@@ -343,10 +343,10 @@ export default function Welcome() {
                             </a>
                         </nav>
 
-                        <div className="flex max-w-full flex-wrap items-center justify-center gap-2 sm:gap-3 md:justify-end">
+                        <div className="flex max-w-full shrink-0 flex-wrap items-center justify-end gap-1.5 sm:gap-3">
                             <Link
                                 href={RegistrantAccessController.create()}
-                                className="inline-flex max-w-full items-center gap-2 rounded-md px-2.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-white/60 hover:text-slate-900 sm:px-3 sm:text-sm"
+                                className="inline-flex max-w-full items-center gap-2 rounded-md px-2 py-2 text-xs font-semibold whitespace-nowrap text-slate-600 transition-colors hover:bg-white/60 hover:text-slate-900 sm:px-3 sm:text-sm"
                             >
                                 <span className="sm:hidden">
                                     Request Access
@@ -365,7 +365,7 @@ export default function Welcome() {
                             ) : (
                                 <Link
                                     href={login()}
-                                    className="inline-flex items-center gap-2 rounded-md px-2.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-white/60 hover:text-slate-900 sm:px-3 sm:text-sm"
+                                    className="inline-flex items-center gap-2 rounded-md px-2 py-2 text-xs font-semibold whitespace-nowrap text-slate-600 transition-colors hover:bg-white/60 hover:text-slate-900 sm:px-3 sm:text-sm"
                                 >
                                     <LogIn className="size-4" />
                                     Log in
