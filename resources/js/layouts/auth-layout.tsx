@@ -10,7 +10,7 @@ export default function AuthLayout({
 }: {
     children: React.ReactNode;
     title: string;
-    description: string;
+    description?: string;
     singleCard?: boolean;
     centerContent?: boolean;
 }) {

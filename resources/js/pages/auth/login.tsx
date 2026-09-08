@@ -20,12 +20,7 @@ export default function Login() {
     const { status } = usePage().props as { status?: string | null };
 
     return (
-        <AuthLayout
-            title="Log in to your account"
-            description="Enter your assigned credentials to access the registration workspace."
-            singleCard
-            centerContent
-        >
+        <AuthLayout title="Log in to your account" singleCard centerContent>
             <Head title="Log in">
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link
