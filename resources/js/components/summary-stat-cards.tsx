@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils';
 type SummaryStatCard = {
     title: string;
     value: number;
-    subtitle: string;
     icon: LucideIcon;
     cardClassName: string;
     iconWrapperClassName?: string;
@@ -37,11 +36,6 @@ export default function SummaryStatCards({ items, gridClassName }: Props) {
                                 className={`text-xl font-semibold tracking-[-0.04em] sm:text-2xl ${reviewWorkspaceStyles.summaryValue}`}
                             >
                                 {item.value}
-                            </div>
-                            <div
-                                className={`text-[12px] sm:text-[13px] ${reviewWorkspaceStyles.summarySubtitle}`}
-                            >
-                                {item.subtitle}
                             </div>
                         </div>
 

@@ -366,7 +366,6 @@ export default function RegistrationVerificationIndex({
         {
             title: 'Pending Review',
             value: summary.pending_verification,
-            subtitle: 'Ready for receipt checking',
             icon: Clock3,
             cardClassName: reviewWorkspaceStyles.summaryCardPending,
             iconWrapperClassName: reviewWorkspaceStyles.summaryIconPending,
@@ -374,7 +373,6 @@ export default function RegistrationVerificationIndex({
         {
             title: 'Needs Correction',
             value: summary.needs_correction,
-            subtitle: 'Waiting for church updates',
             icon: AlertTriangle,
             cardClassName: reviewWorkspaceStyles.summaryCardPending,
             iconWrapperClassName: reviewWorkspaceStyles.summaryIconPending,
@@ -382,7 +380,6 @@ export default function RegistrationVerificationIndex({
         {
             title: 'Verified',
             value: summary.verified,
-            subtitle: 'Completed verification',
             icon: BadgeCheck,
             cardClassName: reviewWorkspaceStyles.summaryCardApproved,
             iconWrapperClassName: reviewWorkspaceStyles.summaryIconApproved,
@@ -390,7 +387,6 @@ export default function RegistrationVerificationIndex({
         {
             title: 'Rejected',
             value: summary.rejected,
-            subtitle: 'Closed without approval',
             icon: CircleX,
             cardClassName: reviewWorkspaceStyles.summaryCardRejected,
             iconWrapperClassName: reviewWorkspaceStyles.summaryIconRejected,

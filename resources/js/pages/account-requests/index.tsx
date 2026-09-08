@@ -194,7 +194,6 @@ export default function AccountRequestsIndex({
         {
             title: 'Pending Requests',
             value: summary.pending,
-            subtitle: 'Awaiting account approval',
             icon: Clock3,
             cardClassName: reviewWorkspaceStyles.summaryCardPending,
             iconWrapperClassName: reviewWorkspaceStyles.summaryIconPending,
@@ -202,7 +201,6 @@ export default function AccountRequestsIndex({
         {
             title: 'Approved',
             value: summary.approved,
-            subtitle: 'Online registration unlocked',
             icon: BadgeCheck,
             cardClassName: reviewWorkspaceStyles.summaryCardApproved,
             iconWrapperClassName: reviewWorkspaceStyles.summaryIconApproved,
@@ -210,7 +208,6 @@ export default function AccountRequestsIndex({
         {
             title: 'Rejected',
             value: summary.rejected,
-            subtitle: 'Needs follow-up',
             icon: CircleX,
             cardClassName: reviewWorkspaceStyles.summaryCardRejected,
             iconWrapperClassName: reviewWorkspaceStyles.summaryIconRejected,

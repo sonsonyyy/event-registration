@@ -489,7 +489,6 @@ export default function EventCheckInIndex({
         {
             title: 'Registered Qty',
             value: summary.registered_quantity,
-            subtitle: 'Approved quantity',
             icon: Boxes,
             cardClassName: reviewWorkspaceStyles.summaryCard,
             iconWrapperClassName: reviewWorkspaceStyles.summaryIconWrapper,
@@ -497,7 +496,6 @@ export default function EventCheckInIndex({
         {
             title: 'Claimed Qty',
             value: summary.claimed_quantity,
-            subtitle: 'Already released',
             icon: PackageCheck,
             cardClassName: reviewWorkspaceStyles.summaryCardApproved,
             iconWrapperClassName: reviewWorkspaceStyles.summaryIconApproved,
@@ -505,7 +503,6 @@ export default function EventCheckInIndex({
         {
             title: 'Remaining Qty',
             value: summary.remaining_quantity,
-            subtitle: 'Still available to claim',
             icon: PackageMinus,
             cardClassName: reviewWorkspaceStyles.summaryCardPending,
             iconWrapperClassName: reviewWorkspaceStyles.summaryIconPending,
@@ -513,7 +510,6 @@ export default function EventCheckInIndex({
         {
             title: 'Not Yet Claimed',
             value: summary.churches_not_claimed,
-            subtitle: 'Churches still waiting',
             icon: Clock3,
             cardClassName: reviewWorkspaceStyles.summaryCardPending,
             iconWrapperClassName: reviewWorkspaceStyles.summaryIconPending,
