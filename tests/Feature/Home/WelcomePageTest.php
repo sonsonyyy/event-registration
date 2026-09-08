@@ -98,9 +98,11 @@ test('welcome page lists open events that can still accept registrations', funct
         ->assertInertia(fn (Assert $page) => $page
             ->component('welcome')
             ->has('events', 1)
-            ->has('registrationFlow', 5)
+            ->has('registrationFlow', 3)
             ->has('faqs', 5)
-            ->where('registrationFlow.0.title', 'Request a registrant account')
+            ->where('registrationFlow.0.title', 'Request church access')
+            ->where('registrationFlow.1.title', 'Register for an event')
+            ->where('registrationFlow.2.title', 'Track verification')
             ->where('faqs.0.question', 'How do I request a registrant account for our church?')
             ->where('events.0.name', 'CLD Youth Conference 2026')
             ->where('events.0.registration_close_at', $registrationCloseAt->toIso8601String())

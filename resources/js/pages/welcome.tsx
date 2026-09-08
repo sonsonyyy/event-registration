@@ -568,23 +568,27 @@ export default function Welcome() {
                                 </p>
                             </div>
 
-                            <div className="grid w-full gap-4 lg:grid-cols-5">
-                                {registrationFlow.map((step) => (
+                            <div className="grid w-full gap-4 md:grid-cols-3">
+                                {registrationFlow.map((step, index) => (
                                     <Card
                                         key={step.eyebrow}
-                                        className="border-[#d8ddd2] bg-white/90 py-0 shadow-xl shadow-[#184d47]/5"
+                                        className="relative overflow-hidden border-[#d8ddd2] bg-white/95 py-0 shadow-xl shadow-[#184d47]/6"
                                     >
-                                        <CardContent className="flex h-full flex-col gap-4 px-5 py-5">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div className="text-xs font-semibold tracking-[0.18em] text-[#184d47] uppercase">
-                                                    {step.eyebrow}
+                                        <div className="absolute inset-x-0 top-0 h-1 bg-[#184d47]" />
+                                        <CardContent className="flex h-full flex-col gap-5 px-6 py-6">
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="flex size-12 shrink-0 items-center justify-center rounded-md bg-[#184d47] text-lg font-bold text-white shadow-lg shadow-[#184d47]/20">
+                                                    {index + 1}
                                                 </div>
                                                 <div className="flex size-9 items-center justify-center rounded-md border border-[#dbe4df] bg-[#f3f7f4] text-[#184d47]">
                                                     <CircleCheckBig className="size-4" />
                                                 </div>
                                             </div>
-                                            <div className="space-y-2">
-                                                <h3 className="text-lg font-bold tracking-[-0.03em] text-slate-900">
+                                            <div className="space-y-3">
+                                                <div className="text-xs font-semibold tracking-[0.18em] text-[#184d47] uppercase">
+                                                    {step.eyebrow}
+                                                </div>
+                                                <h3 className="text-xl font-bold tracking-[-0.03em] text-slate-900">
                                                     {step.title}
                                                 </h3>
                                                 <p className="text-sm leading-6 text-slate-600">

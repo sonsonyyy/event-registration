@@ -123,28 +123,18 @@ class HomeController extends Controller
         return [
             [
                 'eyebrow' => 'Step 1',
-                'title' => 'Request a registrant account',
-                'description' => 'Use the church representative access link and submit the assigned section, pastor, church, and account password. Each church may maintain up to two registrant accounts.',
+                'title' => 'Request church access',
+                'description' => 'Submit the representative details, assigned section, pastor, church, and account password. Each church may maintain up to two registrant accounts.',
             ],
             [
                 'eyebrow' => 'Step 2',
-                'title' => 'Wait for account approval',
-                'description' => 'An authorized reviewer with the proper scope reviews the account request before online registration is unlocked.',
+                'title' => 'Register for an event',
+                'description' => 'Once approved, choose an open event, enter the fee-category quantities, and attach the payment reference with proof of payment.',
             ],
             [
                 'eyebrow' => 'Step 3',
-                'title' => 'Submit the event registration',
-                'description' => 'Choose an open event, add fee-category quantities, and provide the payment reference number with proof of payment.',
-            ],
-            [
-                'eyebrow' => 'Step 4',
-                'title' => 'Monitor verification',
-                'description' => 'Track the submission in the account dashboard while authorized reviewers check the receipt and transaction details.',
-            ],
-            [
-                'eyebrow' => 'Step 5',
-                'title' => 'Complete once verified',
-                'description' => 'When the registration status becomes verified, the church registration is complete for that event.',
+                'title' => 'Track verification',
+                'description' => 'Monitor the dashboard while reviewers validate the submission. Registration is complete when the status is verified.',
             ],
         ];
     }
