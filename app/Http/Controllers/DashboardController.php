@@ -196,7 +196,7 @@ class DashboardController extends Controller
     /**
      * Build the dashboard metrics.
      *
-     * @return array<int, array{label: string, value: int, description: string}>
+     * @return array<int, array{label: string, value: int}>
      */
     private function metrics(User $user, int $openEventsCount, Builder $registrationQuery): array
     {
@@ -212,22 +212,18 @@ class DashboardController extends Controller
                 [
                     'label' => 'Open events',
                     'value' => $openEventsCount,
-                    'description' => 'Events currently accepting registrations',
                 ],
                 [
                     'label' => 'Pending verification',
                     'value' => $pendingVerificationCount,
-                    'description' => 'Registrations waiting for review',
                 ],
                 [
                     'label' => 'Active users',
                     'value' => $activeUsersCount,
-                    'description' => 'Accounts with active workspace access',
                 ],
                 [
                     'label' => 'Active churches',
                     'value' => $activeChurchesCount,
-                    'description' => 'Church records ready for registration use',
                 ],
             ];
         }
@@ -237,22 +233,18 @@ class DashboardController extends Controller
                 [
                     'label' => 'Open events',
                     'value' => $openEventsCount,
-                    'description' => 'Events currently accepting registrations',
                 ],
                 [
                     'label' => 'Pending verification',
                     'value' => $pendingVerificationCount,
-                    'description' => 'Registrations waiting for review',
                 ],
                 [
                     'label' => 'Active users',
                     'value' => $activeUsersCount,
-                    'description' => 'Accounts with active workspace access',
                 ],
                 [
                     'label' => 'Active churches',
                     'value' => $activeChurchesCount,
-                    'description' => 'Church records ready for registration use',
                 ],
             ];
         }
@@ -269,22 +261,18 @@ class DashboardController extends Controller
                 [
                     'label' => 'Assigned churches',
                     'value' => $pastorCount,
-                    'description' => 'Active churches in your section',
                 ],
                 [
                     'label' => 'Section registrations',
                     'value' => $registrationCount,
-                    'description' => 'Registrations within your section scope',
                 ],
                 [
                     'label' => 'Pending verification',
                     'value' => $pendingVerificationCount,
-                    'description' => 'Section submissions still awaiting review',
                 ],
                 [
                     'label' => 'Open events',
                     'value' => $openEventsCount,
-                    'description' => 'Events your section can register into',
                 ],
             ];
         }
@@ -294,24 +282,20 @@ class DashboardController extends Controller
                 [
                     'label' => 'Open events',
                     'value' => $openEventsCount,
-                    'description' => 'Current events available for encoding',
                 ],
                 [
                     'label' => 'Encoded transactions',
                     'value' => $registrationCount,
-                    'description' => 'Onsite registrations created by your account',
                 ],
                 [
                     'label' => 'Paid transactions',
                     'value' => (clone $registrationQuery)
                         ->where('payment_status', Registration::PAYMENT_STATUS_PAID)
                         ->count(),
-                    'description' => 'Transactions marked paid in your history',
                 ],
                 [
                     'label' => 'Pending verification',
                     'value' => $pendingVerificationCount,
-                    'description' => 'Transactions still awaiting verification',
                 ],
             ];
         }
@@ -320,17 +304,14 @@ class DashboardController extends Controller
             [
                 'label' => 'Open events',
                 'value' => $openEventsCount,
-                'description' => 'Events available to your church account',
             ],
             [
                 'label' => 'Submitted registrations',
                 'value' => $registrationCount,
-                'description' => 'Online registrations under your church scope',
             ],
             [
                 'label' => 'Pending verification',
                 'value' => $pendingVerificationCount,
-                'description' => 'Submissions still awaiting review',
             ],
             [
                 'label' => 'Verified or completed',
@@ -340,7 +321,6 @@ class DashboardController extends Controller
                         Registration::STATUS_COMPLETED,
                     ])
                     ->count(),
-                'description' => 'Approved registrations within your church scope',
             ],
         ];
     }

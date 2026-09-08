@@ -82,7 +82,6 @@ export const reviewWorkspaceStyles = {
         'border-[#ecd7d8] bg-[linear-gradient(145deg,_rgba(253,245,245,0.96),_rgba(255,255,255,1))] shadow-[#be4b56]/8 dark:border-rose-950/60 dark:bg-slate-950',
     summaryEyebrow: 'text-slate-500 dark:text-slate-400',
     summaryValue: 'text-slate-900 dark:text-slate-100',
-    summarySubtitle: 'text-slate-600 dark:text-slate-400',
     summaryIconWrapper: 'flex size-9 items-center justify-center rounded-md',
     summaryIconPending:
         'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',

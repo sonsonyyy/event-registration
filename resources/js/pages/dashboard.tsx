@@ -26,7 +26,6 @@ const breadcrumbs: BreadcrumbItem[] = [
 type DashboardMetric = {
     label: string;
     value: number;
-    description: string;
 };
 
 type DashboardEvent = {
@@ -205,7 +204,6 @@ export default function Dashboard({ dashboard }: Props) {
                             return {
                                 title: metric.label,
                                 value: metric.value,
-                                subtitle: metric.description,
                                 icon: style.icon,
                                 cardClassName: style.cardClassName,
                                 iconWrapperClassName:
