@@ -28,12 +28,10 @@ import RegistrationVerificationController from '@/actions/App/Http/Controllers/R
 import ReportsController, {
     onsiteCollectionIndex,
 } from '@/actions/App/Http/Controllers/ReportsController';
-import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import {
     Sidebar,
     SidebarContent,
-    SidebarFooter,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
@@ -177,12 +175,29 @@ export function AppSidebar() {
 
     return (
         <Sidebar collapsible="icon" variant="inset">
-            <SidebarHeader>
+            <SidebarHeader className="px-3 pt-3 pb-2">
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
+                        <SidebarMenuButton
+                            size="lg"
+                            asChild
+                            className="h-auto overflow-hidden rounded-lg border border-sidebar-border/80 bg-linear-to-br from-sidebar-accent via-background to-sidebar-accent/70 p-0 shadow-sm ring-1 ring-white/70 transition-all group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:p-0! hover:border-teal-600/30 hover:shadow-md dark:ring-white/5"
+                        >
                             <Link href={dashboard()} prefetch>
-                                <AppLogo showNameOnMobile />
+                                <span className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-teal-500 via-sky-500 to-amber-400 group-data-[collapsible=icon]:hidden" />
+                                <div className="flex w-full items-center gap-3 px-3 py-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0">
+                                    <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-linear-to-br from-teal-600 to-sky-700 text-white shadow-sm ring-1 ring-white/30 dark:from-teal-400 dark:to-sky-500 dark:text-neutral-950">
+                                        <CalendarRange className="size-4" />
+                                    </div>
+                                    <div className="grid min-w-0 flex-1 gap-1 text-left group-data-[collapsible=icon]:hidden">
+                                        <span className="truncate text-[13px] leading-tight font-bold text-sidebar-foreground">
+                                            {name}
+                                        </span>
+                                        <span className="w-fit rounded-md border border-sidebar-border/70 bg-background/80 px-1.5 py-0.5 text-[10px] leading-tight font-semibold text-muted-foreground shadow-xs">
+                                            App Version v.{appVersion}
+                                        </span>
+                                    </div>
+                                </div>
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -192,17 +207,6 @@ export function AppSidebar() {
             <SidebarContent>
                 <NavMain groups={navGroups} />
             </SidebarContent>
-
-            <SidebarFooter className="border-t border-sidebar-border/60 p-3 group-data-[collapsible=icon]:hidden">
-                <div className="rounded-md border border-sidebar-border/70 bg-sidebar-accent/70 px-3 py-3">
-                    <p className="truncate text-sm font-medium text-sidebar-foreground">
-                        {name}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                        Version {appVersion}
-                    </p>
-                </div>
-            </SidebarFooter>
         </Sidebar>
     );
 }
