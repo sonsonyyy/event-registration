@@ -17,6 +17,7 @@
         "laravel/tinker": "^2.10.1",
         "laravel/wayfinder": "^0.1.9",
         "league/flysystem-aws-s3-v3": "^3.0",
+        "sentry/sentry-laravel": "^4.27",
         "spatie/simple-excel": "^3.9"
     },
     "require-dev": {
