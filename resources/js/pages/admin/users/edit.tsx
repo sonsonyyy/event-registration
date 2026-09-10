@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
-import Heading from '@/components/heading';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -101,10 +100,6 @@ export default function EditUser({
             <Head title={`Edit ${userRecord.name}`} />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title={`Edit ${userRecord.name}`}
-                    description="Update role assignments, status, and scope without exposing self-service account changes."
-                />
                 <UserForm
                     userRecord={userRecord}
                     minimalLayout

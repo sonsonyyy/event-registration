@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import OnlineRegistrationController from '@/actions/App/Http/Controllers/OnlineRegistrationController';
-import Heading from '@/components/heading';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -79,11 +78,6 @@ export default function CreateOnlineRegistration({
             <Head title="Create Online Registration" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title="Create online registration"
-                    description="Register grouped delegates for your assigned church and upload proof of payment during submission."
-                />
-
                 {hasUnavailableDependencies && (
                     <Card className="border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100">
                         <CardHeader>

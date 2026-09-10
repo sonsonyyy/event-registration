@@ -5,7 +5,6 @@ import ReportsController from '@/actions/App/Http/Controllers/ReportsController'
 import DataTablePagination from '@/components/data-table-pagination';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
-import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -195,7 +194,6 @@ const eventStatusVariant = (
 };
 
 export default function ReportsIndex({
-    scopeSummary,
     canFilterBySection,
     events,
     sections,
@@ -265,12 +263,6 @@ export default function ReportsIndex({
             <Head title="Reports" />
 
             <div className="flex flex-1 flex-col gap-5 p-4 md:p-6">
-                <Heading
-                    title="Reports"
-                    description={`Registration reporting for ${scopeSummary}.`}
-                    className="mb-3"
-                />
-
                 <Card className={reportsPanelClassName}>
                     <CardContent className="p-5">
                         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">

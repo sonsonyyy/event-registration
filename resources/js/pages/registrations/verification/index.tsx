@@ -23,7 +23,6 @@ import {
     reviewWorkspaceStyles,
 } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
-import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import RegistrationRecordDialog from '@/components/registration-record-dialog';
 import SummaryStatCards from '@/components/summary-stat-cards';
@@ -326,7 +325,6 @@ const decisionContent: Record<
 };
 
 export default function RegistrationVerificationIndex({
-    scopeSummary,
     summary,
     registrations,
     filters,
@@ -492,11 +490,6 @@ export default function RegistrationVerificationIndex({
             <Head title="Verification" />
 
             <div className="flex flex-1 flex-col gap-5 p-4 md:p-5">
-                <Heading
-                    title="Registration verification"
-                    description={`Review uploaded receipts and resolve registrations within ${scopeSummary}.`}
-                />
-
                 <SummaryStatCards
                     gridClassName="grid gap-3 xl:grid-cols-4"
                     items={summaryCards}

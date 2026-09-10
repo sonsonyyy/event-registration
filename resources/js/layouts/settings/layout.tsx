@@ -1,6 +1,5 @@
 import { Link } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
-import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/hooks/use-current-url';
@@ -32,11 +31,6 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
 
     return (
         <div className="px-4 py-6">
-            <Heading
-                title="Settings"
-                description="Review your profile and manage account security settings"
-            />
-
             <div className="flex flex-col lg:flex-row lg:space-x-12">
                 <aside className="w-full max-w-xl lg:w-48">
                     <nav

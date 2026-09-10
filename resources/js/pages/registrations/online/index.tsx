@@ -14,7 +14,6 @@ import {
     reviewWorkspaceStyles,
 } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
-import Heading from '@/components/heading';
 import RegistrationRecordDialog from '@/components/registration-record-dialog';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
@@ -211,12 +210,6 @@ export default function OnlineRegistrationIndex({
             <Head title="Online Registration" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title="Online registration"
-                    description="View your submitted church registrations and monitor their verification status."
-                    className="mb-4"
-                />
-
                 {assignedPastor && (
                     <AssignedChurchCard assignedPastor={assignedPastor} />
                 )}

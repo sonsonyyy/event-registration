@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
-import Heading from '@/components/heading';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -84,10 +83,6 @@ export default function CreateUser({
             <Head title="Create User" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title="Create user"
-                    description="Create system accounts and assign the correct role and operational scope."
-                />
                 <UserForm
                     minimalLayout
                     roles={roles}

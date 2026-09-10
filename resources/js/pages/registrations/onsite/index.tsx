@@ -9,7 +9,6 @@ import {
     reviewWorkspaceStyles,
 } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
-import Heading from '@/components/heading';
 import RegistrationRecordDialog from '@/components/registration-record-dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -225,12 +224,6 @@ export default function OnsiteRegistrationIndex({
             <Head title="Onsite Registration" />
 
             <div className="flex flex-1 flex-col gap-5 p-4 md:p-5">
-                <Heading
-                    title="Onsite registration"
-                    description="Record walk-in quantities with multiple fee-category items in a single transaction."
-                    className="mb-3"
-                />
-
                 <div className={elevatedIndexTableStyles.shell}>
                     <div className={elevatedIndexTableStyles.band}>
                         <DataTableToolbar

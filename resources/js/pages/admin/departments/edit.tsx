@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import DepartmentController from '@/actions/App/Http/Controllers/Admin/DepartmentController';
-import Heading from '@/components/heading';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -44,10 +43,6 @@ export default function EditDepartment({ department, statusOptions }: Props) {
             <Head title={`Edit ${department.name}`} />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title={`Edit ${department.name}`}
-                    description="Update the department record used for scoped leadership accounts and events."
-                />
                 <DepartmentForm
                     department={department}
                     minimalLayout

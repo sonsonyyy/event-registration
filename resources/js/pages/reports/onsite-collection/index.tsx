@@ -4,7 +4,6 @@ import { CalendarDays, Download } from 'lucide-react';
 import { useState } from 'react';
 import { onsiteCollectionIndex } from '@/actions/App/Http/Controllers/ReportsController';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
-import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
@@ -197,7 +196,6 @@ function CollectionDatePicker({
 }
 
 export default function OnsiteCollectionReportIndex({
-    scopeSummary,
     onsiteCollectionFilters,
     onsiteCollectionCollectorLocked,
     onsiteCollectionUsers,
@@ -264,12 +262,6 @@ export default function OnsiteCollectionReportIndex({
             <Head title="Onsite Collection Report" />
 
             <div className="flex flex-1 flex-col gap-5 p-4 md:p-6">
-                <Heading
-                    title="Onsite Collection Report"
-                    description={`Onsite collection reporting for ${scopeSummary}.`}
-                    className="mb-3"
-                />
-
                 <div className={elevatedIndexTableStyles.shell}>
                     <div className={elevatedIndexTableStyles.band}>
                         <form

@@ -14,7 +14,6 @@ import {
 } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import EntityRecordDialog from '@/components/entity-record-dialog';
-import Heading from '@/components/heading';
 import SummaryStatCards from '@/components/summary-stat-cards';
 import { Button } from '@/components/ui/button';
 import {
@@ -110,7 +109,6 @@ const formatDateTime = (value: string | null): string => {
 };
 
 export default function AccountRequestsIndex({
-    scopeSummary,
     summary,
     requests,
     filters,
@@ -219,11 +217,6 @@ export default function AccountRequestsIndex({
             <Head title="Account Requests" />
 
             <div className="flex flex-1 flex-col gap-5 p-4 md:p-5">
-                <Heading
-                    title="Registrant account requests"
-                    description={`Review church representative account requests within ${scopeSummary}.`}
-                />
-
                 <SummaryStatCards
                     gridClassName="grid gap-3 xl:grid-cols-3"
                     items={summaryCards}

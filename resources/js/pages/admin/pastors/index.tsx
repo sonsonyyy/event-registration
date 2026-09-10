@@ -9,7 +9,6 @@ import {
 import DataTablePagination from '@/components/data-table-pagination';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
-import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import {
     Select,
@@ -154,12 +153,6 @@ export default function PastorIndex({
             <Head title="Pastors" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title="Pastors and churches"
-                    description="Maintain the pastor and church records used by onsite staff and online registrants."
-                    className="mb-4"
-                />
-
                 <div className={elevatedIndexTableStyles.shell}>
                     <div className={elevatedIndexTableStyles.band}>
                         <DataTableToolbar
