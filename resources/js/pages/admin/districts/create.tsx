@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import DistrictController from '@/actions/App/Http/Controllers/Admin/DistrictController';
-import Heading from '@/components/heading';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -36,10 +35,6 @@ export default function CreateDistrict({ statusOptions }: Props) {
             <Head title="Create District" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title="Create district"
-                    description="Add a district before you assign sections beneath it."
-                />
                 <DistrictForm minimalLayout statusOptions={statusOptions} />
             </div>
         </AppLayout>

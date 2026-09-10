@@ -14,7 +14,6 @@ import {
 } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
 import EntityRecordDialog from '@/components/entity-record-dialog';
-import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { formatSystemDateOnly, formatSystemDateTime } from '@/lib/date-time';
@@ -147,12 +146,6 @@ export default function EventIndex({ events, filters, perPageOptions }: Props) {
             <Head title="Events" />
 
             <div className="flex flex-1 flex-col gap-5 p-4 md:p-5">
-                <Heading
-                    title="Events"
-                    description="Manage event schedules, fee categories, and registration capacity in one place."
-                    className="mb-3"
-                />
-
                 <div className={elevatedIndexTableStyles.shell}>
                     <div className={elevatedIndexTableStyles.band}>
                         <DataTableToolbar

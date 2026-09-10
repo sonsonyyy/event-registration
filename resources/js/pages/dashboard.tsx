@@ -7,7 +7,6 @@ import {
     Users,
 } from 'lucide-react';
 import { reviewWorkspaceStyles } from '@/components/data-table-presets';
-import Heading from '@/components/heading';
 import SummaryStatCards from '@/components/summary-stat-cards';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -171,12 +170,6 @@ export default function Dashboard({ dashboard }: Props) {
             <Head title="Dashboard" />
 
             <div className="flex flex-1 flex-col gap-5 p-4 md:p-5">
-                <Heading
-                    title="Dashboard"
-                    description="Event availability, account status, and recent registration activity."
-                    className="mb-3"
-                />
-
                 {dashboard.account_notice && (
                     <Card className={`overflow-hidden py-0 ${noticeClassName}`}>
                         <CardContent className="p-4 sm:p-5">

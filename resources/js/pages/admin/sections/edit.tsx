@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import SectionController from '@/actions/App/Http/Controllers/Admin/SectionController';
-import Heading from '@/components/heading';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -58,10 +57,6 @@ export default function EditSection({
             <Head title={`Edit ${section.name}`} />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title={`Edit ${section.name}`}
-                    description="Update the section metadata and district assignment."
-                />
                 <SectionForm
                     section={section}
                     districts={districts}

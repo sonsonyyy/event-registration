@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import OnlineRegistrationController from '@/actions/App/Http/Controllers/OnlineRegistrationController';
-import Heading from '@/components/heading';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -109,11 +108,6 @@ export default function EditOnlineRegistration({
             <Head title="Edit Online Registration" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title="Edit online registration"
-                    description="Update grouped quantities, proof of payment, and notes before the registration is finalized."
-                />
-
                 <OnlineRegistrationForm
                     assignedPastor={assignedPastor}
                     events={events}

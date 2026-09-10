@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import DepartmentController from '@/actions/App/Http/Controllers/Admin/DepartmentController';
-import Heading from '@/components/heading';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -36,10 +35,6 @@ export default function CreateDepartment({ statusOptions }: Props) {
             <Head title="Create Department" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title="Create department"
-                    description="Add a department before assigning it to users or department-specific events."
-                />
                 <DepartmentForm minimalLayout statusOptions={statusOptions} />
             </div>
         </AppLayout>

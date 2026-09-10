@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import PastorController from '@/actions/App/Http/Controllers/Admin/PastorController';
-import Heading from '@/components/heading';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -59,10 +58,6 @@ export default function EditPastor({ pastor, sections, statusOptions }: Props) {
             <Head title={`Edit ${pastor.church_name}`} />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title={`Edit ${pastor.church_name}`}
-                    description="Update the pastor, church, and section assignment details."
-                />
                 <PastorForm
                     pastor={pastor}
                     minimalLayout

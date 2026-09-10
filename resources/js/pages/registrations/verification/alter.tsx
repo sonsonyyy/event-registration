@@ -1,7 +1,6 @@
 import { Head } from '@inertiajs/react';
 import RegistrationAlterationController from '@/actions/App/Http/Controllers/RegistrationAlterationController';
 import RegistrationVerificationController from '@/actions/App/Http/Controllers/RegistrationVerificationController';
-import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import {
     Card,
@@ -179,11 +178,6 @@ export default function AlterRegistrationVerification({
             <Head title="Alter Registration" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title="Alter registration"
-                    description="Update the online registration, then keep the previous record snapshot in the alteration history."
-                />
-
                 <OnlineRegistrationForm
                     assignedPastor={assignedPastor}
                     events={events}

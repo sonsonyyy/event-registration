@@ -7,7 +7,6 @@ import {
     resolveDataTableTone,
 } from '@/components/data-table-badge';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
-import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -63,12 +62,6 @@ export default function DepartmentIndex({ departments }: Props) {
             <Head title="Departments" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title="Departments"
-                    description="Manage the departments that can own events and be assigned to leadership accounts."
-                    className="mb-4"
-                />
-
                 <div className={elevatedIndexTableStyles.shell}>
                     <div className={elevatedIndexTableStyles.band}>
                         <div className={elevatedIndexTableStyles.headerActions}>

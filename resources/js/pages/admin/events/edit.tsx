@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import EventController from '@/actions/App/Http/Controllers/Admin/EventController';
-import Heading from '@/components/heading';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -112,10 +111,6 @@ export default function EditEvent({
             <Head title={`Edit ${event.name}`} />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title={`Edit ${event.name}`}
-                    description="Adjust registration rules and fee categories without breaking existing reservations."
-                />
                 <EventForm
                     event={event}
                     statusOptions={statusOptions}

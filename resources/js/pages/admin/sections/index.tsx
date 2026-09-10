@@ -7,7 +7,6 @@ import {
     resolveDataTableTone,
 } from '@/components/data-table-badge';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
-import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -67,12 +66,6 @@ export default function SectionIndex({ sections }: Props) {
             <Head title="Sections" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title="Sections"
-                    description="Create and maintain the section records that sit beneath each district."
-                    className="mb-4"
-                />
-
                 <div className={elevatedIndexTableStyles.shell}>
                     <div className={elevatedIndexTableStyles.band}>
                         <div className={elevatedIndexTableStyles.headerActions}>

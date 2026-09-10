@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
-import Heading from '@/components/heading';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -81,11 +80,6 @@ export default function EditOnsiteRegistration({
             <Head title="Edit Onsite Registration" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title="Edit onsite registration"
-                    description="Correct church assignment, grouped quantities, and reference details for this onsite transaction."
-                />
-
                 <OnsiteRegistrationForm
                     events={events}
                     pastors={pastors}

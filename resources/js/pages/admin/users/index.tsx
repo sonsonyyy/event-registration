@@ -9,7 +9,6 @@ import {
 import DataTablePagination from '@/components/data-table-pagination';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import DataTableToolbar from '@/components/data-table-toolbar';
-import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import {
     Select,
@@ -229,12 +228,6 @@ export default function UserIndex({
             <Head title="Users" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title="Users"
-                    description="Manage system accounts, roles, and section or pastor scope assignments."
-                    className="mb-4"
-                />
-
                 <div className={elevatedIndexTableStyles.shell}>
                     <div className={elevatedIndexTableStyles.band}>
                         <DataTableToolbar

@@ -521,11 +521,6 @@ export default function EventCheckInIndex({
             <Head title="Event Check-in" />
 
             <div className="flex flex-1 flex-col gap-5 p-4 md:p-5">
-                <Heading
-                    title="Event Check-in"
-                    description="Claim kits and track attendance by church."
-                />
-
                 <Card className="border-[#d6e2de] bg-[linear-gradient(145deg,_rgba(247,250,249,0.98),_rgba(255,255,255,1))] shadow-sm shadow-[#184d47]/8 dark:border-slate-800 dark:bg-slate-950">
                     <CardHeader className="gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div className="space-y-3">

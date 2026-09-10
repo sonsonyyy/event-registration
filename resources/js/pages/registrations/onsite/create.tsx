@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import OnsiteRegistrationController from '@/actions/App/Http/Controllers/OnsiteRegistrationController';
-import Heading from '@/components/heading';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -66,11 +65,6 @@ export default function CreateOnsiteRegistration({ events, pastors }: Props) {
             <Head title="Create Onsite Registration" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <Heading
-                    title="Create onsite registration"
-                    description="Capture walk-in quantities by fee category without collecting delegate-level details."
-                />
-
                 {hasUnavailableDependencies && (
                     <Card className="border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100">
                         <CardHeader>
