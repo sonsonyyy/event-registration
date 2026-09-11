@@ -27,7 +27,7 @@ type FeeCategoryRecord = {
 type EventRecord = {
     id: number;
     name: string;
-    description: string;
+    department_name: string;
     venue: string;
     date_from: string;
     date_to: string;
@@ -147,11 +147,11 @@ function PublicEventCard({
                         </div>
 
                         <div className="min-w-0 flex-1 space-y-3">
-                            <h3 className="min-w-0 text-lg font-bold text-slate-900">
+                            <h3 className="min-w-0 text-base font-bold text-slate-900">
                                 {event.name}
                             </h3>
-                            <p className="line-clamp-2 text-xs leading-6 text-slate-600">
-                                {event.description}
+                            <p className="text-[0.65rem] leading-4 font-semibold tracking-[0.14em] text-[#184d47] uppercase">
+                                {event.department_name}
                             </p>
                         </div>
                     </div>
@@ -209,12 +209,12 @@ function PublicEventCard({
                                         <div className="truncate text-sm font-semibold text-slate-900">
                                             {feeCategory.category_name}
                                         </div>
-                                        <div className="text-xs text-slate-500">
-                                            {feeCategory.remaining_slots ===
-                                            null
-                                                ? 'No category slot limit'
-                                                : `${feeCategory.remaining_slots} category slots left`}
-                                        </div>
+                                        {feeCategory.remaining_slots !==
+                                            null && (
+                                            <div className="text-xs text-slate-500">
+                                                {`${feeCategory.remaining_slots} category slots left`}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="shrink-0 text-sm font-extrabold text-[#184d47]">
                                         {formatCurrency(feeCategory.amount)}

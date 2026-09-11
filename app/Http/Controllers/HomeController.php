@@ -39,6 +39,7 @@ class HomeController extends Controller
             })
             ->withCapacityMetrics()
             ->with([
+                'department',
                 'feeCategories' => fn ($query) => $query
                     ->where('status', 'active')
                     ->withSum('reservedRegistrationItems as reserved_quantity', 'quantity')
@@ -59,7 +60,7 @@ class HomeController extends Controller
                 return [
                     'id' => $event->getKey(),
                     'name' => $event->name,
-                    'description' => $event->description,
+                    'department_name' => $event->department?->name ?? 'No department',
                     'venue' => $event->venue,
                     'date_from' => $event->date_from->toDateString(),
                     'date_to' => $event->date_to->toDateString(),

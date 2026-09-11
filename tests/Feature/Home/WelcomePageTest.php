@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Department;
 use App\Models\Event;
 use App\Models\EventFeeCategory;
 use App\Models\Registration;
@@ -36,9 +37,13 @@ test('welcome page lists open events that can still accept registrations', funct
     config()->set('app.asset_url', 'http://assets.test');
 
     $registrationCloseAt = now()->addDays(14)->endOfDay();
+    $department = Department::factory()->create([
+        'name' => 'Youth Ministries',
+    ]);
 
     $availableEvent = Event::factory()->create([
         'name' => 'CLD Youth Conference 2026',
+        'department_id' => $department->id,
         'status' => Event::STATUS_OPEN,
         'registration_open_at' => now()->subDay(),
         'registration_close_at' => $registrationCloseAt,
@@ -105,10 +110,12 @@ test('welcome page lists open events that can still accept registrations', funct
             ->where('registrationFlow.2.title', 'Track verification')
             ->where('faqs.0.question', 'How do I request a registrant account for our church?')
             ->where('events.0.name', 'CLD Youth Conference 2026')
+            ->where('events.0.department_name', 'Youth Ministries')
             ->where('events.0.registration_close_at', $registrationCloseAt->toIso8601String())
             ->where('events.0.remaining_slots', 797)
             ->where('events.0.fee_categories.0.remaining_slots', 7)
-            ->where('events.0.fee_categories.0.category_name', 'Regular (Online)'));
+            ->where('events.0.fee_categories.0.category_name', 'Regular (Online)')
+            ->missing('events.0.description'));
 
     $laterReservation = Registration::factory()->create([
         'event_id' => $availableEvent->id,
