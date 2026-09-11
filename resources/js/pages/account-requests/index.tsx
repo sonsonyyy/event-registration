@@ -98,11 +98,14 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const accountRequestsTableClassName = `${elevatedIndexTableStyles.table} min-w-[70rem]`;
+const accountRequestsTableClassName = `${elevatedIndexTableStyles.table} min-w-[84rem] table-auto`;
 
-const formatDateTime = (value: string | null): string => {
+const formatDateTime = (
+    value: string | null,
+    fallback = 'Not reviewed yet',
+): string => {
     if (!value) {
-        return 'Not reviewed yet';
+        return fallback;
     }
 
     return formatManilaDateTime(value);
@@ -358,7 +361,14 @@ export default function AccountRequestsIndex({
                                             elevatedIndexTableStyles.firstHeaderCell
                                         }
                                     >
-                                        Requester
+                                        Requester Name
+                                    </th>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Email
                                     </th>
                                     <th
                                         className={
@@ -372,14 +382,22 @@ export default function AccountRequestsIndex({
                                             elevatedIndexTableStyles.headerCell
                                         }
                                     >
-                                        Requested
+                                        Pastor
                                     </th>
                                     <th
-                                        className={
-                                            elevatedIndexTableStyles.headerCell
-                                        }
+                                        className={`${elevatedIndexTableStyles.headerCell} text-center`}
                                     >
                                         Status
+                                    </th>
+                                    <th
+                                        className={`${elevatedIndexTableStyles.headerCell} text-right`}
+                                    >
+                                        Reviewed By
+                                    </th>
+                                    <th
+                                        className={`${elevatedIndexTableStyles.headerCell} text-right`}
+                                    >
+                                        Requested At
                                     </th>
                                     <th
                                         className={
@@ -394,7 +412,7 @@ export default function AccountRequestsIndex({
                                 {requests.data.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={5}
+                                            colSpan={8}
                                             className={
                                                 elevatedIndexTableStyles.emptyCell
                                             }
@@ -433,94 +451,88 @@ export default function AccountRequestsIndex({
                                             <td
                                                 className={`${elevatedIndexTableStyles.firstCell} min-w-[14rem]`}
                                             >
-                                                <div className="font-medium text-slate-900 dark:text-slate-100">
+                                                <div
+                                                    className="font-medium whitespace-nowrap text-slate-900 dark:text-slate-100"
+                                                    title={accountRequest.name}
+                                                >
                                                     {accountRequest.name}
                                                 </div>
-                                                <div className="mt-1 text-[12px] whitespace-nowrap text-slate-500 sm:text-[13px] dark:text-slate-400">
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[18rem]`}
+                                            >
+                                                <div
+                                                    className="font-medium whitespace-nowrap text-slate-900 dark:text-slate-100"
+                                                    title={accountRequest.email}
+                                                >
                                                     {accountRequest.email}
                                                 </div>
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.cell} min-w-[16rem]`}
                                             >
-                                                <div className="font-medium text-slate-900 dark:text-slate-100">
+                                                <div
+                                                    className="font-medium whitespace-nowrap text-slate-900 dark:text-slate-100"
+                                                    title={
+                                                        accountRequest.pastor
+                                                            ?.church_name ??
+                                                        'No church assigned'
+                                                    }
+                                                >
                                                     {accountRequest.pastor
                                                         ?.church_name ??
                                                         'No church assigned'}
                                                 </div>
-                                                <div className="mt-1 text-[12px] whitespace-nowrap text-slate-500 sm:text-[13px] dark:text-slate-400">
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[14rem]`}
+                                            >
+                                                <div
+                                                    className="font-medium whitespace-nowrap text-slate-900 dark:text-slate-100"
+                                                    title={
+                                                        accountRequest.pastor
+                                                            ?.pastor_name ??
+                                                        'No pastor assigned'
+                                                    }
+                                                >
                                                     {accountRequest.pastor
                                                         ?.pastor_name ??
                                                         'No pastor assigned'}
-                                                    {' - '}
-                                                    {accountRequest.pastor
-                                                        ?.section_name ??
-                                                        'No section'}
                                                 </div>
                                             </td>
                                             <td
-                                                className={`${elevatedIndexTableStyles.cell} min-w-[16rem] text-[12px] text-slate-500 sm:text-[13px] dark:text-slate-400`}
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[12rem] text-center`}
                                             >
-                                                <div>
-                                                    Submitted{' '}
-                                                    {formatDateTime(
-                                                        accountRequest.created_at,
-                                                    )}
-                                                </div>
-                                                <div className="mt-1.5">
-                                                    {accountRequest.approval_reviewer ? (
-                                                        <div className="line-clamp-1">
-                                                            Reviewed by{' '}
-                                                            <span className="font-medium text-slate-900 dark:text-slate-100">
-                                                                {
-                                                                    accountRequest
-                                                                        .approval_reviewer
-                                                                        .name
-                                                                }
-                                                            </span>
-                                                        </div>
-                                                    ) : (
-                                                        <div>
-                                                            Waiting for reviewer
-                                                            action
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td
-                                                className={`${elevatedIndexTableStyles.cell} min-w-[12rem]`}
-                                            >
-                                                <div className="flex flex-nowrap gap-1.5">
-                                                    <DataTableBadge
-                                                        tone={resolveDataTableTone(
-                                                            accountRequest.approval_status,
-                                                            {
-                                                                approved:
-                                                                    'emerald',
-                                                                rejected:
-                                                                    'rose',
-                                                                pending:
-                                                                    'amber',
-                                                            },
-                                                        )}
-                                                        className="w-fit rounded-md capitalize"
-                                                    >
+                                                <DataTableBadge
+                                                    tone={resolveDataTableTone(
+                                                        accountRequest.approval_status,
                                                         {
-                                                            accountRequest.approval_status
-                                                        }
-                                                    </DataTableBadge>
-                                                    <DataTableBadge
-                                                        tone={
-                                                            accountRequest.status ===
-                                                            'active'
-                                                                ? 'emerald'
-                                                                : 'rose'
-                                                        }
-                                                        className="w-fit rounded-md capitalize"
-                                                    >
-                                                        {accountRequest.status}
-                                                    </DataTableBadge>
-                                                </div>
+                                                            approved: 'emerald',
+                                                            rejected: 'rose',
+                                                            pending: 'amber',
+                                                        },
+                                                    )}
+                                                    className="mx-auto w-fit rounded-md capitalize"
+                                                >
+                                                    {
+                                                        accountRequest.approval_status
+                                                    }
+                                                </DataTableBadge>
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[14rem] text-right whitespace-nowrap text-slate-500 dark:text-slate-400`}
+                                            >
+                                                {accountRequest
+                                                    .approval_reviewer?.name ??
+                                                    '-'}
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[12rem] text-right whitespace-nowrap text-slate-500 dark:text-slate-400`}
+                                            >
+                                                {formatDateTime(
+                                                    accountRequest.created_at,
+                                                    'Not requested',
+                                                )}
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.lastCellRight} min-w-[8rem] text-right`}
