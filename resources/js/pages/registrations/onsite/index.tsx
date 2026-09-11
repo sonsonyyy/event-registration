@@ -95,7 +95,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const onsiteTableClassName = `${elevatedIndexTableStyles.table} min-w-[68rem]`;
+const onsiteTableClassName = `${elevatedIndexTableStyles.table} min-w-[68rem] table-auto`;
 
 const formatCurrency = (value: string): string =>
     new Intl.NumberFormat(undefined, {
@@ -327,7 +327,7 @@ export default function OnsiteRegistrationIndex({
                                             elevatedIndexTableStyles.firstHeaderCell
                                         }
                                     >
-                                        Transaction
+                                        Event Name
                                     </th>
                                     <th
                                         className={
@@ -341,21 +341,22 @@ export default function OnsiteRegistrationIndex({
                                             elevatedIndexTableStyles.headerCell
                                         }
                                     >
-                                        Items
+                                        Pastor
                                     </th>
                                     <th
-                                        className={
-                                            elevatedIndexTableStyles.headerCell
-                                        }
+                                        className={`${elevatedIndexTableStyles.headerCell} text-right`}
                                     >
-                                        Totals
+                                        Delegates
                                     </th>
                                     <th
-                                        className={
-                                            elevatedIndexTableStyles.headerCell
-                                        }
+                                        className={`${elevatedIndexTableStyles.headerCell} text-right`}
                                     >
-                                        Encoded by
+                                        Total Amount
+                                    </th>
+                                    <th
+                                        className={`${elevatedIndexTableStyles.headerCell} text-right`}
+                                    >
+                                        Registered At
                                     </th>
                                     <th
                                         className={
@@ -370,7 +371,7 @@ export default function OnsiteRegistrationIndex({
                                 {registrations.data.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={6}
+                                            colSpan={7}
                                             className={
                                                 elevatedIndexTableStyles.emptyCell
                                             }
@@ -408,95 +409,65 @@ export default function OnsiteRegistrationIndex({
                                             <td
                                                 className={`${elevatedIndexTableStyles.firstCell} min-w-[16rem]`}
                                             >
-                                                <div className="font-medium text-foreground">
+                                                <div
+                                                    className="font-medium whitespace-nowrap text-foreground"
+                                                    title={
+                                                        registration.event.name
+                                                    }
+                                                >
                                                     {registration.event.name}
-                                                </div>
-                                                <div className="mt-1 text-[12px] text-muted-foreground sm:text-[13px]">
-                                                    {formatDate(
-                                                        registration.submitted_at,
-                                                    )}
                                                 </div>
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.cell} min-w-[14rem]`}
                                             >
-                                                <div className="font-medium text-foreground">
+                                                <div
+                                                    className="font-medium whitespace-nowrap text-foreground"
+                                                    title={
+                                                        registration.pastor
+                                                            .church_name
+                                                    }
+                                                >
                                                     {
                                                         registration.pastor
                                                             .church_name
                                                     }
                                                 </div>
-                                                <div className="mt-1 text-[12px] whitespace-nowrap text-muted-foreground sm:text-[13px]">
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[14rem]`}
+                                            >
+                                                <div
+                                                    className="font-medium whitespace-nowrap text-foreground"
+                                                    title={
+                                                        registration.pastor
+                                                            .pastor_name
+                                                    }
+                                                >
                                                     {
                                                         registration.pastor
                                                             .pastor_name
                                                     }
-                                                    {' - '}
-                                                    {
-                                                        registration.pastor
-                                                            .section_name
-                                                    }
                                                 </div>
                                             </td>
                                             <td
-                                                className={`${elevatedIndexTableStyles.cell} min-w-[18rem]`}
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[8rem] text-right whitespace-nowrap text-foreground`}
                                             >
-                                                <div className="space-y-1.5">
-                                                    {registration.items.map(
-                                                        (item) => (
-                                                            <div
-                                                                key={item.id}
-                                                                className="space-y-0.5"
-                                                            >
-                                                                <div className="text-[12px] font-medium whitespace-nowrap text-foreground sm:text-[13px]">
-                                                                    {
-                                                                        item.category_name
-                                                                    }{' '}
-                                                                    -{' '}
-                                                                    <span className="text-muted-foreground">
-                                                                        {
-                                                                            item.quantity
-                                                                        }{' '}
-                                                                        x{' '}
-                                                                        {formatCurrency(
-                                                                            item.unit_amount,
-                                                                        )}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        ),
-                                                    )}
-                                                </div>
+                                                {registration.total_quantity}
                                             </td>
                                             <td
-                                                className={`${elevatedIndexTableStyles.cell} min-w-[10rem] text-[12px] text-muted-foreground sm:text-[13px]`}
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[10rem] text-right whitespace-nowrap text-foreground`}
                                             >
-                                                <div className="font-medium whitespace-nowrap text-foreground">
-                                                    {
-                                                        registration.total_quantity
-                                                    }{' '}
-                                                    delegates
-                                                </div>
-                                                <div className="mt-1 font-medium text-foreground">
-                                                    {formatCurrency(
-                                                        registration.total_amount,
-                                                    )}
-                                                </div>
-                                                {registration.remarks && (
-                                                    <div className="mt-1 line-clamp-1 max-w-sm">
-                                                        {registration.remarks}
-                                                    </div>
+                                                {formatCurrency(
+                                                    registration.total_amount,
                                                 )}
                                             </td>
                                             <td
-                                                className={`${elevatedIndexTableStyles.cell} min-w-[10rem] whitespace-nowrap text-muted-foreground`}
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[12rem] text-right whitespace-nowrap text-muted-foreground`}
                                             >
-                                                <div>
-                                                    {
-                                                        registration.encoded_by
-                                                            .name
-                                                    }
-                                                </div>
+                                                {formatDate(
+                                                    registration.submitted_at,
+                                                )}
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.lastCellRight} min-w-[8rem] text-right`}

@@ -2,7 +2,7 @@ export const elevatedIndexTableStyles = {
     shell: 'overflow-hidden rounded-md border border-slate-200/80 bg-background shadow-[0_22px_60px_-34px_rgba(15,23,42,0.26)] dark:border-slate-800 dark:bg-slate-950',
     band: 'border-b border-slate-200/80 bg-[linear-gradient(180deg,#fcfdfb_0%,#f7f9f7_100%)] px-3 py-2.5 sm:px-4 sm:py-3 md:px-5 dark:border-slate-800 dark:bg-slate-950/70',
     toolbar: 'gap-2.5 lg:flex-row lg:items-end lg:justify-between',
-    searchWrapper: 'max-w-none',
+    searchWrapper: 'w-full sm:max-w-md xl:max-w-lg',
     input: 'h-9 rounded-md border-slate-200 bg-white pl-10 text-[12px] text-slate-900 shadow-none placeholder:text-slate-400 sm:h-10 sm:pl-11 sm:text-[13px] focus-visible:border-[#184d47]/35 focus-visible:ring-[#184d47]/12 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500',
     action: 'w-full lg:w-auto',
     primaryButton:
@@ -96,7 +96,7 @@ export const reviewWorkspaceStyles = {
     shell: 'overflow-hidden rounded-md border border-[#d6e2de] bg-[linear-gradient(145deg,_rgba(247,250,249,0.98),_rgba(255,255,255,1))] shadow-sm shadow-[#184d47]/8 dark:border-slate-800 dark:bg-slate-950',
     band: 'border-b border-[#dce4e1] bg-white/75 px-3 py-2.5 sm:px-4 sm:py-3 md:px-5 dark:border-slate-800 dark:bg-slate-950/70',
     toolbar: 'gap-2.5 lg:flex-row lg:items-end lg:justify-between',
-    searchWrapper: 'max-w-none',
+    searchWrapper: 'w-full sm:max-w-md xl:max-w-lg',
     input: 'h-9 rounded-md border-[#d6e2de] bg-white pl-10 text-[12px] text-slate-900 shadow-none placeholder:text-slate-400 sm:h-10 sm:pl-11 sm:text-[13px] focus-visible:border-[#184d47]/35 focus-visible:ring-[#184d47]/12 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500',
     action: 'w-full lg:w-auto',
     selectTrigger:
