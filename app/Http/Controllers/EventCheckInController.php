@@ -92,7 +92,6 @@ class EventCheckInController extends Controller
                 ? $this->selectedEventData($selectedEvent)
                 : null,
             'summary' => $workspace['summary'],
-            'feeCategorySummary' => $workspace['fee_category_summary'],
             'churches' => [
                 'data' => $churches->getCollection()->all(),
                 'meta' => $this->paginationMeta($churches),
@@ -263,16 +262,14 @@ class EventCheckInController extends Controller
 
     private function selectedEvent(Collection $events, ?int $eventId): ?Event
     {
-        if ($events->isEmpty()) {
+        if ($events->isEmpty() || $eventId === null) {
             return null;
         }
 
         /** @var Event|null $selectedEvent */
-        $selectedEvent = $eventId !== null
-            ? $events->firstWhere('id', $eventId)
-            : null;
+        $selectedEvent = $events->firstWhere('id', $eventId);
 
-        return $selectedEvent ?? $events->first();
+        return $selectedEvent;
     }
 
     private function selectedSectionId(
@@ -303,7 +300,6 @@ class EventCheckInController extends Controller
     /**
      * @return array{
      *     summary: array{registered_quantity: int, claimed_quantity: int, remaining_quantity: int, churches_fully_claimed: int, churches_not_claimed: int},
-     *     fee_category_summary: array<int, array{id: int, category_name: string, registered_quantity: int, claimed_quantity: int, remaining_quantity: int}>,
      *     churches: Collection<int, array<string, mixed>>
      * }
      */
@@ -420,32 +416,6 @@ class EventCheckInController extends Controller
                     ->where('claim_status', 'not claimed')
                     ->count(),
             ],
-            'fee_category_summary' => $feeCategories
-                ->map(function (EventFeeCategory $feeCategory) use ($churches): array {
-                    $registeredQuantity = (int) $churches->sum(function (array $church) use ($feeCategory): int {
-                        $category = collect($church['category_totals'])
-                            ->firstWhere('id', $feeCategory->getKey());
-
-                        return (int) ($category['registered_quantity'] ?? 0);
-                    });
-                    $claimedQuantity = (int) $churches->sum(function (array $church) use ($feeCategory): int {
-                        $category = collect($church['category_totals'])
-                            ->firstWhere('id', $feeCategory->getKey());
-
-                        return (int) ($category['claimed_quantity'] ?? 0);
-                    });
-
-                    return [
-                        'id' => $feeCategory->getKey(),
-                        'category_name' => $feeCategory->category_name,
-                        'registered_quantity' => $registeredQuantity,
-                        'claimed_quantity' => $claimedQuantity,
-                        'remaining_quantity' => max(0, $registeredQuantity - $claimedQuantity),
-                    ];
-                })
-                ->filter(fn (array $category): bool => $category['registered_quantity'] > 0 || $category['claimed_quantity'] > 0)
-                ->values()
-                ->all(),
             'churches' => $churches,
         ];
     }
@@ -453,7 +423,6 @@ class EventCheckInController extends Controller
     /**
      * @return array{
      *     summary: array{registered_quantity: int, claimed_quantity: int, remaining_quantity: int, churches_fully_claimed: int, churches_not_claimed: int},
-     *     fee_category_summary: array<int, array{id: int, category_name: string, registered_quantity: int, claimed_quantity: int, remaining_quantity: int}>,
      *     churches: Collection<int, array<string, mixed>>
      * }
      */
@@ -467,7 +436,6 @@ class EventCheckInController extends Controller
                 'churches_fully_claimed' => 0,
                 'churches_not_claimed' => 0,
             ],
-            'fee_category_summary' => [],
             'churches' => collect(),
         ];
     }
