@@ -11,6 +11,40 @@ use App\Models\Section;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
+test('event check-in does not select an event by default', function () {
+    $district = District::factory()->create();
+    $section = Section::factory()->for($district)->create();
+    $pastor = Pastor::factory()->for($section)->create();
+    $staff = User::factory()->registrationStaff()->create([
+        'district_id' => $district->id,
+    ]);
+    $event = eventCheckInEvent([
+        'district_id' => $district->id,
+    ]);
+    $feeCategory = EventFeeCategory::factory()->for($event)->create();
+
+    createClaimableRegistration(
+        $event,
+        $pastor,
+        $staff,
+        $feeCategory,
+        2,
+        Registration::MODE_ONLINE,
+        Registration::STATUS_VERIFIED,
+    );
+
+    $this->actingAs($staff)
+        ->get(route('event-check-in.index'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('event-check-in/index')
+            ->has('events', 1)
+            ->where('filters.event_id', null)
+            ->where('selectedEvent', null)
+            ->where('summary.registered_quantity', 0)
+            ->has('churches.data', 0));
+});
+
 test('registration staff can view event check-in progress and store partial claims', function () {
     $district = District::factory()->create([
         'name' => 'Central District',
@@ -81,13 +115,6 @@ test('registration staff can view event check-in progress and store partial clai
             ->where('summary.registered_quantity', 7)
             ->where('summary.claimed_quantity', 2)
             ->where('summary.remaining_quantity', 5)
-            ->has('feeCategorySummary', 2)
-            ->where('feeCategorySummary.0.registered_quantity', 5)
-            ->where('feeCategorySummary.0.claimed_quantity', 2)
-            ->where('feeCategorySummary.0.remaining_quantity', 3)
-            ->where('feeCategorySummary.1.registered_quantity', 2)
-            ->where('feeCategorySummary.1.claimed_quantity', 0)
-            ->where('feeCategorySummary.1.remaining_quantity', 2)
             ->has('churches.data', 1)
             ->where('churches.data.0.church_name', 'Hope Assembly')
             ->where('churches.data.0.registered_quantity', 7)

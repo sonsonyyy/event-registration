@@ -24,13 +24,6 @@ import SummaryStatCards from '@/components/summary-stat-cards';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import {
     Drawer,
     DrawerContent,
     DrawerDescription,
@@ -48,7 +41,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
-import { formatSystemDateOnly, formatSystemDateTime } from '@/lib/date-time';
+import { formatSystemDateTime } from '@/lib/date-time';
 import { formTextareaClassName } from '@/lib/ui-styles';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, PaginatedData } from '@/types';
@@ -155,7 +148,6 @@ type Props = {
         remaining_quantity: number;
         churches_not_claimed: number;
     };
-    feeCategorySummary: FeeCategorySummary[];
     churches: PaginatedData<ChurchRecord>;
 };
 
@@ -199,33 +191,10 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const checkInTableClassName = `${elevatedIndexTableStyles.table} min-w-[88rem]`;
+const checkInTableClassName = `${elevatedIndexTableStyles.table} min-w-[92rem] table-auto`;
 
 const formatDateTime = (value: string | null, fallback = 'Not yet claimed') =>
     value ? formatSystemDateTime(value) : fallback;
-
-const formatEventDateRange = (
-    dateFrom: string | null,
-    dateTo: string | null,
-): string => {
-    if (dateFrom !== null && dateTo !== null) {
-        if (dateFrom === dateTo) {
-            return formatSystemDateOnly(dateFrom);
-        }
-
-        return `${formatSystemDateOnly(dateFrom)} - ${formatSystemDateOnly(dateTo)}`;
-    }
-
-    if (dateFrom !== null) {
-        return formatSystemDateOnly(dateFrom);
-    }
-
-    if (dateTo !== null) {
-        return formatSystemDateOnly(dateTo);
-    }
-
-    return 'Date TBA';
-};
 
 const claimStatusTone = (value: string) =>
     resolveDataTableTone(
@@ -234,19 +203,6 @@ const claimStatusTone = (value: string) =>
             'not claimed': 'amber',
             'partially claimed': 'blue',
             'fully claimed': 'emerald',
-        },
-        'slate',
-    );
-
-const eventStatusTone = (value: string) =>
-    resolveDataTableTone(
-        value,
-        {
-            open: 'emerald',
-            completed: 'emerald',
-            closed: 'rose',
-            cancelled: 'rose',
-            draft: 'slate',
         },
         'slate',
     );
@@ -272,9 +228,7 @@ export default function EventCheckInIndex({
     claimStatusOptions,
     filters,
     perPageOptions,
-    selectedEvent,
     summary,
-    feeCategorySummary,
     churches,
 }: Props) {
     const [search, setSearch] = useState(filters.search);
@@ -521,86 +475,62 @@ export default function EventCheckInIndex({
             <Head title="Event Check-in" />
 
             <div className="flex flex-1 flex-col gap-5 p-4 md:p-5">
-                <Card className="border-[#d6e2de] bg-[linear-gradient(145deg,_rgba(247,250,249,0.98),_rgba(255,255,255,1))] shadow-sm shadow-[#184d47]/8 dark:border-slate-800 dark:bg-slate-950">
-                    <CardHeader className="gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="space-y-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <Badge
-                                    variant="outline"
-                                    className="border-[#cfe0da] bg-white/85 text-[#184d47] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                                >
-                                    <PackageCheck className="mr-1.5 size-3.5" />
-                                    Kit Claiming & Attendance
-                                </Badge>
-                                {selectedEvent && (
-                                    <DataTableBadge
-                                        tone={eventStatusTone(
-                                            selectedEvent.status,
-                                        )}
-                                    >
-                                        {selectedEvent.status}
-                                    </DataTableBadge>
-                                )}
-                            </div>
+                <SummaryStatCards
+                    gridClassName="grid gap-3 xl:grid-cols-4"
+                    items={summaryCards}
+                />
 
-                            <div className="space-y-1">
-                                <CardTitle className="text-base text-slate-900 dark:text-slate-100">
-                                    {selectedEvent?.name ??
-                                        'Select an accessible event'}
-                                </CardTitle>
-                                <CardDescription className="max-w-3xl text-[13px] leading-5">
-                                    {selectedEvent
-                                        ? `${selectedEvent.venue} - ${formatEventDateRange(selectedEvent.date_from, selectedEvent.date_to)}`
-                                        : 'Only events with claimable registrations inside your scope appear here.'}
-                                </CardDescription>
-                            </div>
-                        </div>
-
-                        <div className="w-full max-w-sm shrink-0 space-y-2">
-                            <Label htmlFor="event_id">Event</Label>
-                            <Select
-                                value={
-                                    filters.event_id !== null
-                                        ? String(filters.event_id)
-                                        : 'none'
-                                }
-                                onValueChange={(value) =>
-                                    visitIndex(
-                                        buildQuery({
-                                            eventValue: value,
-                                            sectionValue: 'all',
-                                            searchValue: '',
-                                            claimStatusValue: 'all',
-                                            perPage: filters.per_page,
-                                        }),
-                                    )
-                                }
+                <div className="flex justify-end">
+                    <div className="w-full max-w-sm sm:w-96">
+                        <Select
+                            value={
+                                filters.event_id !== null
+                                    ? String(filters.event_id)
+                                    : 'none'
+                            }
+                            onValueChange={(value) =>
+                                visitIndex(
+                                    buildQuery({
+                                        eventValue: value,
+                                        sectionValue: 'all',
+                                        searchValue: '',
+                                        claimStatusValue: 'all',
+                                        perPage: filters.per_page,
+                                    }),
+                                )
+                            }
+                        >
+                            <SelectTrigger
+                                id="event_id"
+                                aria-label="Event"
+                                className={`${elevatedIndexTableStyles.selectTrigger} h-auto min-h-9 whitespace-normal py-2 text-left sm:min-h-10 [&_[data-slot=select-value]]:line-clamp-none [&_[data-slot=select-value]]:whitespace-normal`}
                             >
-                                <SelectTrigger
-                                    id="event_id"
-                                    className={
-                                        elevatedIndexTableStyles.selectTrigger
-                                    }
-                                >
-                                    <SelectValue placeholder="Select an event" />
-                                </SelectTrigger>
-                                <SelectContent
-                                    className={
-                                        elevatedIndexTableStyles.selectContent
-                                    }
-                                >
-                                    {events.length === 0 ? (
+                                <SelectValue placeholder="Select an event" />
+                            </SelectTrigger>
+                            <SelectContent
+                                className={elevatedIndexTableStyles.selectContent}
+                            >
+                                {events.length === 0 ? (
+                                    <SelectItem
+                                        value="none"
+                                        disabled
+                                        className={
+                                            elevatedIndexTableStyles.selectItem
+                                        }
+                                    >
+                                        No accessible events
+                                    </SelectItem>
+                                ) : (
+                                    <>
                                         <SelectItem
                                             value="none"
-                                            disabled
                                             className={
                                                 elevatedIndexTableStyles.selectItem
                                             }
                                         >
-                                            No accessible events
+                                            Select an event
                                         </SelectItem>
-                                    ) : (
-                                        events.map((event) => (
+                                        {events.map((event) => (
                                             <SelectItem
                                                 key={event.id}
                                                 value={String(event.id)}
@@ -610,63 +540,15 @@ export default function EventCheckInIndex({
                                             >
                                                 {event.name}
                                             </SelectItem>
-                                        ))
-                                    )}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </CardHeader>
-                </Card>
-
-                <SummaryStatCards
-                    gridClassName="grid gap-3 xl:grid-cols-4"
-                    items={summaryCards}
-                />
+                                        ))}
+                                    </>
+                                )}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
 
                 <div className="space-y-5">
-                    <Card className="border-[#d6e2de] dark:border-slate-800">
-                        <CardHeader>
-                            <CardTitle>Fee-category progress</CardTitle>
-                            <CardDescription>
-                                Monitor registered, claimed, and remaining
-                                quantities for the selected event.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            {feeCategorySummary.length === 0 ? (
-                                <div className="rounded-md border border-dashed border-slate-300 px-4 py-6 text-sm text-muted-foreground dark:border-slate-700">
-                                    Select an event with claimable registrations
-                                    to view fee-category progress.
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    {feeCategorySummary.map((category) => (
-                                        <div
-                                            key={category.id}
-                                            className="grid gap-2 rounded-md border border-slate-200/80 bg-slate-50/70 px-3 py-3 text-sm lg:grid-cols-[minmax(0,1.25fr)_repeat(3,minmax(0,11rem))] dark:border-slate-800 dark:bg-slate-900/40"
-                                        >
-                                            <div className="font-medium text-slate-900 dark:text-slate-100">
-                                                {category.category_name}
-                                            </div>
-                                            <div className="text-slate-600 dark:text-slate-300">
-                                                Registered:{' '}
-                                                {category.registered_quantity}
-                                            </div>
-                                            <div className="text-slate-600 dark:text-slate-300">
-                                                Claimed:{' '}
-                                                {category.claimed_quantity}
-                                            </div>
-                                            <div className="text-slate-600 dark:text-slate-300">
-                                                Remaining:{' '}
-                                                {category.remaining_quantity}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
                     <div className={elevatedIndexTableStyles.shell}>
                         <div className={elevatedIndexTableStyles.band}>
                             <DataTableToolbar
@@ -834,32 +716,39 @@ export default function EventCheckInIndex({
                                                 elevatedIndexTableStyles.headerCell
                                             }
                                         >
+                                            Pastor
+                                        </th>
+                                        <th
+                                            className={
+                                                elevatedIndexTableStyles.headerCell
+                                            }
+                                        >
                                             Section
                                         </th>
                                         <th
-                                            className={`${elevatedIndexTableStyles.headerCell} text-right`}
-                                        >
-                                            Registered Qty
-                                        </th>
-                                        <th
-                                            className={`${elevatedIndexTableStyles.headerCell} text-right`}
-                                        >
-                                            Claimed Qty
-                                        </th>
-                                        <th
-                                            className={`${elevatedIndexTableStyles.headerCell} text-right`}
-                                        >
-                                            Remaining Qty
-                                        </th>
-                                        <th
                                             className={`${elevatedIndexTableStyles.headerCell} text-center`}
                                         >
-                                            Claim Status
+                                            Status
                                         </th>
                                         <th
-                                            className={`${elevatedIndexTableStyles.headerCell} text-center`}
+                                            className={`${elevatedIndexTableStyles.headerCell} text-right`}
                                         >
-                                            Last Claim
+                                            Registered
+                                        </th>
+                                        <th
+                                            className={`${elevatedIndexTableStyles.headerCell} text-right`}
+                                        >
+                                            Claimed
+                                        </th>
+                                        <th
+                                            className={`${elevatedIndexTableStyles.headerCell} text-right`}
+                                        >
+                                            Remaining
+                                        </th>
+                                        <th
+                                            className={`${elevatedIndexTableStyles.headerCell} text-right`}
+                                        >
+                                            Last Claim At
                                         </th>
                                         <th
                                             className={
@@ -876,7 +765,7 @@ export default function EventCheckInIndex({
                                     {churches.data.length === 0 ? (
                                         <tr>
                                             <td
-                                                colSpan={8}
+                                                colSpan={9}
                                                 className={
                                                     elevatedIndexTableStyles.emptyCell
                                                 }
@@ -918,53 +807,42 @@ export default function EventCheckInIndex({
                                                 }
                                             >
                                                 <td
-                                                    className={
-                                                        elevatedIndexTableStyles.firstCell
-                                                    }
+                                                    className={`${elevatedIndexTableStyles.firstCell} min-w-[16rem]`}
                                                 >
                                                     <div
-                                                        className={
-                                                            elevatedIndexTableStyles.primaryText
+                                                        className={`${elevatedIndexTableStyles.primaryText} whitespace-nowrap`}
+                                                        title={
+                                                            church.church_name
                                                         }
                                                     >
                                                         {church.church_name}
                                                     </div>
+                                                </td>
+                                                <td
+                                                    className={`${elevatedIndexTableStyles.cell} min-w-[14rem]`}
+                                                >
                                                     <div
-                                                        className={
-                                                            elevatedIndexTableStyles.secondaryText
+                                                        className={`${elevatedIndexTableStyles.primaryText} whitespace-nowrap`}
+                                                        title={
+                                                            church.pastor_name
                                                         }
                                                     >
                                                         {church.pastor_name}
                                                     </div>
                                                 </td>
                                                 <td
-                                                    className={
-                                                        elevatedIndexTableStyles.cell
-                                                    }
+                                                    className={`${elevatedIndexTableStyles.cell} min-w-[12rem]`}
                                                 >
                                                     <div
-                                                        className={
-                                                            elevatedIndexTableStyles.primaryText
+                                                        className={`${elevatedIndexTableStyles.primaryText} whitespace-nowrap`}
+                                                        title={
+                                                            church.section_name ??
+                                                            'Unassigned'
                                                         }
                                                     >
                                                         {church.section_name ??
                                                             'Unassigned'}
                                                     </div>
-                                                </td>
-                                                <td
-                                                    className={`${elevatedIndexTableStyles.cell} text-right font-medium text-slate-900 dark:text-slate-100`}
-                                                >
-                                                    {church.registered_quantity}
-                                                </td>
-                                                <td
-                                                    className={`${elevatedIndexTableStyles.cell} text-right font-medium text-slate-900 dark:text-slate-100`}
-                                                >
-                                                    {church.claimed_quantity}
-                                                </td>
-                                                <td
-                                                    className={`${elevatedIndexTableStyles.cell} text-right font-medium text-slate-900 dark:text-slate-100`}
-                                                >
-                                                    {church.remaining_quantity}
                                                 </td>
                                                 <td
                                                     className={`${elevatedIndexTableStyles.cell} text-center`}
@@ -973,15 +851,32 @@ export default function EventCheckInIndex({
                                                         tone={claimStatusTone(
                                                             church.claim_status,
                                                         )}
+                                                        className="mx-auto"
                                                     >
                                                         {church.claim_status}
                                                     </DataTableBadge>
                                                 </td>
                                                 <td
-                                                    className={`${elevatedIndexTableStyles.cell} min-w-[12rem] text-center text-muted-foreground`}
+                                                    className={`${elevatedIndexTableStyles.cell} min-w-[8rem] text-right whitespace-nowrap text-foreground`}
+                                                >
+                                                    {church.registered_quantity}
+                                                </td>
+                                                <td
+                                                    className={`${elevatedIndexTableStyles.cell} min-w-[8rem] text-right whitespace-nowrap text-foreground`}
+                                                >
+                                                    {church.claimed_quantity}
+                                                </td>
+                                                <td
+                                                    className={`${elevatedIndexTableStyles.cell} min-w-[8rem] text-right whitespace-nowrap text-foreground`}
+                                                >
+                                                    {church.remaining_quantity}
+                                                </td>
+                                                <td
+                                                    className={`${elevatedIndexTableStyles.cell} min-w-[12rem] text-right whitespace-nowrap text-muted-foreground`}
                                                 >
                                                     {formatDateTime(
                                                         church.last_claim_at,
+                                                        '-',
                                                     )}
                                                 </td>
                                                 <td
