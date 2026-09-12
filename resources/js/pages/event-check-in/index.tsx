@@ -503,12 +503,14 @@ export default function EventCheckInIndex({
                             <SelectTrigger
                                 id="event_id"
                                 aria-label="Event"
-                                className={`${elevatedIndexTableStyles.selectTrigger} h-auto min-h-9 whitespace-normal py-2 text-left sm:min-h-10 [&_[data-slot=select-value]]:line-clamp-none [&_[data-slot=select-value]]:whitespace-normal`}
+                                className={`${elevatedIndexTableStyles.selectTrigger} h-auto min-h-9 py-2 text-left whitespace-normal sm:min-h-10 [&_[data-slot=select-value]]:line-clamp-none [&_[data-slot=select-value]]:whitespace-normal`}
                             >
                                 <SelectValue placeholder="Select an event" />
                             </SelectTrigger>
                             <SelectContent
-                                className={elevatedIndexTableStyles.selectContent}
+                                className={
+                                    elevatedIndexTableStyles.selectContent
+                                }
                             >
                                 {events.length === 0 ? (
                                     <SelectItem

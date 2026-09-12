@@ -332,16 +332,20 @@ export default function OnsiteCollectionReportIndex({
                             <SelectTrigger
                                 id="collection-event-id"
                                 aria-label="Event"
-                                className={`${elevatedIndexTableStyles.selectTrigger} h-auto min-h-9 whitespace-normal py-2 text-left sm:min-h-10 [&_[data-slot=select-value]]:line-clamp-none [&_[data-slot=select-value]]:whitespace-normal`}
+                                className={`${elevatedIndexTableStyles.selectTrigger} h-auto min-h-9 py-2 text-left whitespace-normal sm:min-h-10 [&_[data-slot=select-value]]:line-clamp-none [&_[data-slot=select-value]]:whitespace-normal`}
                             >
                                 <SelectValue placeholder="Select an event" />
                             </SelectTrigger>
                             <SelectContent
-                                className={elevatedIndexTableStyles.selectContent}
+                                className={
+                                    elevatedIndexTableStyles.selectContent
+                                }
                             >
                                 <SelectItem
                                     value="none"
-                                    className={elevatedIndexTableStyles.selectItem}
+                                    className={
+                                        elevatedIndexTableStyles.selectItem
+                                    }
                                 >
                                     Select an event
                                 </SelectItem>
