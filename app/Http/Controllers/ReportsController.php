@@ -150,9 +150,13 @@ class ReportsController extends Controller
 
         abort_unless($user instanceof User, 403);
 
+        $filters = $request->onsiteCollectionFilters();
+        $events = $this->eventOptions($user);
+        $selectedEvent = $this->selectedOnsiteCollectionEvent($events, $filters['event_id']);
+
         return Inertia::render('reports/onsite-collection/index', [
             'scopeSummary' => $this->scopeSummary($user),
-            ...$this->onsiteCollectionPageProps($user, $request->onsiteCollectionFilters()),
+            ...$this->onsiteCollectionPageProps($user, $filters, $events, $selectedEvent),
         ]);
     }
 
@@ -223,7 +227,12 @@ class ReportsController extends Controller
         abort_unless($user instanceof User, 403);
 
         $filters = $request->onsiteCollectionFilters();
-        $collectors = $this->onsiteCollectionUsers($user);
+        $events = $this->eventOptions($user);
+        $selectedEvent = $this->selectedOnsiteCollectionEvent($events, $filters['event_id']);
+
+        abort_if($selectedEvent === null, 404);
+
+        $collectors = $this->onsiteCollectionUsers($user, $selectedEvent);
         $selectedCollectorId = $this->selectedOnsiteCollectionUserId(
             $collectors,
             $filters['user_id'],
@@ -233,6 +242,7 @@ class ReportsController extends Controller
             $this->nullableFilter($filters['date_from']),
             $this->nullableFilter($filters['date_to']),
             $selectedCollectorId,
+            $selectedEvent,
         )->get();
 
         return $this->downloadSpreadsheet(
@@ -524,8 +534,9 @@ class ReportsController extends Controller
         ?string $dateFrom,
         ?string $dateTo,
         ?int $collectorId,
+        ?Event $event,
     ): array {
-        $registrations = $this->onsiteCollectionQuery($user, $dateFrom, $dateTo, $collectorId)->get();
+        $registrations = $this->onsiteCollectionQuery($user, $dateFrom, $dateTo, $collectorId, $event)->get();
 
         return [
             'data' => $registrations
@@ -557,40 +568,52 @@ class ReportsController extends Controller
     }
 
     /**
-     * @param  array{date_from: string, date_to: string, user_id: int|null, generated: bool}  $filters
+     * @param  array{event_id: int|null, date_from: string, date_to: string, user_id: int|null, generated: bool}  $filters
+     * @param  Collection<int, Event>  $events
      * @return array{
      *     onsiteCollectionCollectorLocked: bool,
-     *     onsiteCollectionFilters: array{date_from: string, date_to: string, user_id: int|null, generated: bool},
+     *     onsiteCollectionFilters: array{event_id: int|null, date_from: string, date_to: string, user_id: int|null, generated: bool},
+     *     onsiteCollectionEvents: array<int, array{id: int, name: string}>,
      *     onsiteCollectionUsers: array<int, array{id: int, name: string}>,
      *     onsiteCollectionReport: array{data: array<int, array<string, mixed>>, totals: array{transaction_count: int, total_quantity: int, total_amount: string}},
      *     onsiteCollectionExportUrl: string|null
      * }
      */
-    private function onsiteCollectionPageProps(User $user, array $filters): array
+    private function onsiteCollectionPageProps(User $user, array $filters, Collection $events, ?Event $event): array
     {
+        $isGenerated = $filters['generated'] && $event !== null;
         $onsiteCollectionCollectorLocked = $user->isManager();
-        $onsiteCollectionUsers = $this->onsiteCollectionUsers($user);
+        $onsiteCollectionUsers = $this->onsiteCollectionUsers($user, $event);
         $selectedOnsiteCollectionUserId = $this->selectedOnsiteCollectionUserId(
             $onsiteCollectionUsers,
             $filters['user_id'],
         );
-        $onsiteCollectionReport = $filters['generated']
+        $onsiteCollectionReport = $isGenerated
             ? $this->onsiteCollectionReport(
                 $user,
                 $this->nullableFilter($filters['date_from']),
                 $this->nullableFilter($filters['date_to']),
                 $selectedOnsiteCollectionUserId,
+                $event,
             )
             : $this->emptyOnsiteCollectionReport();
 
         return [
             'onsiteCollectionCollectorLocked' => $onsiteCollectionCollectorLocked,
             'onsiteCollectionFilters' => [
+                'event_id' => $event?->getKey(),
                 'date_from' => $filters['date_from'],
                 'date_to' => $filters['date_to'],
                 'user_id' => $selectedOnsiteCollectionUserId,
-                'generated' => $filters['generated'],
+                'generated' => $isGenerated,
             ],
+            'onsiteCollectionEvents' => $events
+                ->map(fn (Event $event): array => [
+                    'id' => $event->getKey(),
+                    'name' => $event->name,
+                ])
+                ->values()
+                ->all(),
             'onsiteCollectionUsers' => $onsiteCollectionUsers
                 ->map(fn (User $collector): array => [
                     'id' => $collector->getKey(),
@@ -599,11 +622,12 @@ class ReportsController extends Controller
                 ->values()
                 ->all(),
             'onsiteCollectionReport' => $onsiteCollectionReport,
-            'onsiteCollectionExportUrl' => $filters['generated']
+            'onsiteCollectionExportUrl' => $isGenerated
                 ? route('reports.onsite-collection.export', $this->onsiteCollectionQueryParams(
                     $filters['date_from'],
                     $filters['date_to'],
                     $selectedOnsiteCollectionUserId,
+                    $event,
                 ))
                 : null,
         ];
@@ -729,13 +753,17 @@ class ReportsController extends Controller
     }
 
     /**
-     * @return array{collection_date_from?: string, collection_date_to?: string, collection_user_id?: int, collection_generated: int}
+     * @return array{event_id?: int, collection_date_from?: string, collection_date_to?: string, collection_user_id?: int, collection_generated: int}
      */
-    private function onsiteCollectionQueryParams(string $dateFrom, string $dateTo, ?int $collectorId): array
+    private function onsiteCollectionQueryParams(string $dateFrom, string $dateTo, ?int $collectorId, ?Event $event): array
     {
         $query = [
             'collection_generated' => 1,
         ];
+
+        if ($event !== null) {
+            $query['event_id'] = $event->getKey();
+        }
 
         if ($dateFrom !== '') {
             $query['collection_date_from'] = $dateFrom;
@@ -1070,8 +1098,13 @@ class ReportsController extends Controller
         ?string $dateFrom,
         ?string $dateTo,
         ?int $collectorId,
+        ?Event $event,
     ): Builder {
         return $this->onsiteCollectionBaseQuery($user)
+            ->when(
+                $event !== null,
+                fn (Builder $query) => $query->where('event_id', $event->getKey()),
+            )
             ->when(
                 $dateFrom !== null,
                 fn (Builder $query) => $query->whereDate('submitted_at', '>=', $dateFrom),
@@ -1097,13 +1130,17 @@ class ReportsController extends Controller
     /**
      * @return Collection<int, User>
      */
-    private function onsiteCollectionUsers(User $user): Collection
+    private function onsiteCollectionUsers(User $user, ?Event $event): Collection
     {
         if ($user->isManager()) {
             return collect([$user]);
         }
 
         $collectorIds = $this->onsiteCollectionBaseQuery($user)
+            ->when(
+                $event !== null,
+                fn (Builder $query) => $query->where('event_id', $event->getKey()),
+            )
             ->whereNotNull('encoded_by_user_id')
             ->distinct()
             ->pluck('encoded_by_user_id')
@@ -1120,6 +1157,18 @@ class ReportsController extends Controller
             ->orderBy('name')
             ->orderBy('id')
             ->get();
+    }
+
+    private function selectedOnsiteCollectionEvent(Collection $events, ?int $eventId): ?Event
+    {
+        if ($eventId === null) {
+            return null;
+        }
+
+        /** @var Event|null $event */
+        $event = $events->firstWhere('id', $eventId);
+
+        return $event;
     }
 
     private function selectedOnsiteCollectionUserId(Collection $collectors, ?int $collectorId): ?int

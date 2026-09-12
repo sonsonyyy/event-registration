@@ -664,6 +664,10 @@ test('admins can generate onsite collection reports filtered by transaction date
     $event = reportEvent([
         'district_id' => $district->id,
     ]);
+    $otherAccessibleEvent = reportEvent([
+        'district_id' => $district->id,
+        'name' => 'CLD Leaders Camp 2026',
+    ]);
     $outsideEvent = reportEvent([
         'district_id' => $outsideDistrict->id,
         'name' => 'North District Conference',
@@ -671,6 +675,10 @@ test('admins can generate onsite collection reports filtered by transaction date
     $regular = EventFeeCategory::factory()->for($event)->create([
         'category_name' => 'Regular',
         'amount' => '800.00',
+    ]);
+    $otherAccessibleRegular = EventFeeCategory::factory()->for($otherAccessibleEvent)->create([
+        'category_name' => 'Camp Regular',
+        'amount' => '700.00',
     ]);
     $outsideRegular = EventFeeCategory::factory()->for($outsideEvent)->create([
         'category_name' => 'Outside Regular',
@@ -735,6 +743,20 @@ test('admins can generate onsite collection reports filtered by transaction date
     );
 
     createReportedRegistration(
+        $otherAccessibleEvent,
+        $pastor,
+        $collectorAda,
+        $otherAccessibleRegular,
+        Registration::MODE_ONSITE,
+        Registration::STATUS_COMPLETED,
+        7,
+        [
+            'payment_reference' => 'ONS-1005',
+            'submitted_at' => '2026-05-01 13:00:00',
+        ],
+    );
+
+    createReportedRegistration(
         $outsideEvent,
         $outsidePastor,
         $outsideCollector,
@@ -750,6 +772,7 @@ test('admins can generate onsite collection reports filtered by transaction date
 
     $this->actingAs($admin)
         ->get(route('reports.onsite-collection.index', [
+            'event_id' => $event->id,
             'collection_date_from' => '2026-05-01',
             'collection_date_to' => '2026-05-02',
             'collection_user_id' => $collectorAda->id,
@@ -759,10 +782,12 @@ test('admins can generate onsite collection reports filtered by transaction date
         ->assertInertia(fn (Assert $page) => $page
             ->component('reports/onsite-collection/index')
             ->where('onsiteCollectionCollectorLocked', false)
+            ->where('onsiteCollectionFilters.event_id', $event->id)
             ->where('onsiteCollectionFilters.date_from', '2026-05-01')
             ->where('onsiteCollectionFilters.date_to', '2026-05-02')
             ->where('onsiteCollectionFilters.user_id', $collectorAda->id)
             ->where('onsiteCollectionFilters.generated', true)
+            ->has('onsiteCollectionEvents', 2)
             ->has('onsiteCollectionUsers', 2)
             ->where('onsiteCollectionUsers.0.name', 'Ada Encoder')
             ->where('onsiteCollectionUsers.1.name', 'Bea Encoder')
@@ -777,6 +802,124 @@ test('admins can generate onsite collection reports filtered by transaction date
             ->where('onsiteCollectionReport.totals.transaction_count', 1)
             ->where('onsiteCollectionReport.totals.total_quantity', 2)
             ->where('onsiteCollectionReport.totals.total_amount', '1600.00'));
+});
+
+test('onsite collection reports require a selected event before generating', function () {
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $section = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $pastor = Pastor::factory()->for($section)->create([
+        'church_name' => 'Grace Community Church',
+    ]);
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $collector = User::factory()->registrationStaff()->create([
+        'name' => 'Ada Encoder',
+    ]);
+    $event = reportEvent([
+        'district_id' => $district->id,
+    ]);
+    $regular = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular',
+        'amount' => '800.00',
+    ]);
+
+    createReportedRegistration(
+        $event,
+        $pastor,
+        $collector,
+        $regular,
+        Registration::MODE_ONSITE,
+        Registration::STATUS_COMPLETED,
+        2,
+        [
+            'submitted_at' => '2026-05-01 10:30:00',
+        ],
+    );
+
+    $this->actingAs($admin)
+        ->get(route('reports.onsite-collection.index', [
+            'collection_date_from' => '2026-05-01',
+            'collection_date_to' => '2026-05-01',
+            'collection_generated' => 1,
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('reports/onsite-collection/index')
+            ->where('onsiteCollectionFilters.event_id', null)
+            ->where('onsiteCollectionFilters.generated', false)
+            ->has('onsiteCollectionEvents', 1)
+            ->has('onsiteCollectionReport.data', 0)
+            ->where('onsiteCollectionReport.totals.transaction_count', 0)
+            ->where('onsiteCollectionExportUrl', null));
+
+    $this->actingAs($admin)
+        ->get(route('reports.onsite-collection.export', [
+            'collection_date_from' => '2026-05-01',
+            'collection_date_to' => '2026-05-01',
+            'collection_generated' => 1,
+        ]))
+        ->assertNotFound();
+});
+
+test('selecting an event does not generate onsite collection reports until requested', function () {
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $section = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $pastor = Pastor::factory()->for($section)->create([
+        'church_name' => 'Grace Community Church',
+    ]);
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $collector = User::factory()->registrationStaff()->create([
+        'name' => 'Ada Encoder',
+    ]);
+    $event = reportEvent([
+        'district_id' => $district->id,
+    ]);
+    $regular = EventFeeCategory::factory()->for($event)->create([
+        'category_name' => 'Regular',
+        'amount' => '800.00',
+    ]);
+
+    createReportedRegistration(
+        $event,
+        $pastor,
+        $collector,
+        $regular,
+        Registration::MODE_ONSITE,
+        Registration::STATUS_COMPLETED,
+        2,
+        [
+            'submitted_at' => '2026-05-01 10:30:00',
+        ],
+    );
+
+    $this->actingAs($admin)
+        ->get(route('reports.onsite-collection.index', [
+            'event_id' => $event->id,
+            'collection_date_from' => '2026-05-01',
+            'collection_date_to' => '2026-05-01',
+            'collection_user_id' => $collector->id,
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('reports/onsite-collection/index')
+            ->where('onsiteCollectionFilters.event_id', $event->id)
+            ->where('onsiteCollectionFilters.date_from', '2026-05-01')
+            ->where('onsiteCollectionFilters.date_to', '2026-05-01')
+            ->where('onsiteCollectionFilters.user_id', $collector->id)
+            ->where('onsiteCollectionFilters.generated', false)
+            ->has('onsiteCollectionReport.data', 0)
+            ->where('onsiteCollectionExportUrl', null));
 });
 
 test('managers only see their own onsite collection records within their assigned section', function () {
@@ -857,6 +1000,7 @@ test('managers only see their own onsite collection records within their assigne
 
     $this->actingAs($manager)
         ->get(route('reports.onsite-collection.index', [
+            'event_id' => $event->id,
             'collection_date_from' => '2026-05-01',
             'collection_date_to' => '2026-05-01',
             'collection_user_id' => $collectorOne->id,
@@ -866,6 +1010,7 @@ test('managers only see their own onsite collection records within their assigne
         ->assertInertia(fn (Assert $page) => $page
             ->component('reports/onsite-collection/index')
             ->where('onsiteCollectionCollectorLocked', true)
+            ->where('onsiteCollectionFilters.event_id', $event->id)
             ->where('onsiteCollectionFilters.user_id', $manager->id)
             ->has('onsiteCollectionUsers', 1)
             ->where('onsiteCollectionUsers.0.name', 'Mila Manager')
@@ -899,9 +1044,17 @@ test('admins can export onsite collection reports based on transaction date and 
     $event = reportEvent([
         'district_id' => $district->id,
     ]);
+    $otherEvent = reportEvent([
+        'district_id' => $district->id,
+        'name' => 'CLD Leaders Camp 2026',
+    ]);
     $regular = EventFeeCategory::factory()->for($event)->create([
         'category_name' => 'Regular',
         'amount' => '800.00',
+    ]);
+    $otherRegular = EventFeeCategory::factory()->for($otherEvent)->create([
+        'category_name' => 'Camp Regular',
+        'amount' => '700.00',
     ]);
 
     $registration = createReportedRegistration(
@@ -919,8 +1072,23 @@ test('admins can export onsite collection reports based on transaction date and 
         ],
     );
 
+    createReportedRegistration(
+        $otherEvent,
+        $pastor,
+        $collector,
+        $otherRegular,
+        Registration::MODE_ONSITE,
+        Registration::STATUS_COMPLETED,
+        7,
+        [
+            'payment_reference' => 'ONS-1005',
+            'submitted_at' => '2026-05-01 13:00:00',
+        ],
+    );
+
     $response = $this->actingAs($admin)
         ->get(route('reports.onsite-collection.export', [
+            'event_id' => $event->id,
             'collection_date_from' => '2026-05-01',
             'collection_date_to' => '2026-05-01',
             'collection_user_id' => $collector->id,
@@ -1016,6 +1184,7 @@ test('managers can only export their own onsite collection records', function ()
 
     $response = $this->actingAs($manager)
         ->get(route('reports.onsite-collection.export', [
+            'event_id' => $event->id,
             'collection_date_from' => '2026-05-01',
             'collection_date_to' => '2026-05-01',
             'collection_user_id' => $collector->id,

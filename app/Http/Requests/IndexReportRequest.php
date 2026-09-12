@@ -70,6 +70,7 @@ class IndexReportRequest extends FormRequest
      * Get the normalized onsite collection report filters.
      *
      * @return array{
+     *     event_id: int|null,
      *     date_from: string,
      *     date_to: string,
      *     user_id: int|null,
@@ -86,6 +87,9 @@ class IndexReportRequest extends FormRequest
         }
 
         return [
+            'event_id' => $this->filled('event_id')
+                ? (int) $this->validated('event_id')
+                : null,
             'date_from' => (string) $this->validated('collection_date_from', ''),
             'date_to' => (string) $this->validated('collection_date_to', ''),
             'user_id' => $collectorId !== null ? (int) $collectorId : null,
