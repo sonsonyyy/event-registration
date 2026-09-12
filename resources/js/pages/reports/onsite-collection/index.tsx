@@ -1,12 +1,11 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
-import { CalendarDays, Download } from 'lucide-react';
+import { CalendarDays, Download, FileText } from 'lucide-react';
 import { useState } from 'react';
 import { onsiteCollectionIndex } from '@/actions/App/Http/Controllers/ReportsController';
 import { elevatedIndexTableStyles } from '@/components/data-table-presets';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { Label } from '@/components/ui/label';
 import {
     Popover,
     PopoverContent,
@@ -31,6 +30,11 @@ type OnsiteCollectionCollector = {
     name: string;
 };
 
+type OnsiteCollectionEvent = {
+    id: number;
+    name: string;
+};
+
 type OnsiteCollectionRecord = {
     transaction_id: number;
     transaction_date: string | null;
@@ -38,15 +42,9 @@ type OnsiteCollectionRecord = {
         id: number | null;
         name: string;
     };
-    event: {
-        id: number;
-        name: string;
-    };
     church_name: string;
     pastor_name: string;
     section_name: string | null;
-    district_name: string | null;
-    remarks: string | null;
     total_quantity: number;
     total_amount: string;
 };
@@ -60,12 +58,14 @@ type OnsiteCollectionTotals = {
 type Props = {
     scopeSummary: string;
     onsiteCollectionFilters: {
+        event_id: number | null;
         date_from: string;
         date_to: string;
         user_id: number | null;
         generated: boolean;
     };
     onsiteCollectionCollectorLocked: boolean;
+    onsiteCollectionEvents: OnsiteCollectionEvent[];
     onsiteCollectionUsers: OnsiteCollectionCollector[];
     onsiteCollectionReport: {
         data: OnsiteCollectionRecord[];
@@ -75,13 +75,14 @@ type Props = {
 };
 
 type CollectionReportQuery = {
+    event_id?: number;
     collection_date_from?: string;
     collection_date_to?: string;
     collection_user_id?: number;
     collection_generated?: 1;
 };
 
-const onsiteCollectionTableClassName = `${elevatedIndexTableStyles.table} min-w-[88rem]`;
+const onsiteCollectionTableClassName = `${elevatedIndexTableStyles.table} min-w-[90rem] table-auto`;
 
 const formatCurrency = (value: string): string =>
     new Intl.NumberFormat(undefined, {
@@ -123,6 +124,7 @@ type CollectionDatePickerProps = {
     label: string;
     value: string;
     placeholder: string;
+    disabled?: boolean;
     onChange: (value: string) => void;
 };
 
@@ -131,6 +133,7 @@ function CollectionDatePicker({
     label,
     value,
     placeholder,
+    disabled = false,
     onChange,
 }: CollectionDatePickerProps) {
     const [open, setOpen] = useState(false);
@@ -138,27 +141,21 @@ function CollectionDatePicker({
 
     return (
         <div className="grid gap-2">
-            <div className="flex items-center justify-between gap-3">
-                <Label htmlFor={id}>{label}</Label>
-                {value !== '' && (
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onChange('')}
-                        className="h-auto px-0 text-[12px] text-slate-500 hover:bg-transparent hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                    >
-                        Clear
-                    </Button>
-                )}
-            </div>
-
-            <Popover open={open} onOpenChange={setOpen}>
+            <Popover
+                open={open}
+                onOpenChange={(nextOpen) => {
+                    if (!disabled) {
+                        setOpen(nextOpen);
+                    }
+                }}
+            >
                 <PopoverTrigger asChild>
                     <Button
                         id={id}
                         type="button"
                         variant="outline"
+                        aria-label={label}
+                        disabled={disabled}
                         className={cn(
                             elevatedIndexTableStyles.selectTrigger,
                             'w-full justify-between bg-white text-left font-normal shadow-none hover:bg-white dark:bg-slate-950 dark:hover:bg-slate-950',
@@ -182,6 +179,10 @@ function CollectionDatePicker({
                         mode="single"
                         selected={selectedDate}
                         onSelect={(date) => {
+                            if (disabled) {
+                                return;
+                            }
+
                             onChange(toDateValue(date));
 
                             if (date !== undefined) {
@@ -191,6 +192,18 @@ function CollectionDatePicker({
                     />
                 </PopoverContent>
             </Popover>
+            {value !== '' && (
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onChange('')}
+                    disabled={disabled}
+                    className="h-auto justify-start px-0 text-[12px] text-slate-500 hover:bg-transparent hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                    Clear
+                </Button>
+            )}
         </div>
     );
 }
@@ -198,6 +211,7 @@ function CollectionDatePicker({
 export default function OnsiteCollectionReportIndex({
     onsiteCollectionFilters,
     onsiteCollectionCollectorLocked,
+    onsiteCollectionEvents,
     onsiteCollectionUsers,
     onsiteCollectionReport,
     onsiteCollectionExportUrl,
@@ -216,6 +230,12 @@ export default function OnsiteCollectionReportIndex({
             ? String(onsiteCollectionFilters.user_id)
             : 'all',
     );
+    const [collectionEventId, setCollectionEventId] = useState(
+        onsiteCollectionFilters.event_id !== null
+            ? String(onsiteCollectionFilters.event_id)
+            : 'none',
+    );
+    const hasSelectedEvent = collectionEventId !== 'none';
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -243,7 +263,12 @@ export default function OnsiteCollectionReportIndex({
     };
 
     const submitReport = (): void => {
+        if (!hasSelectedEvent) {
+            return;
+        }
+
         visitReport({
+            event_id: Number(collectionEventId),
             ...(collectionDateFrom !== ''
                 ? { collection_date_from: collectionDateFrom }
                 : {}),
@@ -257,11 +282,85 @@ export default function OnsiteCollectionReportIndex({
         });
     };
 
+    const selectEvent = (value: string): void => {
+        setCollectionEventId(value);
+        setCollectionUserId(
+            onsiteCollectionCollectorLocked ? String(auth.user.id) : 'all',
+        );
+
+        if (value === 'none') {
+            visitReport({
+                ...(collectionDateFrom !== ''
+                    ? { collection_date_from: collectionDateFrom }
+                    : {}),
+                ...(collectionDateTo !== ''
+                    ? { collection_date_to: collectionDateTo }
+                    : {}),
+                ...(onsiteCollectionCollectorLocked
+                    ? { collection_user_id: auth.user.id }
+                    : {}),
+            });
+
+            return;
+        }
+
+        visitReport({
+            event_id: Number(value),
+            ...(collectionDateFrom !== ''
+                ? { collection_date_from: collectionDateFrom }
+                : {}),
+            ...(collectionDateTo !== ''
+                ? { collection_date_to: collectionDateTo }
+                : {}),
+            ...(onsiteCollectionCollectorLocked
+                ? { collection_user_id: auth.user.id }
+                : {}),
+        });
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Onsite Collection Report" />
 
             <div className="flex flex-1 flex-col gap-5 p-4 md:p-6">
+                <div className="flex justify-end">
+                    <div className="w-full max-w-sm sm:w-96">
+                        <Select
+                            value={collectionEventId}
+                            onValueChange={selectEvent}
+                        >
+                            <SelectTrigger
+                                id="collection-event-id"
+                                aria-label="Event"
+                                className={`${elevatedIndexTableStyles.selectTrigger} h-auto min-h-9 whitespace-normal py-2 text-left sm:min-h-10 [&_[data-slot=select-value]]:line-clamp-none [&_[data-slot=select-value]]:whitespace-normal`}
+                            >
+                                <SelectValue placeholder="Select an event" />
+                            </SelectTrigger>
+                            <SelectContent
+                                className={elevatedIndexTableStyles.selectContent}
+                            >
+                                <SelectItem
+                                    value="none"
+                                    className={elevatedIndexTableStyles.selectItem}
+                                >
+                                    Select an event
+                                </SelectItem>
+                                {onsiteCollectionEvents.map((event) => (
+                                    <SelectItem
+                                        key={event.id}
+                                        value={String(event.id)}
+                                        className={
+                                            elevatedIndexTableStyles.selectItem
+                                        }
+                                    >
+                                        {event.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+
                 <div className={elevatedIndexTableStyles.shell}>
                     <div className={elevatedIndexTableStyles.band}>
                         <form
@@ -269,13 +368,14 @@ export default function OnsiteCollectionReportIndex({
                                 event.preventDefault();
                                 submitReport();
                             }}
-                            className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_280px_auto]"
+                            className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_280px_auto]"
                         >
                             <CollectionDatePicker
                                 id="collection-date-from"
                                 label="Transaction date from"
                                 value={collectionDateFrom}
                                 placeholder="Select a start date"
+                                disabled={!hasSelectedEvent}
                                 onChange={setCollectionDateFrom}
                             />
 
@@ -284,19 +384,19 @@ export default function OnsiteCollectionReportIndex({
                                 label="Transaction date to"
                                 value={collectionDateTo}
                                 placeholder="Select an end date"
+                                disabled={!hasSelectedEvent}
                                 onChange={setCollectionDateTo}
                             />
 
                             <div className="grid gap-2">
-                                <Label htmlFor="collection-user-id">
-                                    Collected by
-                                </Label>
                                 <Select
                                     value={collectionUserId}
                                     onValueChange={setCollectionUserId}
+                                    disabled={!hasSelectedEvent}
                                 >
                                     <SelectTrigger
                                         id="collection-user-id"
+                                        aria-label="Collected by"
                                         className={
                                             elevatedIndexTableStyles.selectTrigger
                                         }
@@ -340,10 +440,12 @@ export default function OnsiteCollectionReportIndex({
                             <div className="flex flex-col justify-end gap-2 sm:flex-row xl:items-end xl:justify-end">
                                 <Button
                                     type="submit"
+                                    disabled={!hasSelectedEvent}
                                     className={
                                         elevatedIndexTableStyles.primaryButton
                                     }
                                 >
+                                    <FileText className="size-4" />
                                     Generate
                                 </Button>
                                 {onsiteCollectionExportUrl !== null ? (
@@ -427,28 +529,14 @@ export default function OnsiteCollectionReportIndex({
                                             elevatedIndexTableStyles.firstHeaderCell
                                         }
                                     >
-                                        Transaction date
-                                    </th>
-                                    <th
-                                        className={
-                                            elevatedIndexTableStyles.headerCell
-                                        }
-                                    >
-                                        Collected by
-                                    </th>
-                                    <th
-                                        className={
-                                            elevatedIndexTableStyles.headerCell
-                                        }
-                                    >
-                                        Event
-                                    </th>
-                                    <th
-                                        className={
-                                            elevatedIndexTableStyles.headerCell
-                                        }
-                                    >
                                         Church
+                                    </th>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Pastor
                                     </th>
                                     <th
                                         className={
@@ -458,16 +546,22 @@ export default function OnsiteCollectionReportIndex({
                                         Section
                                     </th>
                                     <th
-                                        className={
-                                            elevatedIndexTableStyles.headerCell
-                                        }
+                                        className={`${elevatedIndexTableStyles.headerCell} text-right`}
                                     >
-                                        Quantity
+                                        Delegates
                                     </th>
                                     <th
-                                        className={`${elevatedIndexTableStyles.lastHeaderCellRight} text-right`}
+                                        className={`${elevatedIndexTableStyles.headerCell} text-right`}
                                     >
-                                        Amount
+                                        Total Amount
+                                    </th>
+                                    <th
+                                        className={`${elevatedIndexTableStyles.headerCell} text-right`}
+                                    >
+                                        Transaction At
+                                    </th>
+                                    <th className="py-2 pr-4 text-right font-medium whitespace-nowrap text-slate-500 sm:py-2.5 sm:pr-5 dark:text-slate-400">
+                                        Collected by
                                     </th>
                                 </tr>
                             </thead>
@@ -496,9 +590,9 @@ export default function OnsiteCollectionReportIndex({
                                                     }
                                                 >
                                                     Choose a transaction date
-                                                    range and any needed
-                                                    filters, then click
-                                                    Generate.
+                                                    range, select an event, and
+                                                    any needed filters, then
+                                                    click Generate.
                                                 </div>
                                             </div>
                                         </td>
@@ -543,90 +637,72 @@ export default function OnsiteCollectionReportIndex({
                                                 }
                                             >
                                                 <td
-                                                    className={
-                                                        elevatedIndexTableStyles.firstCell
-                                                    }
+                                                    className={`${elevatedIndexTableStyles.firstCell} min-w-[16rem]`}
                                                 >
-                                                    <div className="font-medium text-foreground">
-                                                        {formatTransactionDate(
-                                                            record.transaction_date,
-                                                        )}
-                                                    </div>
                                                     <div
-                                                        className={
-                                                            elevatedIndexTableStyles.secondaryText
+                                                        className={`${elevatedIndexTableStyles.primaryText} whitespace-nowrap`}
+                                                        title={
+                                                            record.church_name
                                                         }
                                                     >
-                                                        Transaction #
-                                                        {record.transaction_id}
-                                                    </div>
-                                                </td>
-                                                <td
-                                                    className={
-                                                        elevatedIndexTableStyles.cell
-                                                    }
-                                                >
-                                                    <div className="font-medium text-foreground">
-                                                        {record.collector.name}
-                                                    </div>
-                                                </td>
-                                                <td
-                                                    className={
-                                                        elevatedIndexTableStyles.cell
-                                                    }
-                                                >
-                                                    <div className="font-medium text-foreground">
-                                                        {record.event.name}
-                                                    </div>
-                                                    {record.remarks && (
-                                                        <div
-                                                            className={
-                                                                elevatedIndexTableStyles.secondaryText
-                                                            }
-                                                        >
-                                                            {record.remarks}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td
-                                                    className={
-                                                        elevatedIndexTableStyles.cell
-                                                    }
-                                                >
-                                                    <div className="font-medium text-foreground">
                                                         {record.church_name}
                                                     </div>
+                                                </td>
+                                                <td
+                                                    className={`${elevatedIndexTableStyles.cell} min-w-[14rem]`}
+                                                >
                                                     <div
-                                                        className={
-                                                            elevatedIndexTableStyles.secondaryText
+                                                        className={`${elevatedIndexTableStyles.primaryText} whitespace-nowrap`}
+                                                        title={
+                                                            record.pastor_name
                                                         }
                                                     >
                                                         {record.pastor_name}
                                                     </div>
                                                 </td>
                                                 <td
-                                                    className={`${elevatedIndexTableStyles.cell} text-sm text-muted-foreground`}
+                                                    className={`${elevatedIndexTableStyles.cell} min-w-[12rem] text-muted-foreground`}
                                                 >
-                                                    <div className="font-medium text-foreground/90">
+                                                    <div
+                                                        className={`${elevatedIndexTableStyles.primaryText} whitespace-nowrap`}
+                                                        title={
+                                                            record.section_name ??
+                                                            'Unassigned'
+                                                        }
+                                                    >
                                                         {record.section_name ??
                                                             'Unassigned'}
                                                     </div>
-                                                    <div className="mt-2">
-                                                        {record.district_name ??
-                                                            'No district assigned'}
-                                                    </div>
                                                 </td>
                                                 <td
-                                                    className={`${elevatedIndexTableStyles.cell} text-right font-medium text-foreground`}
+                                                    className={`${elevatedIndexTableStyles.cell} min-w-[8rem] text-right whitespace-nowrap text-foreground`}
                                                 >
                                                     {record.total_quantity}
                                                 </td>
                                                 <td
-                                                    className={`${elevatedIndexTableStyles.lastCellRight} text-right font-medium text-foreground`}
+                                                    className={`${elevatedIndexTableStyles.cell} min-w-[10rem] text-right whitespace-nowrap text-foreground`}
                                                 >
                                                     {formatCurrency(
                                                         record.total_amount,
                                                     )}
+                                                </td>
+                                                <td
+                                                    className={`${elevatedIndexTableStyles.cell} min-w-[14rem] text-right whitespace-nowrap text-muted-foreground`}
+                                                >
+                                                    {formatTransactionDate(
+                                                        record.transaction_date,
+                                                    )}
+                                                </td>
+                                                <td className="py-2.5 pr-4 text-right align-middle sm:py-3 sm:pr-5">
+                                                    <div
+                                                        className={`${elevatedIndexTableStyles.primaryText} whitespace-nowrap`}
+                                                        title={
+                                                            record.collector
+                                                                .name
+                                                        }
+                                                    >
+                                                        {record.collector.name}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ),
@@ -638,7 +714,7 @@ export default function OnsiteCollectionReportIndex({
                                     <tfoot className="bg-slate-50/80 dark:bg-slate-900/60">
                                         <tr className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                                             <td
-                                                colSpan={5}
+                                                colSpan={3}
                                                 className="px-4 py-3 sm:px-5 sm:py-4"
                                             >
                                                 Totals
@@ -655,6 +731,10 @@ export default function OnsiteCollectionReportIndex({
                                                         .totals.total_amount,
                                                 )}
                                             </td>
+                                            <td
+                                                colSpan={2}
+                                                className="py-3 pr-4 sm:py-4 sm:pr-5"
+                                            />
                                         </tr>
                                     </tfoot>
                                 )}
