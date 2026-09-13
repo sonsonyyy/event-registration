@@ -2,7 +2,6 @@ import { Head, Link, router } from '@inertiajs/react';
 import { Ban, Eye, Pencil, Plus, ReceiptText, X } from 'lucide-react';
 import { useState } from 'react';
 import OnlineRegistrationController from '@/actions/App/Http/Controllers/OnlineRegistrationController';
-import AssignedChurchCard from '@/components/assigned-church-card';
 import ConfirmActionDialog from '@/components/confirm-action-dialog';
 import {
     DataTableBadge,
@@ -82,17 +81,7 @@ type RegistrationRecord = {
     items: RegistrationItemRecord[];
 };
 
-type AssignedPastor = {
-    id: number;
-    pastor_name: string;
-    church_name: string;
-    section_name: string;
-    district_name: string;
-    status: string;
-} | null;
-
 type Props = {
-    assignedPastor: AssignedPastor;
     registrations: PaginatedData<RegistrationRecord>;
     filters: {
         search: string;
@@ -129,7 +118,6 @@ const formatDate = (value: string | null): string => {
 const onlineRegistrationTableClassName = `${elevatedIndexTableStyles.table} min-w-[112rem] table-auto`;
 
 export default function OnlineRegistrationIndex({
-    assignedPastor,
     registrations,
     filters,
     perPageOptions,
@@ -210,10 +198,6 @@ export default function OnlineRegistrationIndex({
             <Head title="Online Registration" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                {assignedPastor && (
-                    <AssignedChurchCard assignedPastor={assignedPastor} />
-                )}
-
                 <div className={elevatedIndexTableStyles.shell}>
                     <div className={elevatedIndexTableStyles.band}>
                         <DataTableToolbar

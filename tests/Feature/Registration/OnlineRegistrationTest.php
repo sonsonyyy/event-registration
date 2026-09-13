@@ -109,7 +109,7 @@ test('online registrants can submit registrations with receipt upload stored on 
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('registrations/online/index')
-            ->where('assignedPastor.church_name', 'Grace Community Church')
+            ->missing('assignedPastor')
             ->where('filters.search', 'receipt.pdf')
             ->where('filters.per_page', 10)
             ->has('registrations.data', 1)
