@@ -9,6 +9,8 @@ import {
     Ticket,
     UsersRound,
 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import OnlineRegistrationController from '@/actions/App/Http/Controllers/OnlineRegistrationController';
 import RegistrantAccessController from '@/actions/App/Http/Controllers/RegistrantAccessController';
 import AppLogo from '@/components/app-logo';
@@ -60,6 +62,57 @@ type PrimaryActionHref =
     | ReturnType<typeof login>
     | ReturnType<typeof dashboard>
     | ReturnType<typeof OnlineRegistrationController.create>;
+
+function RevealOnScroll({
+    children,
+    className = '',
+    delayClassName = '',
+}: {
+    children: ReactNode;
+    className?: string;
+    delayClassName?: string;
+}) {
+    const elementRef = useRef<HTMLDivElement>(null);
+    const [isVisible, setIsVisible] = useState(false);
+
+    useEffect(() => {
+        const element = elementRef.current;
+
+        if (!element) {
+            return;
+        }
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setIsVisible(true);
+                    observer.disconnect();
+                }
+            },
+            {
+                rootMargin: '0px 0px -80px 0px',
+                threshold: 0.2,
+            },
+        );
+
+        observer.observe(element);
+
+        return () => observer.disconnect();
+    }, []);
+
+    return (
+        <div
+            ref={elementRef}
+            className={`${className} ${delayClassName} transition-[opacity,translate] duration-700 ease-out motion-reduce:transition-none ${
+                isVisible
+                    ? 'translate-y-0 opacity-100'
+                    : 'translate-y-6 opacity-0'
+            }`}
+        >
+            {children}
+        </div>
+    );
+}
 
 const formatCurrency = (value: string): string =>
     new Intl.NumberFormat(undefined, {
@@ -325,19 +378,19 @@ export default function Welcome() {
                         <nav className="hidden items-center justify-center gap-6 md:flex">
                             <a
                                 href="#available-events"
-                                className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900"
+                                className="inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold whitespace-nowrap text-slate-600 transition-colors hover:bg-white/60 hover:text-slate-900"
                             >
                                 Events
                             </a>
                             <a
                                 href="#how-to-register"
-                                className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900"
+                                className="inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold whitespace-nowrap text-slate-600 transition-colors hover:bg-white/60 hover:text-slate-900"
                             >
                                 How to Register
                             </a>
                             <a
                                 href="#faqs"
-                                className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900"
+                                className="inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold whitespace-nowrap text-slate-600 transition-colors hover:bg-white/60 hover:text-slate-900"
                             >
                                 FAQs
                             </a>
@@ -378,10 +431,10 @@ export default function Welcome() {
                         <section className="mx-auto flex w-full max-w-4xl flex-col items-center text-center">
                             <div className="flex w-full flex-col items-center gap-8">
                                 <div className="space-y-4">
-                                    <h1 className="mx-auto max-w-3xl text-3xl font-extrabold tracking-[-0.04em] text-balance sm:text-5xl lg:text-6xl">
+                                    <h1 className="mx-auto max-w-3xl text-3xl font-extrabold tracking-[-0.04em] text-balance motion-safe:animate-in motion-safe:duration-700 motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-3 sm:text-5xl lg:text-6xl">
                                         Register for CLD Events
                                     </h1>
-                                    <p className="mx-auto max-w-2xl text-sm leading-7 text-slate-600 sm:text-lg">
+                                    <p className="mx-auto max-w-2xl text-sm leading-7 text-slate-600 motion-safe:animate-in motion-safe:delay-150 motion-safe:duration-700 motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-3 sm:text-lg">
                                         Browse open district and department
                                         events, choose the right fee categories
                                         for your church, upload payment proof,
@@ -394,19 +447,22 @@ export default function Welcome() {
                                     <Button
                                         asChild
                                         size="lg"
-                                        className="h-11 rounded-md px-5 text-sm sm:h-12 sm:px-6"
+                                        className="group h-11 rounded-md px-5 text-sm shadow-md shadow-[#184d47]/15 transition-[color,background-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#184d47]/20 active:translate-y-0 sm:h-12 sm:px-6"
                                     >
                                         <Link href={primaryActionHref}>
+                                            <Ticket className="size-4 transition-transform duration-200 group-hover:scale-110" />
                                             {primaryActionLabel}
+                                            <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                                         </Link>
                                     </Button>
                                     <Button
                                         variant="outline"
                                         asChild
                                         size="lg"
-                                        className="h-11 rounded-md px-5 text-sm sm:h-12 sm:px-6"
+                                        className="group h-11 rounded-md border-[#cad4c4] bg-white/70 px-5 text-sm text-slate-700 transition-[color,background-color,border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-[#b8c8be] hover:bg-white hover:text-slate-900 hover:shadow-lg hover:shadow-[#184d47]/10 active:translate-y-0 sm:h-12 sm:px-6"
                                     >
                                         <a href="#available-events">
+                                            <CalendarDays className="size-4 text-[#184d47] transition-transform duration-200 group-hover:scale-110" />
                                             Browse available events
                                         </a>
                                     </Button>
@@ -418,7 +474,7 @@ export default function Welcome() {
                             id="available-events"
                             className="mx-auto flex w-full max-w-6xl flex-col items-center space-y-6"
                         >
-                            <div className="space-y-2 text-center">
+                            <RevealOnScroll className="space-y-2 text-center">
                                 <p className="text-sm font-semibold tracking-[0.2em] text-[#184d47] uppercase">
                                     Available events
                                 </p>
@@ -430,7 +486,7 @@ export default function Welcome() {
                                     registration window, and still have capacity
                                     available.
                                 </p>
-                            </div>
+                            </RevealOnScroll>
 
                             {events.length === 0 ? (
                                 <Card className="border-dashed border-[#cad4c4] bg-white/70 py-8 shadow-sm">
@@ -457,7 +513,10 @@ export default function Welcome() {
                             id="how-to-register"
                             className="mx-auto flex w-full max-w-6xl flex-col items-center space-y-6"
                         >
-                            <div className="space-y-2 text-center">
+                            <RevealOnScroll
+                                className="space-y-2 text-center"
+                                delayClassName="delay-100"
+                            >
                                 <p className="text-sm font-semibold tracking-[0.2em] text-[#184d47] uppercase">
                                     How to register
                                 </p>
@@ -468,21 +527,21 @@ export default function Welcome() {
                                     Follow the church registration process from
                                     account request through final verification.
                                 </p>
-                            </div>
+                            </RevealOnScroll>
 
                             <div className="grid w-full gap-4 md:grid-cols-3">
                                 {registrationFlow.map((step, index) => (
                                     <Card
                                         key={step.eyebrow}
-                                        className="relative overflow-hidden border-[#d8ddd2] bg-white/95 py-0 shadow-xl shadow-[#184d47]/6"
+                                        className="group relative overflow-hidden border-[#d8ddd2] bg-white/95 py-0 shadow-xl shadow-[#184d47]/6 transition-[background-color,border-color,box-shadow,translate] duration-300 hover:-translate-y-1 hover:border-[#b8c8be] hover:bg-white hover:shadow-2xl hover:shadow-[#184d47]/12"
                                     >
-                                        <div className="absolute inset-x-0 top-0 h-1 bg-[#184d47]" />
+                                        <div className="absolute inset-x-0 top-0 h-1 bg-[#184d47] transition-[height] duration-300 group-hover:h-1.5" />
                                         <CardContent className="flex h-full flex-col gap-5 px-6 py-6">
                                             <div className="flex items-start justify-between gap-4">
-                                                <div className="flex size-12 shrink-0 items-center justify-center rounded-md bg-[#184d47] text-lg font-bold text-white shadow-lg shadow-[#184d47]/20">
+                                                <div className="flex size-12 shrink-0 items-center justify-center rounded-md bg-[#184d47] text-lg font-bold text-white shadow-lg shadow-[#184d47]/20 transition-[box-shadow,scale] duration-300 group-hover:scale-105 group-hover:shadow-xl group-hover:shadow-[#184d47]/25">
                                                     {index + 1}
                                                 </div>
-                                                <div className="flex size-9 items-center justify-center rounded-md border border-[#dbe4df] bg-[#f3f7f4] text-[#184d47]">
+                                                <div className="flex size-9 items-center justify-center rounded-md border border-[#dbe4df] bg-[#f3f7f4] text-[#184d47] transition-[background-color,border-color,scale] duration-300 group-hover:scale-105 group-hover:border-[#b8c8be] group-hover:bg-[#e8f1ec]">
                                                     <CircleCheckBig className="size-4" />
                                                 </div>
                                             </div>
@@ -507,7 +566,10 @@ export default function Welcome() {
                             id="faqs"
                             className="mx-auto flex w-full max-w-6xl flex-col items-center space-y-6"
                         >
-                            <div className="space-y-2 text-center">
+                            <RevealOnScroll
+                                className="space-y-2 text-center"
+                                delayClassName="delay-100"
+                            >
                                 <p className="text-sm font-semibold tracking-[0.2em] text-[#184d47] uppercase">
                                     Registration guide
                                 </p>
@@ -518,19 +580,19 @@ export default function Welcome() {
                                     A quick guide for registrant accounts and
                                     online event submissions.
                                 </p>
-                            </div>
+                            </RevealOnScroll>
 
                             <div className="grid w-full gap-4 lg:grid-cols-2">
                                 {faqs.map((faq, index) => (
                                     <Card
                                         key={faq.question}
-                                        className={`border-[#d8ddd2] bg-white/90 py-0 shadow-xl shadow-[#184d47]/5 ${index === 0 ? 'lg:col-span-2' : ''}`}
+                                        className={`group border-[#d8ddd2] bg-white/90 py-0 shadow-xl shadow-[#184d47]/5 transition-[background-color,border-color,box-shadow,translate] duration-300 hover:-translate-y-1 hover:border-[#b8c8be] hover:bg-white hover:shadow-2xl hover:shadow-[#184d47]/10 ${index === 0 ? 'lg:col-span-2' : ''}`}
                                     >
                                         <CardContent className="space-y-3 px-6 py-6">
-                                            <div className="text-xs font-semibold tracking-[0.18em] text-[#184d47] uppercase">
+                                            <div className="text-xs font-semibold tracking-[0.18em] text-[#184d47] uppercase transition-[translate,color] duration-300 group-hover:translate-x-1 group-hover:text-[#143f3a]">
                                                 FAQ {index + 1}
                                             </div>
-                                            <h3 className="text-xl font-bold tracking-[-0.03em] text-slate-900">
+                                            <h3 className="text-xl font-bold tracking-[-0.03em] text-slate-900 transition-colors duration-300 group-hover:text-[#184d47]">
                                                 {faq.question}
                                             </h3>
                                             <p className="text-sm leading-7 text-slate-600">
