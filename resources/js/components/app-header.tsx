@@ -30,7 +30,7 @@ import ReportsController, {
 import AppLogo from '@/components/app-logo';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { NotificationMenu } from '@/components/notification-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -269,27 +269,14 @@ export function AppHeader({ breadcrumbs: _breadcrumbs = [] }: Props) {
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="ghost"
-                                    className="h-10 gap-3 rounded-md px-1 py-1.5 sm:px-2"
+                                    className="h-10 w-10 rounded-md p-1.5"
+                                    aria-label={`Open user menu for ${auth.user.name}`}
                                 >
                                     <Avatar className="size-8 shrink-0 overflow-hidden rounded-full">
-                                        <AvatarImage
-                                            src={auth.user.avatar}
-                                            alt={auth.user.name}
-                                        />
-                                        <AvatarFallback className="rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
+                                        <AvatarFallback className="rounded-full bg-[#184d47] text-sm font-semibold text-white dark:bg-emerald-500/20 dark:text-emerald-100">
                                             {getInitials(auth.user.name)}
                                         </AvatarFallback>
                                     </Avatar>
-                                    <div className="hidden min-w-0 text-left sm:block">
-                                        <div className="truncate text-sm leading-tight font-medium">
-                                            {auth.user.name}
-                                        </div>
-                                        {auth.user.role_name && (
-                                            <div className="truncate text-xs text-muted-foreground">
-                                                {auth.user.role_name}
-                                            </div>
-                                        )}
-                                    </div>
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56" align="end">

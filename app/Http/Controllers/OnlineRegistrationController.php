@@ -52,7 +52,6 @@ class OnlineRegistrationController extends Controller
             ->withQueryString();
 
         return Inertia::render('registrations/online/index', [
-            'assignedPastor' => $this->assignedPastorData($user),
             'registrations' => [
                 'data' => $registrations->getCollection()
                     ->map(fn (Registration $registration): array => $this->registrationData($registration, $user))
