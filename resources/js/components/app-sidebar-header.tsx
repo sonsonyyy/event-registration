@@ -1,7 +1,7 @@
 import { usePage } from '@inertiajs/react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { NotificationMenu } from '@/components/notification-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -34,27 +34,14 @@ export function AppSidebarHeader({
                     <DropdownMenuTrigger asChild>
                         <button
                             type="button"
-                            className="flex items-center gap-2.5 rounded-md px-1 py-1 text-left transition-colors hover:bg-sidebar-accent/60 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-hidden sm:px-2"
+                            className="flex size-10 items-center justify-center rounded-md p-1.5 text-left transition-colors hover:bg-sidebar-accent/60 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-hidden"
+                            aria-label={`Open user menu for ${auth.user.name}`}
                         >
                             <Avatar className="size-7 overflow-hidden rounded-full">
-                                <AvatarImage
-                                    src={auth.user.avatar}
-                                    alt={auth.user.name}
-                                />
-                                <AvatarFallback className="rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
+                                <AvatarFallback className="rounded-full bg-[#184d47] text-[13px] font-semibold text-white dark:bg-emerald-500/20 dark:text-emerald-100">
                                     {getInitials(auth.user.name)}
                                 </AvatarFallback>
                             </Avatar>
-                            <div className="hidden min-w-0 text-left sm:block">
-                                <div className="truncate text-[13px] leading-tight font-medium">
-                                    {auth.user.name}
-                                </div>
-                                {auth.user.role_name && (
-                                    <div className="truncate text-[11px] text-muted-foreground">
-                                        {auth.user.role_name}
-                                    </div>
-                                )}
-                            </div>
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
