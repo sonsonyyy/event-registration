@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 type SummaryStatCard = {
     title: string;
-    value: number;
+    value: number | string;
     icon: LucideIcon;
     cardClassName: string;
     iconWrapperClassName?: string;

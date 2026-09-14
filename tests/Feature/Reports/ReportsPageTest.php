@@ -65,6 +65,9 @@ test('admins can view event total registration and churches without registration
         Registration::MODE_ONLINE,
         Registration::STATUS_PENDING_VERIFICATION,
         3,
+        [
+            'submitted_at' => '2026-05-03 09:00:00',
+        ],
     );
 
     createReportedRegistration(
@@ -75,6 +78,9 @@ test('admins can view event total registration and churches without registration
         Registration::MODE_ONLINE,
         Registration::STATUS_VERIFIED,
         2,
+        [
+            'submitted_at' => '2026-05-03 10:00:00',
+        ],
     );
 
     createReportedRegistration(
@@ -85,6 +91,9 @@ test('admins can view event total registration and churches without registration
         Registration::MODE_ONSITE,
         Registration::STATUS_COMPLETED,
         5,
+        [
+            'submitted_at' => '2026-05-01 08:00:00',
+        ],
     );
 
     $this->actingAs($admin)
@@ -101,6 +110,7 @@ test('admins can view event total registration and churches without registration
             ->where('filters.search', '')
             ->where('filters.per_page', 10)
             ->where('selectedEvent.name', 'CLD Youth Conference 2026')
+            ->where('selectedEvent.department_name', 'No department')
             ->where('eventTotalRegistration.total_registered_quantity', 10)
             ->where('eventTotalRegistration.total_registered_amount', '7600.00')
             ->where('eventTotalRegistration.registration_count', 3)
@@ -135,10 +145,14 @@ test('admins can view event total registration and churches without registration
             ->where('eventTotalRegistration.church_summary_totals.total_registered_quantity', 10)
             ->where('eventTotalRegistration.church_summary_totals.total_registered_amount', '7600.00')
             ->has('churchesWithRegistration.data', 2)
-            ->where('churchesWithRegistration.data.0.church_name', 'Grace Community Church')
+            ->where('churchesWithRegistration.data.0.church_name', 'River of Life Church')
             ->where('churchesWithRegistration.data.0.total_registered_quantity', 5)
-            ->where('churchesWithRegistration.data.0.total_registered_amount', '3600.00')
-            ->where('churchesWithRegistration.data.1.church_name', 'River of Life Church')
+            ->where('churchesWithRegistration.data.0.total_registered_amount', '4000.00')
+            ->where('churchesWithRegistration.data.0.registered_at', '2026-05-01T08:00:00+08:00')
+            ->where('churchesWithRegistration.data.1.church_name', 'Grace Community Church')
+            ->where('churchesWithRegistration.data.1.total_registered_quantity', 5)
+            ->where('churchesWithRegistration.data.1.total_registered_amount', '3600.00')
+            ->where('churchesWithRegistration.data.1.registered_at', '2026-05-03T09:00:00+08:00')
             ->where('churchesWithRegistration.meta.total', 2)
             ->has('churchesWithoutRegistration.data', 2)
             ->where('churchesWithoutRegistration.data.0.church_name', 'Faith Harvest Church')
@@ -266,6 +280,20 @@ test('admins can filter and search churches without registration report', functi
             ->where('churchesWithoutRegistration.data.0.church_name', 'Hope Chapel')
             ->where('churchesWithoutRegistration.data.0.pastor_name', 'Pastor Anne Reyes'));
 
+    $this->actingAs($admin)
+        ->get(route('reports.index', [
+            'event_id' => $event->id,
+            'section_id' => $sectionThree->id,
+            'search' => 'Section 3',
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('reports/index')
+            ->where('filters.tab', 'no-registration')
+            ->where('filters.search', 'Section 3')
+            ->where('churchesWithoutRegistration.meta.total', 0)
+            ->has('churchesWithoutRegistration.data', 0));
+
     expect($pastorThree->church_name)->toBe('Hope Chapel');
 });
 
@@ -319,6 +347,22 @@ test('admins can filter and search churches with registration report', function 
         Registration::MODE_ONSITE,
         Registration::STATUS_COMPLETED,
         5,
+        [
+            'submitted_at' => '2026-05-04 09:15:00',
+        ],
+    );
+
+    createReportedRegistration(
+        $event,
+        $pastorThree,
+        $encoder,
+        $regular,
+        Registration::MODE_ONLINE,
+        Registration::STATUS_VERIFIED,
+        1,
+        [
+            'submitted_at' => '2026-05-01 08:00:00',
+        ],
     );
 
     $this->actingAs($admin)
@@ -335,12 +379,28 @@ test('admins can filter and search churches with registration report', function 
             ->where('filters.search', 'river')
             ->where('filters.per_page', 25)
             ->where('churchesWithRegistration.meta.total', 1)
+            ->where('churchesWithoutRegistration.meta.total', 1)
             ->has('churchesWithRegistration.data', 1)
             ->where('churchesWithRegistration.data.0.church_name', 'River of Life Church')
             ->where('churchesWithRegistration.data.0.pastor_name', 'Pastor Joel Cruz')
             ->where('churchesWithRegistration.data.0.section_name', 'Section 2')
-            ->where('churchesWithRegistration.data.0.total_registered_quantity', 5)
-            ->where('churchesWithRegistration.data.0.total_registered_amount', '4000.00'));
+            ->where('churchesWithRegistration.data.0.total_registered_quantity', 6)
+            ->where('churchesWithRegistration.data.0.total_registered_amount', '4800.00')
+            ->where('churchesWithRegistration.data.0.registered_at', '2026-05-01T08:00:00+08:00'));
+
+    $this->actingAs($admin)
+        ->get(route('reports.index', [
+            'event_id' => $event->id,
+            'tab' => 'church-summary',
+            'search' => 'Section 2',
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('reports/index')
+            ->where('filters.tab', 'church-summary')
+            ->where('filters.search', 'Section 2')
+            ->where('churchesWithRegistration.meta.total', 0)
+            ->has('churchesWithRegistration.data', 0));
 
     expect($pastorThree->church_name)->toBe('River of Life Church');
 });
@@ -376,6 +436,10 @@ test('admin report section filters stay inside the assigned district', function 
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('reports/index')
+            ->where('filters.event_id', null)
+            ->where('selectedEvent', null)
+            ->where('eventTotalRegistration.total_registered_quantity', 0)
+            ->where('churchesWithRegistration.meta.total', 0)
             ->has('sections', 1)
             ->where('sections.0.id', $section->id)
             ->where('sections.0.district_name', 'Central Luzon'));
@@ -621,11 +685,11 @@ test('department-scoped admins only see district report events for their departm
             ->component('reports/index')
             ->where('scopeSummary', 'District events • Youth Ministries')
             ->has('events', 1)
-            ->where('filters.event_id', $accessibleEvent->id)
-            ->where('selectedEvent.name', $accessibleEvent->name)
-            ->where('eventTotalRegistration.total_registered_quantity', 4)
-            ->where('eventTotalRegistration.registration_count', 1)
-            ->where('eventTotalRegistration.pending_online_quantity', 4));
+            ->where('filters.event_id', null)
+            ->where('selectedEvent', null)
+            ->where('eventTotalRegistration.total_registered_quantity', 0)
+            ->where('eventTotalRegistration.registration_count', 0)
+            ->where('eventTotalRegistration.pending_online_quantity', 0));
 });
 
 test('admins can generate onsite collection reports filtered by transaction date and collector', function () {
@@ -1325,6 +1389,9 @@ test('admins can export churches with registration based on report scope', funct
         Registration::MODE_ONLINE,
         Registration::STATUS_PENDING_VERIFICATION,
         3,
+        [
+            'submitted_at' => '2026-05-02 14:45:00',
+        ],
     );
 
     $response = $this->actingAs($admin)
@@ -1345,6 +1412,7 @@ test('admins can export churches with registration based on report scope', funct
             'Section' => 'Section 1',
             'Registered quantity' => 3,
             'Registered value' => '2400.00',
+            'Registered at' => '2026-05-02T14:45:00+08:00',
         ],
         [
             'Church name' => 'Totals',
@@ -1352,6 +1420,7 @@ test('admins can export churches with registration based on report scope', funct
             'Section' => '',
             'Registered quantity' => 3,
             'Registered value' => '2400.00',
+            'Registered at' => '',
         ],
     ]);
 

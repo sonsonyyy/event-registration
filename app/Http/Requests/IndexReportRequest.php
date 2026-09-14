@@ -26,7 +26,7 @@ class IndexReportRequest extends FormRequest
         return [
             'event_id' => ['nullable', 'integer', 'exists:events,id'],
             'section_id' => ['nullable', 'integer', 'exists:sections,id'],
-            'tab' => ['nullable', 'string', 'in:section-summary,church-summary,no-registration'],
+            'tab' => ['nullable', 'string', 'in:fee-category-totals,section-summary,church-summary,no-registration'],
             'search' => ['nullable', 'string', 'max:255'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'page' => ['nullable', 'integer', 'min:1'],
