@@ -39,12 +39,18 @@ class ReportsController extends Controller
         $sections = $this->sectionOptions($user);
         $selectedEvent = $this->selectedEvent($events, $filters['event_id']);
         $selectedSection = $this->selectedSection($user, $selectedEvent, $sections, $filters['section_id']);
+        $churchesWithRegistrationSearch = $filters['tab'] === 'church-summary'
+            ? $filters['search']
+            : '';
+        $churchesWithoutRegistrationSearch = $filters['tab'] === 'no-registration'
+            ? $filters['search']
+            : '';
         $churchesWithRegistration = $selectedEvent !== null
             ? $this->churchesWithRegistrationQuery(
                 $user,
                 $selectedEvent,
                 $selectedSection,
-                $filters['search'],
+                $churchesWithRegistrationSearch,
             )
                 ->paginate($filters['per_page'])
                 ->withQueryString()
@@ -54,7 +60,7 @@ class ReportsController extends Controller
                 $user,
                 $selectedEvent,
                 $selectedSection,
-                $filters['search'],
+                $churchesWithoutRegistrationSearch,
             )
                 ->paginate($filters['per_page'])
                 ->withQueryString()
@@ -95,6 +101,7 @@ class ReportsController extends Controller
                 'name' => $selectedEvent->name,
                 'venue' => $selectedEvent->venue,
                 'description' => $selectedEvent->description,
+                'department_name' => $selectedEvent->department?->name ?? 'No department',
                 'date_from' => $selectedEvent->date_from?->toDateString(),
                 'date_to' => $selectedEvent->date_to?->toDateString(),
                 'status' => $selectedEvent->status,
@@ -303,16 +310,14 @@ class ReportsController extends Controller
 
     private function selectedEvent(Collection $events, ?int $eventId): ?Event
     {
-        if ($events->isEmpty()) {
+        if ($events->isEmpty() || $eventId === null) {
             return null;
         }
 
         /** @var Event|null $selectedEvent */
-        $selectedEvent = $eventId !== null
-            ? $events->firstWhere('id', $eventId)
-            : null;
+        $selectedEvent = $events->firstWhere('id', $eventId);
 
-        return $selectedEvent ?? $events->first();
+        return $selectedEvent;
     }
 
     private function selectedSection(User $user, ?Event $event, Collection $sections, ?int $sectionId): ?Section
@@ -443,6 +448,13 @@ class ReportsController extends Controller
     ): Builder {
         $pastorsQuery = $this->scopedPastorsQuery($user, $event, $section);
         $pastorsQuery
+            ->addSelect([
+                'first_registration_submitted_at' => Registration::query()
+                    ->selectRaw('min(submitted_at)')
+                    ->whereColumn('registrations.pastor_id', 'pastors.id')
+                    ->where('event_id', $event->getKey())
+                    ->whereIn('registration_status', Registration::capacityReservedStatuses()),
+            ])
             ->with([
                 'registrations' => function ($query) use ($event): void {
                     $query
@@ -459,7 +471,13 @@ class ReportsController extends Controller
 
         $this->applyChurchSearch($pastorsQuery, $search);
 
-        return $pastorsQuery;
+        return $pastorsQuery
+            ->reorder()
+            ->orderByRaw('first_registration_submitted_at is null')
+            ->orderBy('first_registration_submitted_at')
+            ->orderBy('church_name')
+            ->orderBy('pastor_name')
+            ->orderBy('id');
     }
 
     private function churchesWithoutRegistrationQuery(
@@ -490,10 +508,7 @@ class ReportsController extends Controller
         $pastorsQuery->where(function (Builder $query) use ($search): void {
             $query
                 ->where('pastor_name', 'like', "%{$search}%")
-                ->orWhere('church_name', 'like', "%{$search}%")
-                ->orWhereHas('section', function (Builder $sectionQuery) use ($search): void {
-                    $sectionQuery->where('name', 'like', "%{$search}%");
-                });
+                ->orWhere('church_name', 'like', "%{$search}%");
         });
     }
 
@@ -675,6 +690,7 @@ class ReportsController extends Controller
             'pastor_name' => $pastor->pastor_name,
             'section_name' => $pastor->section?->name,
             'district_name' => $pastor->section?->district?->name,
+            'registered_at' => $this->firstRegistrationSubmittedAt($registrations),
             'registration_count' => $registrations->count(),
             'total_registered_quantity' => (int) $items->sum('quantity'),
             'total_registered_amount' => $this->formatAmount($items->sum(
@@ -808,6 +824,7 @@ class ReportsController extends Controller
                 'Section' => $church['section_name'] ?? 'Unassigned',
                 'Registered quantity' => $church['total_registered_quantity'],
                 'Registered value' => $church['total_registered_amount'],
+                'Registered at' => $church['registered_at'] ?? '',
             ])
             ->values();
 
@@ -821,6 +838,7 @@ class ReportsController extends Controller
             'Registered value' => $this->formatAmount($rows->sum(
                 fn (array $row): float => (float) $row['Registered value']
             )),
+            'Registered at' => '',
         ]);
 
         return $rows->all();
@@ -1032,6 +1050,7 @@ class ReportsController extends Controller
      *     pastor_name: string,
      *     section_name: string|null,
      *     district_name: string|null,
+     *     registered_at: string|null,
      *     registration_count: int,
      *     total_registered_quantity: int,
      *     total_registered_amount: string
@@ -1051,6 +1070,7 @@ class ReportsController extends Controller
                     'pastor_name' => $pastor->pastor_name,
                     'section_name' => $pastor->section?->name,
                     'district_name' => $pastor->section?->district?->name,
+                    'registered_at' => $this->firstRegistrationSubmittedAt($churchRegistrations),
                     'registration_count' => $churchRegistrations->count(),
                     'total_registered_quantity' => (int) $churchItems->sum('quantity'),
                     'total_registered_amount' => $this->formatAmount($churchItems->sum(
@@ -1059,6 +1079,20 @@ class ReportsController extends Controller
                 ];
             })
             ->all();
+    }
+
+    /**
+     * @param  Collection<int, Registration>  $registrations
+     */
+    private function firstRegistrationSubmittedAt(Collection $registrations): ?string
+    {
+        /** @var Registration|null $firstRegistration */
+        $firstRegistration = $registrations
+            ->filter(fn (Registration $registration): bool => $registration->submitted_at !== null)
+            ->sortBy('submitted_at')
+            ->first();
+
+        return $firstRegistration?->submitted_at?->toIso8601String();
     }
 
     private function onsiteCollectionBaseQuery(User $user): Builder
