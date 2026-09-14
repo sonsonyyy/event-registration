@@ -23,6 +23,7 @@ class ProfileController extends Controller
             'role:id,name',
             'district:id,name',
             'department:id,name',
+            'departments:id,name',
             'section:id,name,district_id',
             'section.district:id,name',
             'pastor:id,pastor_name,church_name,section_id',
@@ -99,7 +100,25 @@ class ProfileController extends Controller
         }
 
         if ($user->isRegistrationStaff()) {
-            return 'Operational onsite registration access across active events.';
+            $districtName = $user->district?->name ?? $user->section?->district?->name;
+            $sectionName = $user->section?->name;
+            $departmentNames = $user->departments
+                ->sortBy('name')
+                ->pluck('name')
+                ->all();
+            $departmentSummary = $departmentNames === []
+                ? 'all departments'
+                : implode(', ', $departmentNames);
+
+            if ($sectionName !== null) {
+                return 'Section-scoped registration access for '.$sectionName
+                    .($districtName !== null ? ' in '.$districtName : '')
+                    .' under '.$departmentSummary.'.';
+            }
+
+            return 'Operational onsite registration access'
+                .($districtName !== null ? ' in '.$districtName : '')
+                .' under '.$departmentSummary.'.';
         }
 
         if ($user->isOnlineRegistrant()) {

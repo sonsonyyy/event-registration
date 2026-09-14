@@ -300,6 +300,81 @@ test('managers can only review self-service registrant requests within their ass
         ->assertForbidden();
 });
 
+test('registration staff can review self-service registrant requests within their assigned section', function () {
+    Notification::fake();
+
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $section = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $otherSection = Section::factory()->for($district)->create([
+        'name' => 'Section 2',
+    ]);
+    $scopedPastor = Pastor::factory()->for($section)->create([
+        'church_name' => 'Grace Community Church',
+    ]);
+    $outsidePastor = Pastor::factory()->for($otherSection)->create([
+        'church_name' => 'Faith Community Church',
+    ]);
+    $staff = User::factory()->registrationStaff()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'department_id' => Department::factory()->create([
+            'name' => 'Youth Ministries',
+        ])->id,
+    ]);
+    $scopedRequest = User::factory()
+        ->onlineRegistrant()
+        ->selfServiceAccount()
+        ->pendingApproval()
+        ->create([
+            'district_id' => $district->id,
+            'section_id' => $section->id,
+            'pastor_id' => $scopedPastor->id,
+            'email' => 'section1-staff@example.com',
+        ]);
+    $outsideRequest = User::factory()
+        ->onlineRegistrant()
+        ->selfServiceAccount()
+        ->pendingApproval()
+        ->create([
+            'district_id' => $district->id,
+            'section_id' => $otherSection->id,
+            'pastor_id' => $outsidePastor->id,
+            'email' => 'section2-staff@example.com',
+        ]);
+
+    $this->actingAs($staff)
+        ->get(route('account-requests.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('account-requests/index')
+            ->where('scopeSummary', 'Central Luzon • Section 1')
+            ->where('summary.pending', 1)
+            ->has('sections', 0)
+            ->has('requests.data', 1)
+            ->where('requests.data.0.email', 'section1-staff@example.com'));
+
+    $this->actingAs($staff)
+        ->patch(route('account-requests.update', $scopedRequest), [
+            'decision' => User::APPROVAL_APPROVED,
+        ])
+        ->assertRedirect();
+
+    expect($scopedRequest->refresh()->approval_status)->toBe(User::APPROVAL_APPROVED)
+        ->and($scopedRequest->approval_reviewed_by_user_id)->toBe($staff->id);
+
+    Notification::assertSentTo($scopedRequest, RegistrantAccessApproved::class);
+
+    $this->actingAs($staff)
+        ->patch(route('account-requests.update', $outsideRequest), [
+            'decision' => User::APPROVAL_APPROVED,
+        ])
+        ->assertForbidden();
+});
+
 test('managers cannot approve a third registrant account for the same church', function () {
     $district = District::factory()->create();
     $section = Section::factory()->for($district)->create();

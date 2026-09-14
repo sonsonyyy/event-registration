@@ -49,6 +49,13 @@ class StoreUserRequest extends FormRequest
                 Rule::exists('departments', 'id')
                     ->where(fn ($query) => $query->whereNull('deleted_at')),
             ],
+            'department_ids' => ['nullable', 'array'],
+            'department_ids.*' => [
+                'integer',
+                'distinct:strict',
+                Rule::exists('departments', 'id')
+                    ->where(fn ($query) => $query->whereNull('deleted_at')),
+            ],
             'section_id' => [
                 'nullable',
                 'integer',
@@ -195,6 +202,8 @@ class StoreUserRequest extends FormRequest
             'role_id.exists' => 'Choose a valid role.',
             'district_id.exists' => 'Choose a valid district.',
             'department_id.exists' => 'Choose a valid department.',
+            'department_ids.*.exists' => 'Choose valid departments.',
+            'department_ids.*.distinct' => 'Choose each department only once.',
             'section_id.exists' => 'Choose a valid section.',
             'pastor_id.exists' => 'Choose a valid pastor.',
             'position_title.max' => 'Position titles must be 255 characters or fewer.',
@@ -216,6 +225,7 @@ class StoreUserRequest extends FormRequest
         $pastor = $this->selectedPastor();
 
         $validated['district_id'] = $district?->getKey();
+        $validated['department_id'] = $this->primaryDepartmentId();
         $validated['section_id'] = $section?->getKey();
         $validated['pastor_id'] = $pastor?->getKey();
 
@@ -228,7 +238,40 @@ class StoreUserRequest extends FormRequest
             $validated['district_id'] = $pastor->section->district_id;
         }
 
+        unset($validated['department_ids']);
+
         return $validated;
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    public function departmentIds(): array
+    {
+        $role = $this->selectedRole();
+
+        if ($role?->name !== Role::REGISTRATION_STAFF) {
+            return [];
+        }
+
+        return collect($this->validated('department_ids', []))
+            ->map(fn (mixed $departmentId): int => (int) $departmentId)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function primaryDepartmentId(): ?int
+    {
+        $role = $this->selectedRole();
+
+        if ($role?->name === Role::REGISTRATION_STAFF) {
+            return $this->departmentIds()[0] ?? null;
+        }
+
+        $departmentId = $this->validated('department_id');
+
+        return $departmentId !== null ? (int) $departmentId : null;
     }
 
     private function selectedRole(): ?Role

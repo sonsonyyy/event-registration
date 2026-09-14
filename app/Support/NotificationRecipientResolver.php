@@ -57,13 +57,14 @@ class NotificationRecipientResolver
     private function reviewerCandidates(): Collection
     {
         return User::query()
-            ->with('role')
+            ->with('role', 'departments')
             ->where('status', User::STATUS_ACTIVE)
             ->whereHas('role', function ($query): void {
                 $query->whereIn('name', [
                     Role::SUPER_ADMIN,
                     Role::ADMIN,
                     Role::MANAGER,
+                    Role::REGISTRATION_STAFF,
                 ]);
             })
             ->get();

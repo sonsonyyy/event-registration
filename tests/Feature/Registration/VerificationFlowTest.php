@@ -686,6 +686,15 @@ test('department-scoped reviewers are limited to matching departments and event 
         'section_id' => $section->id,
         'department_id' => $youthDepartment->id,
     ]);
+    $registrationStaff = User::factory()->registrationStaff()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'department_id' => $youthDepartment->id,
+    ]);
+    $registrationStaff->departments()->sync([
+        $youthDepartment->id,
+        $ladiesDepartment->id,
+    ]);
     $pastor = Pastor::factory()->for($section)->create();
     $registrant = User::factory()->onlineRegistrant()->create([
         'district_id' => $district->id,
@@ -826,6 +835,25 @@ test('department-scoped reviewers are limited to matching departments and event 
             'decision' => Registration::STATUS_VERIFIED,
         ])
         ->assertForbidden();
+
+    $this->actingAs($registrationStaff)
+        ->get(route('registrations.verification.index', [
+            'status' => 'all',
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('scopeSummary', 'Central Luzon • Section 1 • Ladies Ministries, Youth Ministries')
+            ->where('summary.pending_verification', 4)
+            ->has('sections', 0)
+            ->has('registrations.data', 4));
+
+    $this->actingAs($registrationStaff)
+        ->get(route('registrations.verification.receipt', $ladiesDistrictRegistration))
+        ->assertSuccessful();
+
+    $this->actingAs($registrationStaff)
+        ->get(route('registrations.verification.receipt', $ladiesSectionRegistration))
+        ->assertSuccessful();
 });
 
 test('reviewers can return registrations for correction with a reason and reviewer notes', function () {
