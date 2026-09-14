@@ -156,8 +156,7 @@ export default function UserForm({
 
     const selectedRole =
         roles.find((role) => role.id.toString() === form.data.role_id) ?? null;
-    const isRegistrationStaff =
-        selectedRole?.name === 'Registration Staff';
+    const isRegistrationStaff = selectedRole?.name === 'Registration Staff';
     const filteredSections = form.data.district_id
         ? sections.filter(
               (section) =>
@@ -320,7 +319,9 @@ export default function UserForm({
         form.setData((currentData) => {
             const nextDepartmentIds = checked
                 ? [...currentData.department_ids, departmentId]
-                : currentData.department_ids.filter((id) => id !== departmentId);
+                : currentData.department_ids.filter(
+                      (id) => id !== departmentId,
+                  );
 
             const uniqueDepartmentIds = Array.from(new Set(nextDepartmentIds));
 
