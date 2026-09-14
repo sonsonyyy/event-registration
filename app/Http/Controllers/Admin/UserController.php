@@ -108,6 +108,9 @@ class UserController extends Controller
                         ->orWhereHas('department', function (Builder $query) use ($search): void {
                             $query->where('name', 'like', "%{$search}%");
                         })
+                        ->orWhereHas('departments', function (Builder $query) use ($search): void {
+                            $query->where('name', 'like', "%{$search}%");
+                        })
                         ->orWhereHas('section', function (Builder $query) use ($search): void {
                             $query->where('name', 'like', "%{$search}%");
                         })
@@ -122,6 +125,7 @@ class UserController extends Controller
                 'role:id,name',
                 'district:id,name',
                 'department:id,name',
+                'departments:id,name',
                 'section:id,name,district_id',
                 'section.district:id,name',
                 'pastor:id,pastor_name,church_name,section_id',
@@ -163,6 +167,7 @@ class UserController extends Controller
         $user->forceFill([
             'email_verified_at' => now(),
         ])->save();
+        $this->syncDepartmentScope($user, $request->departmentIds());
 
         return to_route('admin.users.index')->with('success', 'User created.');
     }
@@ -181,6 +186,7 @@ class UserController extends Controller
             'role:id,name',
             'district:id,name',
             'department:id,name',
+            'departments:id,name',
             'section:id,name,district_id',
             'section.district:id,name',
             'pastor:id,pastor_name,church_name,section_id',
@@ -211,11 +217,13 @@ class UserController extends Controller
                 ...$payload,
                 'email_verified_at' => now(),
             ])->save();
+            $this->syncDepartmentScope($user, $request->departmentIds());
 
             return to_route('admin.users.index')->with('success', 'User updated.');
         }
 
         $user->update($payload);
+        $this->syncDepartmentScope($user, $request->departmentIds());
 
         return to_route('admin.users.index')->with('success', 'User updated.');
     }
@@ -288,6 +296,11 @@ class UserController extends Controller
             'role_id' => $user->role_id,
             'district_id' => $user->district_id,
             'department_id' => $user->department_id,
+            'department_ids' => $user->departments
+                ->sortBy('name')
+                ->map(fn (Department $department): int => $department->getKey())
+                ->values()
+                ->all(),
             'section_id' => $user->section_id,
             'pastor_id' => $user->pastor_id,
             'position_title' => $user->position_title,
@@ -482,6 +495,14 @@ class UserController extends Controller
             $scopeParts[] = $user->department->name;
         }
 
+        if ($user->isRegistrationStaff()) {
+            $departmentNames = $user->relationLoaded('departments')
+                ? $user->departments->sortBy('name')->pluck('name')->all()
+                : $user->departments()->pluck('name')->all();
+
+            array_push($scopeParts, ...$departmentNames);
+        }
+
         $scopeParts = array_values(array_unique(array_filter($scopeParts)));
 
         if ($scopeParts !== []) {
@@ -489,5 +510,19 @@ class UserController extends Controller
         }
 
         return $user->hasAdminAccess() ? 'Global access' : 'No scope assigned';
+    }
+
+    /**
+     * @param  array<int, int>  $departmentIds
+     */
+    private function syncDepartmentScope(User $user, array $departmentIds): void
+    {
+        if (! $user->isRegistrationStaff()) {
+            $user->departments()->sync([]);
+
+            return;
+        }
+
+        $user->departments()->sync($departmentIds);
     }
 }

@@ -55,7 +55,7 @@ District-scoped operator responsible for district-level setup, reporting, online
 Section-scoped operator responsible for sectional event management, section review work, and section-level reporting.
 
 ### 3.4 Registration Staff
-Operational encoder focused on onsite grouped registration.
+Section-scoped registration operations user focused on onsite grouped registration plus scoped review and reporting across assigned department scopes.
 
 ### 3.5 Online Registrant
 Church representative assigned to one pastor/church record and responsible for online submissions for that church.
@@ -173,6 +173,7 @@ Current approval behavior:
 - `Super Admin` can review all self-service account requests
 - `Admin` can review requests across the assigned district
 - `Manager` can review requests inside the assigned section
+- `Registration Staff` can review requests inside the assigned section when assigned to a section
 - department does not restrict account-request approval
 
 ### 7.2 Master Data and User Management
@@ -186,7 +187,7 @@ The product must support CRUD plus archive behavior for:
 Current constraints:
 - the standard user form exposes `Admin`, `Manager`, `Registration Staff`, and `Online Registrant`
 - managers must have a section
-- registration staff must have a district
+- registration staff must have a district, may be assigned to a section for scoped review and reporting access, and may be assigned to multiple department scopes inside that section
 - online registrants must have a pastor
 - admin users are limited to managing users inside their district
 
@@ -275,6 +276,7 @@ Current review audience:
 - `Super Admin`
 - `Admin` for district-wide events in the assigned district and matching department lane
 - `Manager` for section registrations in the assigned section, including district-wide events affecting that section
+- `Registration Staff` assigned to a section for assigned department records in that section, including district-wide events affecting that section; when no department scopes are selected, the staff account can review all departments in that section
 
 ### 7.8 Notifications
 The product must provide in-app workflow notifications for:
@@ -307,7 +309,8 @@ Current access rules:
 - `Super Admin` can report across all accessible events
 - `Admin` can report across district events in the assigned department lane
 - `Manager` can report only their own section data
-- `Registration Staff` and `Online Registrant` cannot access reports
+- `Registration Staff` assigned to a section can report on assigned department records inside that section, including the Onsite Collection Report; when no department scopes are selected, the staff account can report on all departments in that section
+- `Online Registrant` cannot access reports
 
 ### 7.10 Dashboard and Settings
 The authenticated workspace must provide:
@@ -478,7 +481,7 @@ Recommended access behavior:
 - `Super Admin` can process check-ins for all events and churches.
 - `Admin` can process check-ins for district-wide events in the assigned district and matching department lane.
 - `Manager` can process check-ins only for churches in the assigned section, including district-wide events that affect the manager's section.
-- `Registration Staff` is the primary booth role and can process check-ins within the assigned district, optional section, and optional department lane.
+- `Registration Staff` is the primary booth role and can process check-ins within the assigned district, optional section, and assigned department lanes.
 - `Online Registrant` cannot process check-ins, but may later be allowed to view their own church's check-in or claim status if needed.
 
 ### 11.9 Recommended User Experience

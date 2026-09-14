@@ -50,6 +50,7 @@ Department matching is strict for privileged event, registration, verification, 
 - If a privileged user belongs to a department, they only match records in that same department.
 - If a privileged user has no department, they only match records where `department_id` is `null`.
 - No-department is not a wildcard.
+- `Registration Staff` can instead hold multiple department scopes for section-level onsite, verification, and reporting work. An empty staff department-scope list means all departments inside the assigned section.
 
 Current seed data creates these default departments:
 - Youth Ministries
@@ -67,6 +68,7 @@ Registrant account approval does not use department matching. Account requests a
 - `Super Admin` can review all requests.
 - `Admin` can review requests in the assigned district.
 - `Manager` can review requests in the assigned section.
+- `Registration Staff` can review requests in the assigned section when assigned to a section.
 
 ---
 
@@ -122,14 +124,15 @@ Current behavior:
 Current behavior:
 - Must belong to a district
 - May optionally belong to a section
-- May optionally belong to a department
+- May optionally belong to one or more department scopes
 - Cannot be assigned to a pastor
 - Can create onsite registrations
 - Can update onsite registrations that they encoded themselves
 - Can see accessible pastors and events for onsite work
+- When assigned to a section, can access Account Requests inside that section
+- When assigned to a section, can access Verification for assigned department records inside that section; no assigned department scopes means all departments in that section
+- When assigned to a section, can access Reports and the Onsite Collection Report for assigned department records inside that section; no assigned department scopes means all departments in that section
 - Cannot manage events
-- Cannot access verification queues
-- Cannot access reports
 - Cannot access admin master-data pages
 
 ### 3.5 Online Registrant
@@ -375,7 +378,7 @@ User-management notes:
 - The standard form supports `Admin`, `Manager`, `Registration Staff`, and `Online Registrant`
 - Selecting a pastor automatically resolves the matching section and district
 - Managers must have a section
-- Registration staff must have a district
+- Registration staff must have a district; section assignment unlocks scoped Account Requests, Verification, Reports, and Onsite Collection Report access, and department scopes can include multiple departments
 - Online registrants must have a pastor
 
 ### 7.2 Onsite Registration
@@ -396,7 +399,7 @@ Current behavior:
 Scope rules:
 - `Admin` may post only for district-wide events in the assigned district and matching department lane
 - `Manager` may post only for churches in the assigned section and matching event access lane
-- `Registration Staff` may post within the assigned district, optional section, and department lane
+- `Registration Staff` may post within the assigned district, optional section, and assigned department lanes
 
 ### 7.3 Online Registration
 Implemented online features:
@@ -433,7 +436,8 @@ Current behavior:
 - only online registrations enter the verification queue
 - queue history includes reviewer, decision, reason, notes, and timestamp
 - section filtering is available to admins and super admins
-- managers do not get a multi-section filter; their queue is already section-scoped
+- managers and section-assigned registration staff do not get a multi-section filter; their queue is already section-scoped
+- section-assigned registration staff see assigned departments inside their section for verification; no assigned department scopes means all departments in that section
 
 ### 7.5 Notifications
 Implemented notification features:
@@ -455,8 +459,8 @@ Current workflow notification types:
 - registration rejected
 
 Routing rules:
-- account request notifications go to active super admins, same-district admins, and same-section managers
-- registration review notifications go to active reviewers whose event, territory, and department scope matches
+- account request notifications go to active super admins, same-district admins, same-section managers, and same-section registration staff
+- registration review notifications go to active reviewers whose event, territory, and department scope matches; section-assigned registration staff receive matching-section review notifications for their assigned departments, or all departments when no department scopes are selected
 
 ### 7.6 Reports
 Implemented report outputs:
@@ -472,11 +476,13 @@ Access rules:
 - `Super Admin` can report across all scopes
 - `Admin` can report on accessible district events in the assigned department lane
 - `Manager` can report only within the assigned section
-- `Registration Staff` cannot access reports
+- `Registration Staff` assigned to a section can report only within that assigned section and assigned departments in that section; no assigned department scopes means all departments in that section
 - `Online Registrant` cannot access reports
 
 Important behavior:
 - managers only see their own section data even when the selected event is district-wide
+- section-assigned registration staff only see their own section data for assigned departments even when the selected event is district-wide
+- the Onsite Collection Report follows the same section and department scope for section-assigned registration staff and allows filtering by collectors inside that scope
 - report event options include archived events for historical lookup
 
 ### 7.7 Dashboard
@@ -553,6 +559,7 @@ Core tables in the current system:
 - `districts`
 - `sections`
 - `departments`
+- `department_user`
 - `pastors`
 - `events`
 - `event_fee_categories`
@@ -566,6 +573,7 @@ Relationship summary:
 - section belongs to district and has many pastors
 - pastor belongs to section
 - user belongs to role and may belong to district, section, department, and pastor
+- registration staff can belong to many department scopes through `department_user`
 - event belongs to district and may belong to section and department
 - event has many fee categories
 - registration belongs to event and pastor
@@ -704,7 +712,7 @@ Recommended role behavior:
 - `Super Admin` can process and view all check-ins.
 - `Admin` can process and view check-ins for district-wide events in the assigned district and matching department lane.
 - `Manager` can process and view check-ins only for churches in the assigned section, including district-wide events that affect the manager's section.
-- `Registration Staff` can process check-ins within the assigned district, optional section, and optional department lane.
+- `Registration Staff` can process check-ins within the assigned district, optional section, and assigned department lanes.
 - `Online Registrant` cannot process check-ins.
 
 Optional future behavior:

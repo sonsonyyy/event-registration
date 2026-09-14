@@ -22,6 +22,7 @@ test('mvp schema tables and key columns exist', function () {
     expect(Schema::hasTable('districts'))->toBeTrue();
     expect(Schema::hasTable('sections'))->toBeTrue();
     expect(Schema::hasTable('departments'))->toBeTrue();
+    expect(Schema::hasTable('department_user'))->toBeTrue();
     expect(Schema::hasTable('pastors'))->toBeTrue();
     expect(Schema::hasTable('events'))->toBeTrue();
     expect(Schema::hasTable('event_fee_categories'))->toBeTrue();
@@ -47,6 +48,10 @@ test('mvp schema tables and key columns exist', function () {
         'pastor_id',
         'position_title',
         'status',
+    ]))->toBeTrue();
+    expect(Schema::hasColumns('department_user', [
+        'department_id',
+        'user_id',
     ]))->toBeTrue();
     expect(Schema::hasColumns('events', [
         'scope_type',
@@ -198,6 +203,9 @@ test('core mvp model relationships resolve correctly', function () {
     expect($user->district->is($district))->toBeTrue();
     expect($user->section->is($section))->toBeTrue();
     expect($user->department->is($department))->toBeTrue();
+    $user->departments()->attach($department);
+    expect($user->departments->first()->is($department))->toBeTrue();
+    expect($department->scopedUsers->first()->is($user))->toBeTrue();
     expect($user->pastor->is($pastor))->toBeTrue();
     expect($event->district->is($district))->toBeTrue();
     expect($event->section->is($section))->toBeTrue();

@@ -87,7 +87,7 @@ class DepartmentScopeAccess
     {
         return $reviewer->isSuperAdmin()
             || ($reviewer->isAdmin() && $reviewer->district_id !== null)
-            || ($reviewer->isManager() && $reviewer->section_id !== null);
+            || self::hasSectionReviewScope($reviewer);
     }
 
     public static function canApproveRegistrantRequest(User $reviewer, User $accountRequest): bool
@@ -109,7 +109,7 @@ class DepartmentScopeAccess
                 && self::approvalDistrictId($accountRequest) === $reviewer->district_id;
         }
 
-        return $reviewer->section_id !== null
+        return self::hasSectionReviewScope($reviewer)
             && $accountRequest->section_id !== null
             && $reviewer->section_id === $accountRequest->section_id;
     }
@@ -124,7 +124,7 @@ class DepartmentScopeAccess
             return $query->where('district_id', $reviewer->district_id);
         }
 
-        if ($reviewer->isManager() && $reviewer->section_id !== null) {
+        if (self::hasSectionReviewScope($reviewer)) {
             return $query->where('section_id', $reviewer->section_id);
         }
 
@@ -176,7 +176,7 @@ class DepartmentScopeAccess
             return $reviewer->district_id !== null;
         }
 
-        return $reviewer->isManager() && $reviewer->section_id !== null;
+        return self::hasSectionReviewScope($reviewer);
     }
 
     public static function canAccessVerificationRegistration(User $reviewer, Registration $registration): bool
@@ -198,7 +198,11 @@ class DepartmentScopeAccess
             return self::adminCanProcessDistrictRegistration($reviewer, $registration);
         }
 
-        return self::managerCanProcessSectionRegistration($reviewer, $registration);
+        return self::sectionReviewerCanProcessRegistration(
+            $reviewer,
+            $registration,
+            $reviewer->isManager(),
+        );
     }
 
     public static function canReviewRegistration(User $reviewer, Registration $registration): bool
@@ -230,7 +234,7 @@ class DepartmentScopeAccess
                 });
         }
 
-        if ($reviewer->isManager() && $reviewer->section_id !== null) {
+        if (self::hasSectionReviewScope($reviewer)) {
             $managerDistrictId = self::managerDistrictId($reviewer);
 
             return $query
@@ -238,7 +242,11 @@ class DepartmentScopeAccess
                     $pastorQuery->where('section_id', $reviewer->section_id);
                 })
                 ->whereHas('event', function (Builder $eventQuery) use ($reviewer, $managerDistrictId): void {
-                    self::applyStrictDepartmentScope($eventQuery, $reviewer);
+                    if ($reviewer->isManager()) {
+                        self::applyStrictDepartmentScope($eventQuery, $reviewer);
+                    } elseif ($reviewer->isRegistrationStaff()) {
+                        self::applyRegistrationStaffDepartmentScope($eventQuery, $reviewer);
+                    }
 
                     $eventQuery->where(function (Builder $scopedEventQuery) use ($reviewer, $managerDistrictId): void {
                         $scopedEventQuery = $scopedEventQuery
@@ -318,7 +326,7 @@ class DepartmentScopeAccess
                 return $query->whereRaw('1 = 0');
             }
 
-            self::applyStrictDepartmentScope($query, $user);
+            self::applyRegistrationStaffDepartmentScope($query, $user);
 
             return $query->where(function (Builder $eventQuery) use ($user): void {
                 $eventQuery
@@ -399,7 +407,9 @@ class DepartmentScopeAccess
             .' • '
             .$section->name
             .' • '
-            .self::departmentScopeLabel($reviewer);
+            .($reviewer->isRegistrationStaff()
+                ? self::registrationStaffDepartmentScopeLabel($reviewer)
+                : self::departmentScopeLabel($reviewer));
     }
 
     public static function canPostOnsiteRegistration(User $user, Pastor $pastor, Event $event): bool
@@ -410,11 +420,11 @@ class DepartmentScopeAccess
             return true;
         }
 
-        if (! self::matchesDepartmentScope($user, $event)) {
-            return false;
-        }
-
         if ($user->isAdmin()) {
+            if (! self::matchesDepartmentScope($user, $event)) {
+                return false;
+            }
+
             return $user->district_id !== null
                 && $event->isDistrictScoped()
                 && $event->district_id === $user->district_id
@@ -422,6 +432,10 @@ class DepartmentScopeAccess
         }
 
         if ($user->isManager()) {
+            if (! self::matchesDepartmentScope($user, $event)) {
+                return false;
+            }
+
             $managerDistrictId = self::managerDistrictId($user);
 
             return $user->section_id !== null
@@ -433,6 +447,10 @@ class DepartmentScopeAccess
         }
 
         if ($user->isRegistrationStaff()) {
+            if (! self::registrationStaffMatchesDepartmentScope($user, $event)) {
+                return false;
+            }
+
             if (! self::canAccessPastorForOnsiteScope($user, $pastor)) {
                 return false;
             }
@@ -552,11 +570,11 @@ class DepartmentScopeAccess
                     .' • '
                     .$section->name
                     .' • '
-                    .self::departmentScopeLabel($user);
+                    .self::registrationStaffDepartmentScopeLabel($user);
             }
 
             return $districtName !== null
-                ? $districtName.' • all sections • '.self::departmentScopeLabel($user)
+                ? $districtName.' • all sections • '.self::registrationStaffDepartmentScopeLabel($user)
                 : 'your assigned scope';
         }
 
@@ -627,7 +645,7 @@ class DepartmentScopeAccess
     {
         if (
             $user->district_id === null
-            || ! self::matchesDepartmentScope($user, $event)
+            || ! self::registrationStaffMatchesDepartmentScope($user, $event)
         ) {
             return false;
         }
@@ -645,9 +663,81 @@ class DepartmentScopeAccess
         return $event->section?->district_id === $user->district_id;
     }
 
+    public static function scopeSectionReportEvents(Builder $query, User $user): Builder
+    {
+        if (! self::hasSectionReviewScope($user)) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        $districtId = self::managerDistrictId($user);
+
+        if ($user->isRegistrationStaff()) {
+            self::applyRegistrationStaffDepartmentScope($query, $user);
+        }
+
+        return $query->where(function (Builder $eventQuery) use ($user, $districtId): void {
+            $eventQuery
+                ->where(function (Builder $districtEventQuery) use ($districtId): void {
+                    $districtEventQuery->where('scope_type', Event::SCOPE_DISTRICT);
+
+                    if ($districtId !== null) {
+                        $districtEventQuery->where('district_id', $districtId);
+
+                        return;
+                    }
+
+                    $districtEventQuery->whereRaw('1 = 0');
+                })
+                ->orWhere(function (Builder $sectionEventQuery) use ($user): void {
+                    $sectionEventQuery
+                        ->where('scope_type', Event::SCOPE_SECTION)
+                        ->where('section_id', $user->section_id);
+                });
+        });
+    }
+
+    private static function sectionReviewerCanProcessRegistration(
+        User $user,
+        Registration $registration,
+        bool $enforceDepartmentScope,
+    ): bool {
+        $event = $registration->event;
+        $pastor = $registration->pastor;
+        $sectionDistrictId = self::managerDistrictId($user);
+
+        return $user->section_id !== null
+            && $pastor?->section_id === $user->section_id
+            && (
+                ($user->isRegistrationStaff() && self::registrationStaffMatchesDepartmentScope($user, $event))
+                || (! $user->isRegistrationStaff() && (! $enforceDepartmentScope || self::matchesDepartmentScope($user, $event)))
+            )
+            && (
+                ($event->isDistrictScoped() && $sectionDistrictId !== null && $event->district_id === $sectionDistrictId)
+                || ($event->isSectionScoped() && $event->section_id === $user->section_id)
+            );
+    }
+
+    private static function hasSectionReviewScope(User $user): bool
+    {
+        return ($user->isManager() || $user->isRegistrationStaff())
+            && $user->section_id !== null;
+    }
+
     private static function matchesDepartmentScope(User $reviewer, Event $event): bool
     {
         return $reviewer->department_id === $event->department_id;
+    }
+
+    private static function registrationStaffMatchesDepartmentScope(User $reviewer, Event $event): bool
+    {
+        $departmentIds = self::registrationStaffDepartmentIds($reviewer);
+
+        if ($departmentIds === []) {
+            return true;
+        }
+
+        return $event->department_id !== null
+            && in_array($event->department_id, $departmentIds, true);
     }
 
     public static function canManageEventRecord(User $user, Event $event): bool
@@ -755,11 +845,57 @@ class DepartmentScopeAccess
         $query->where('department_id', $user->department_id);
     }
 
+    private static function applyRegistrationStaffDepartmentScope(Builder $query, User $user): void
+    {
+        $departmentIds = self::registrationStaffDepartmentIds($user);
+
+        if ($departmentIds === []) {
+            return;
+        }
+
+        $query->whereIn('department_id', $departmentIds);
+    }
+
     private static function departmentScopeLabel(User $reviewer): string
     {
         return $reviewer->department?->name
             ?? $reviewer->department()->value('name')
             ?? 'No department';
+    }
+
+    private static function registrationStaffDepartmentScopeLabel(User $reviewer): string
+    {
+        $departmentNames = $reviewer->relationLoaded('departments')
+            ? $reviewer->departments->sortBy('name')->pluck('name')->all()
+            : $reviewer->departments()->orderBy('name')->pluck('name')->all();
+
+        if ($departmentNames === []) {
+            return 'All departments';
+        }
+
+        return implode(', ', $departmentNames);
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private static function registrationStaffDepartmentIds(User $reviewer): array
+    {
+        $departmentIds = $reviewer->relationLoaded('departments')
+            ? $reviewer->departments->pluck('id')->all()
+            : $reviewer->departments()->pluck('departments.id')->all();
+
+        $departmentIds = collect($departmentIds)
+            ->map(fn (mixed $departmentId): int => (int) $departmentId)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($departmentIds === [] && $reviewer->department_id !== null) {
+            return [(int) $reviewer->department_id];
+        }
+
+        return $departmentIds;
     }
 
     private static function managerDistrictId(User $user): ?int

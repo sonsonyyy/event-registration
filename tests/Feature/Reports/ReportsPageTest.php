@@ -1088,6 +1088,146 @@ test('managers only see their own onsite collection records within their assigne
             ->where('onsiteCollectionReport.totals.total_amount', '1000.00'));
 });
 
+test('registration staff can report on assigned department records within their assigned section', function () {
+    $district = District::factory()->create([
+        'name' => 'Central Luzon',
+    ]);
+    $sectionOne = Section::factory()->for($district)->create([
+        'name' => 'Section 1',
+    ]);
+    $sectionTwo = Section::factory()->for($district)->create([
+        'name' => 'Section 2',
+    ]);
+    $youthDepartment = Department::factory()->create([
+        'name' => 'Youth Ministries',
+    ]);
+    $ladiesDepartment = Department::factory()->create([
+        'name' => 'Ladies Ministries',
+    ]);
+    $pastorOne = Pastor::factory()->for($sectionOne)->create([
+        'church_name' => 'Grace Community Church',
+    ]);
+    $pastorTwo = Pastor::factory()->for($sectionTwo)->create([
+        'church_name' => 'River of Life Church',
+    ]);
+    $staff = User::factory()->registrationStaff()->create([
+        'district_id' => $district->id,
+        'section_id' => $sectionOne->id,
+        'department_id' => $youthDepartment->id,
+    ]);
+    $staff->departments()->sync([
+        $youthDepartment->id,
+        $ladiesDepartment->id,
+    ]);
+    $collectorOne = User::factory()->registrationStaff()->create([
+        'name' => 'Anna Collector',
+    ]);
+    $collectorTwo = User::factory()->registrationStaff()->create([
+        'name' => 'Ben Collector',
+    ]);
+    $youthEvent = reportEvent([
+        'district_id' => $district->id,
+        'department_id' => $youthDepartment->id,
+    ]);
+    $ladiesEvent = reportEvent([
+        'district_id' => $district->id,
+        'department_id' => $ladiesDepartment->id,
+    ]);
+    $youthRegular = EventFeeCategory::factory()->for($youthEvent)->create([
+        'category_name' => 'Youth Regular',
+        'amount' => '500.00',
+    ]);
+    $ladiesRegular = EventFeeCategory::factory()->for($ladiesEvent)->create([
+        'category_name' => 'Ladies Regular',
+        'amount' => '600.00',
+    ]);
+
+    createReportedRegistration(
+        $youthEvent,
+        $pastorOne,
+        $collectorOne,
+        $youthRegular,
+        Registration::MODE_ONSITE,
+        Registration::STATUS_COMPLETED,
+        2,
+        [
+            'submitted_at' => '2026-05-01 09:00:00',
+        ],
+    );
+
+    createReportedRegistration(
+        $ladiesEvent,
+        $pastorOne,
+        $collectorOne,
+        $ladiesRegular,
+        Registration::MODE_ONSITE,
+        Registration::STATUS_COMPLETED,
+        3,
+        [
+            'remarks' => 'Section staff window',
+            'submitted_at' => '2026-05-01 09:30:00',
+        ],
+    );
+
+    createReportedRegistration(
+        $ladiesEvent,
+        $pastorTwo,
+        $collectorTwo,
+        $ladiesRegular,
+        Registration::MODE_ONSITE,
+        Registration::STATUS_COMPLETED,
+        5,
+        [
+            'submitted_at' => '2026-05-01 10:00:00',
+        ],
+    );
+
+    $this->actingAs($staff)
+        ->get(route('reports.index', [
+            'event_id' => $ladiesEvent->id,
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('reports/index')
+            ->where('scopeSummary', 'Central Luzon • Section 1 • Ladies Ministries, Youth Ministries')
+            ->where('canFilterBySection', false)
+            ->where('filters.event_id', $ladiesEvent->id)
+            ->where('filters.section_id', $sectionOne->id)
+            ->has('events', 2)
+            ->has('sections', 1)
+            ->where('selectedEvent.department_name', 'Ladies Ministries')
+            ->where('eventTotalRegistration.total_registered_quantity', 3)
+            ->where('eventTotalRegistration.registration_count', 1)
+            ->has('eventTotalRegistration.section_summaries', 1)
+            ->where('eventTotalRegistration.section_summaries.0.name', 'Section 1')
+            ->where('eventTotalRegistration.section_summaries.0.total_registered_quantity', 3));
+
+    $this->actingAs($staff)
+        ->get(route('reports.onsite-collection.index', [
+            'event_id' => $ladiesEvent->id,
+            'collection_date_from' => '2026-05-01',
+            'collection_date_to' => '2026-05-01',
+            'collection_user_id' => $collectorOne->id,
+            'collection_generated' => 1,
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('reports/onsite-collection/index')
+            ->where('scopeSummary', 'Central Luzon • Section 1 • Ladies Ministries, Youth Ministries')
+            ->where('onsiteCollectionCollectorLocked', false)
+            ->where('onsiteCollectionFilters.event_id', $ladiesEvent->id)
+            ->where('onsiteCollectionFilters.user_id', $collectorOne->id)
+            ->has('onsiteCollectionUsers', 1)
+            ->where('onsiteCollectionUsers.0.name', 'Anna Collector')
+            ->has('onsiteCollectionReport.data', 1)
+            ->where('onsiteCollectionReport.data.0.church_name', 'Grace Community Church')
+            ->where('onsiteCollectionReport.data.0.collector.name', 'Anna Collector')
+            ->where('onsiteCollectionReport.data.0.remarks', 'Section staff window')
+            ->where('onsiteCollectionReport.totals.transaction_count', 1)
+            ->where('onsiteCollectionReport.totals.total_quantity', 3)
+            ->where('onsiteCollectionReport.totals.total_amount', '1800.00'));
+});
+
 test('admins can export onsite collection reports based on transaction date and collector filters', function () {
     $district = District::factory()->create([
         'name' => 'Central Luzon',

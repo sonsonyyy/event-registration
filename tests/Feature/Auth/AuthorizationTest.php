@@ -90,6 +90,12 @@ test('registration staff can encode onsite registrations without master data acc
     $context = authorizationContext();
     $staff = User::factory()->registrationStaff()->create([
         'district_id' => $context['district']->id,
+        'section_id' => $context['section']->id,
+        'department_id' => $context['youthDepartment']->id,
+    ]);
+    $staff->departments()->sync([
+        $context['youthDepartment']->id,
+        $context['ladiesDepartment']->id,
     ]);
     $otherStaff = User::factory()->registrationStaff()->create([
         'district_id' => $context['district']->id,
@@ -118,13 +124,22 @@ test('registration staff can encode onsite registrations without master data acc
     expect($gate->allows('view', $context['pastorOutsideSection']))->toBeTrue();
     expect($gate->allows('createOnsite', [Registration::class, $context['pastorInSection']]))->toBeTrue();
     expect($gate->allows('viewAnyOnline', Registration::class))->toBeFalse();
-    expect($gate->allows('viewAnyVerification', Registration::class))->toBeFalse();
+    expect($gate->allows('viewAnyVerification', Registration::class))->toBeTrue();
+    expect($gate->allows('viewAnyApprovalQueue', User::class))->toBeTrue();
+    expect($gate->allows('reviewRegistrantRequest', $context['pendingRegistrantRequest']))->toBeTrue();
     expect($gate->allows('createOnline', [Registration::class, $context['pastorInSection']]))->toBeFalse();
     expect($gate->allows('view', $ownOnsiteRegistration))->toBeTrue();
     expect($gate->allows('view', $otherOnsiteRegistration))->toBeFalse();
     expect($gate->allows('update', $ownOnsiteRegistration))->toBeTrue();
     expect($gate->allows('update', $otherOnsiteRegistration))->toBeFalse();
-    expect($gate->allows('viewReports'))->toBeFalse();
+    expect($gate->allows('verifyReceipt', $context['departmentSectionVerificationRegistration']))->toBeTrue();
+    expect($gate->allows('verifyReceipt', $context['otherDepartmentSectionVerificationRegistration']))->toBeTrue();
+    expect($gate->allows('verifyReceipt', $context['outsideSectionVerificationRegistration']))->toBeFalse();
+    expect($gate->allows('viewReports'))->toBeTrue();
+    expect($gate->allows('viewSectionReport', $context['section']))->toBeTrue();
+    expect($gate->allows('viewSectionReport', $context['otherSection']))->toBeFalse();
+    expect($gate->allows('viewPastorReport', $context['pastorInSection']))->toBeTrue();
+    expect($gate->allows('viewPastorReport', $context['pastorOutsideSection']))->toBeFalse();
     expect($gate->allows('create', Event::class))->toBeFalse();
     expect($gate->allows('update', $context['pastorInSection']))->toBeFalse();
     expect($gate->allows('create', User::class))->toBeFalse();
@@ -138,6 +153,9 @@ test('registration staff without an assigned district cannot post onsite registr
 
     expect($gate->allows('viewAnyOnsite', Registration::class))->toBeFalse();
     expect($gate->allows('createOnsite', [Registration::class, $context['pastorInSection']]))->toBeFalse();
+    expect($gate->allows('viewAnyVerification', Registration::class))->toBeFalse();
+    expect($gate->allows('viewAnyApprovalQueue', User::class))->toBeFalse();
+    expect($gate->allows('viewReports'))->toBeFalse();
 });
 
 test('department-scoped reviewers are limited to matching departments during verification', function () {

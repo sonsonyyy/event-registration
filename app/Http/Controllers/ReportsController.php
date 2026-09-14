@@ -278,7 +278,11 @@ class ReportsController extends Controller
             ->orderByDesc('date_from')
             ->orderByDesc('id');
 
-        DepartmentScopeAccess::scopeAccessibleEvents($query, $user);
+        if ($user->isRegistrationStaff() && $user->section_id !== null) {
+            DepartmentScopeAccess::scopeSectionReportEvents($query, $user);
+        } else {
+            DepartmentScopeAccess::scopeAccessibleEvents($query, $user);
+        }
 
         return $query->get();
     }
@@ -295,7 +299,7 @@ class ReportsController extends Controller
             ->where('status', 'active')
             ->orderBy('name');
 
-        if ($user->isManager()) {
+        if (($user->isManager() || $user->isRegistrationStaff()) && $user->section_id !== null) {
             $sections->whereKey($user->section_id);
         } elseif ($user->isAdmin()) {
             if ($user->district_id === null) {
@@ -330,7 +334,7 @@ class ReportsController extends Controller
             return $event->section;
         }
 
-        if ($user->isManager()) {
+        if (($user->isManager() || $user->isRegistrationStaff()) && $user->section_id !== null) {
             /** @var Section|null $managedSection */
             $managedSection = $sections->first();
 
@@ -984,7 +988,7 @@ class ReportsController extends Controller
             .' • '
             .$section->name
             .' • '
-            .$this->departmentLabel($user);
+            .($user->isRegistrationStaff() ? $this->registrationStaffDepartmentLabel($user) : $this->departmentLabel($user));
     }
 
     private function quantityForStatus(Collection $registrations, string $mode, string $status): int
@@ -1114,6 +1118,16 @@ class ReportsController extends Controller
             });
         }
 
+        if ($user->isRegistrationStaff() && $user->section_id !== null) {
+            $query->whereHas('pastor', function (Builder $pastorQuery) use ($user): void {
+                $pastorQuery->where('section_id', $user->section_id);
+            });
+
+            return $query->whereHas('event', function (Builder $eventQuery) use ($user): void {
+                DepartmentScopeAccess::scopeSectionReportEvents($eventQuery, $user);
+            });
+        }
+
         if ($user->isAdmin()) {
             $query->whereHas('pastor.section', function (Builder $sectionQuery) use ($user): void {
                 $sectionQuery->where('district_id', $user->district_id);
@@ -1225,7 +1239,7 @@ class ReportsController extends Controller
 
         $sectionId = $event->isSectionScoped()
             ? $event->section_id
-            : ($user->isManager()
+            : ($user->isManager() || $user->isRegistrationStaff()
                 ? $user->section_id
                 : $section?->getKey());
 
@@ -1249,7 +1263,7 @@ class ReportsController extends Controller
 
         $sectionId = $event->isSectionScoped()
             ? $event->section_id
-            : ($user->isManager()
+            : ($user->isManager() || $user->isRegistrationStaff()
                 ? $user->section_id
                 : $section?->getKey());
 
@@ -1270,7 +1284,7 @@ class ReportsController extends Controller
 
     private function canFilterBySection(User $user, ?Event $selectedEvent): bool
     {
-        if ($user->isManager()) {
+        if ($user->isManager() || $user->isRegistrationStaff()) {
             return false;
         }
 
@@ -1282,6 +1296,19 @@ class ReportsController extends Controller
         return $user->department?->name
             ?? $user->department()->value('name')
             ?? 'No department';
+    }
+
+    private function registrationStaffDepartmentLabel(User $user): string
+    {
+        $departmentNames = $user->relationLoaded('departments')
+            ? $user->departments->sortBy('name')->pluck('name')->all()
+            : $user->departments()->orderBy('name')->pluck('name')->all();
+
+        if ($departmentNames === []) {
+            return 'All departments';
+        }
+
+        return implode(', ', $departmentNames);
     }
 
     private function nullableFilter(string $value): ?string

@@ -95,7 +95,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('viewReports', function (User $user): bool {
             return $user->isAdmin() && $user->district_id !== null
                 || $user->isSuperAdmin()
-                || ($user->isManager() && $user->section_id !== null);
+                || (($user->isManager() || $user->isRegistrationStaff()) && $user->section_id !== null);
         });
 
         Gate::define('viewSectionReport', function (User $user, Section $section): bool {
@@ -108,7 +108,7 @@ class AppServiceProvider extends ServiceProvider
                     && $section->district_id === $user->district_id;
             }
 
-            return $user->isManager()
+            return ($user->isManager() || $user->isRegistrationStaff())
                 && $user->section_id !== null
                 && $user->section_id === $section->getKey();
         });
@@ -123,8 +123,10 @@ class AppServiceProvider extends ServiceProvider
                     && $pastor->section?->district_id === $user->district_id;
             }
 
-            return $user->isManager()
-                && $user->managesSection($pastor->section_id);
+            return ($user->isManager() && $user->managesSection($pastor->section_id))
+                || ($user->isRegistrationStaff()
+                    && $user->section_id !== null
+                    && $user->section_id === $pastor->section_id);
         });
     }
 }

@@ -12,6 +12,7 @@ type UserRecord = {
     role_id: number | null;
     district_id: number | null;
     department_id: number | null;
+    department_ids: number[];
     section_id: number | null;
     pastor_id: number | null;
     position_title: string | null;

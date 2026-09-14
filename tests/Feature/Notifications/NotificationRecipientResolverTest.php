@@ -11,7 +11,7 @@ use App\Models\Section;
 use App\Models\User;
 use App\Support\NotificationRecipientResolver;
 
-test('resolver returns account request reviewers for the matching district admins, section managers, and super admins', function () {
+test('resolver returns account request reviewers for matching admins managers staff and super admins', function () {
     $district = District::factory()->create();
     $section = Section::factory()->for($district)->create();
     $otherSection = Section::factory()->for($district)->create();
@@ -48,6 +48,15 @@ test('resolver returns account request reviewers for the matching district admin
         'section_id' => $section->id,
         'department_id' => Department::factory()->create()->id,
     ]);
+    $eligibleRegistrationStaff = User::factory()->registrationStaff()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+    ]);
+    $eligibleDepartmentRegistrationStaff = User::factory()->registrationStaff()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'department_id' => Department::factory()->create()->id,
+    ]);
 
     User::factory()->admin()->create([
         'district_id' => $otherDistrict->id,
@@ -63,6 +72,13 @@ test('resolver returns account request reviewers for the matching district admin
         'district_id' => $otherDistrict->id,
         'section_id' => $otherDistrictSection->id,
     ]);
+    User::factory()->registrationStaff()->create([
+        'district_id' => $district->id,
+        'section_id' => $otherSection->id,
+    ]);
+    User::factory()->registrationStaff()->create([
+        'district_id' => $district->id,
+    ]);
 
     $reviewerIds = app(NotificationRecipientResolver::class)
         ->reviewersForRegistrantAccessRequest($accountRequest)
@@ -77,6 +93,8 @@ test('resolver returns account request reviewers for the matching district admin
         $eligibleDepartmentAdmin->id,
         $eligibleManager->id,
         $eligibleDepartmentManager->id,
+        $eligibleRegistrationStaff->id,
+        $eligibleDepartmentRegistrationStaff->id,
     ]);
 });
 
@@ -128,6 +146,15 @@ test('resolver returns verification reviewers for district departmental registra
         'section_id' => $section->id,
         'department_id' => $department->id,
     ]);
+    $eligibleRegistrationStaff = User::factory()->registrationStaff()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+        'department_id' => $otherDepartment->id,
+    ]);
+    $eligibleRegistrationStaff->departments()->sync([
+        $department->id,
+        $otherDepartment->id,
+    ]);
 
     User::factory()->admin()->create([
         'district_id' => $district->id,
@@ -138,6 +165,9 @@ test('resolver returns verification reviewers for district departmental registra
         'section_id' => $section->id,
     ]);
     User::factory()->admin()->inactive()->create([
+        'district_id' => $district->id,
+    ]);
+    User::factory()->registrationStaff()->create([
         'district_id' => $district->id,
     ]);
 
@@ -152,6 +182,7 @@ test('resolver returns verification reviewers for district departmental registra
         $eligibleSuperAdmin->id,
         $eligibleDepartmentAdmin->id,
         $eligibleDepartmentManager->id,
+        $eligibleRegistrationStaff->id,
     ]);
 });
 
@@ -193,6 +224,10 @@ test('resolver returns verification reviewers for general sectional registration
         'district_id' => $district->id,
         'section_id' => $section->id,
     ]);
+    $eligibleRegistrationStaff = User::factory()->registrationStaff()->create([
+        'district_id' => $district->id,
+        'section_id' => $section->id,
+    ]);
 
     User::factory()->manager()->create([
         'district_id' => $district->id,
@@ -206,6 +241,10 @@ test('resolver returns verification reviewers for general sectional registration
     User::factory()->admin()->create([
         'district_id' => $district->id,
     ]);
+    User::factory()->registrationStaff()->create([
+        'district_id' => $district->id,
+        'section_id' => $otherSection->id,
+    ]);
 
     $reviewerIds = app(NotificationRecipientResolver::class)
         ->reviewersForRegistration($registration)
@@ -217,6 +256,7 @@ test('resolver returns verification reviewers for general sectional registration
     expect($reviewerIds)->toBe([
         $eligibleSuperAdmin->id,
         $eligibleManager->id,
+        $eligibleRegistrationStaff->id,
     ]);
 });
 

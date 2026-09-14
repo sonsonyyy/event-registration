@@ -15,6 +15,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -29,6 +30,7 @@ type UserRecord = {
     role_id: number | null;
     district_id: number | null;
     department_id: number | null;
+    department_ids: number[];
     section_id: number | null;
     pastor_id: number | null;
     position_title: string | null;
@@ -97,6 +99,7 @@ type UserFormData = {
     role_id: string;
     district_id: string;
     department_id: string;
+    department_ids: string[];
     section_id: string;
     pastor_id: string;
     position_title: string;
@@ -108,7 +111,7 @@ const roleDescriptions: Record<string, string> = {
     Manager:
         'Section oversight account. Assign a section and optionally attach a department.',
     'Registration Staff':
-        'Can encode onsite registrations. Assign a district, then optionally narrow access by section or department.',
+        'Can encode onsite registrations. Assign a district and section, then choose one or more department scopes when needed.',
     'Online Registrant':
         'Must be assigned to one pastor or church account. Department stays optional.',
 };
@@ -140,6 +143,10 @@ export default function UserForm({
             userRecord?.role_id?.toString() ?? roles[0]?.id.toString() ?? '',
         district_id: userRecord?.district_id?.toString() ?? '',
         department_id: userRecord?.department_id?.toString() ?? '',
+        department_ids:
+            userRecord?.department_ids.map((departmentId) =>
+                departmentId.toString(),
+            ) ?? [],
         section_id: userRecord?.section_id?.toString() ?? '',
         pastor_id: userRecord?.pastor_id?.toString() ?? '',
         position_title: userRecord?.position_title ?? '',
@@ -149,6 +156,7 @@ export default function UserForm({
 
     const selectedRole =
         roles.find((role) => role.id.toString() === form.data.role_id) ?? null;
+    const isRegistrationStaff = selectedRole?.name === 'Registration Staff';
     const filteredSections = form.data.district_id
         ? sections.filter(
               (section) =>
@@ -174,6 +182,10 @@ export default function UserForm({
             (department) =>
                 department.id.toString() === form.data.department_id,
         ) ?? null;
+    const selectedDepartments = departments.filter((department) =>
+        form.data.department_ids.includes(department.id.toString()),
+    );
+    const formErrors = form.errors as Record<string, string | undefined>;
     const selectedSection =
         sections.find(
             (section) => section.id.toString() === form.data.section_id,
@@ -239,6 +251,10 @@ export default function UserForm({
         form.setData((currentData) => ({
             ...currentData,
             role_id: value,
+            department_ids:
+                roleName === 'Registration Staff'
+                    ? currentData.department_ids
+                    : [],
             section_id: roleName === 'Admin' ? '' : currentData.section_id,
             pastor_id:
                 roleName === 'Online Registrant' ? currentData.pastor_id : '',
@@ -294,6 +310,28 @@ export default function UserForm({
             section_id: pastor?.section_id.toString() ?? currentData.section_id,
             pastor_id: value,
         }));
+    };
+
+    const toggleDepartmentScope = (
+        departmentId: string,
+        checked: boolean,
+    ): void => {
+        form.setData((currentData) => {
+            const nextDepartmentIds = checked
+                ? [...currentData.department_ids, departmentId]
+                : currentData.department_ids.filter(
+                      (id) => id !== departmentId,
+                  );
+
+            const uniqueDepartmentIds = Array.from(new Set(nextDepartmentIds));
+
+            return {
+                ...currentData,
+                department_ids: uniqueDepartmentIds,
+                department_id:
+                    uniqueDepartmentIds[0] ?? currentData.department_id,
+            };
+        });
     };
 
     const submit = (event: FormEvent<HTMLFormElement>): void => {
@@ -394,24 +432,78 @@ export default function UserForm({
             )}
 
             <div className="grid gap-6 md:grid-cols-2">
-                <div className="grid gap-2">
-                    <Label htmlFor="department_id">Department</Label>
-                    <FormSelect
-                        id="department_id"
-                        name="department_id"
-                        value={form.data.department_id}
-                        onValueChange={(value) =>
-                            form.setData('department_id', value)
-                        }
-                        placeholder="Select a department"
-                        emptyLabel="General / no department"
-                        options={departments.map((department) => ({
-                            value: department.id.toString(),
-                            label: `${department.name}${department.status === 'inactive' ? ' (Inactive)' : ''}`,
-                        }))}
-                    />
-                    <InputError message={form.errors.department_id} />
-                </div>
+                {isRegistrationStaff ? (
+                    <div className="grid gap-2">
+                        <Label>Department scopes</Label>
+                        <div className="max-h-48 overflow-y-auto rounded-md border border-input bg-background p-3">
+                            <div className="grid gap-3">
+                                {departments.map((department) => {
+                                    const departmentId =
+                                        department.id.toString();
+
+                                    return (
+                                        <label
+                                            key={department.id}
+                                            className="flex items-start gap-3 text-sm"
+                                        >
+                                            <Checkbox
+                                                checked={form.data.department_ids.includes(
+                                                    departmentId,
+                                                )}
+                                                onCheckedChange={(checked) =>
+                                                    toggleDepartmentScope(
+                                                        departmentId,
+                                                        checked === true,
+                                                    )
+                                                }
+                                                data-error-field="department_ids"
+                                            />
+                                            <span className="leading-none">
+                                                {department.name}
+                                                {department.status ===
+                                                    'inactive' && (
+                                                    <span className="text-muted-foreground">
+                                                        {' '}
+                                                        (Inactive)
+                                                    </span>
+                                                )}
+                                            </span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            Leave all unchecked to allow all departments inside
+                            the assigned section.
+                        </p>
+                        <InputError
+                            message={
+                                formErrors.department_ids ??
+                                formErrors['department_ids.0']
+                            }
+                        />
+                    </div>
+                ) : (
+                    <div className="grid gap-2">
+                        <Label htmlFor="department_id">Department</Label>
+                        <FormSelect
+                            id="department_id"
+                            name="department_id"
+                            value={form.data.department_id}
+                            onValueChange={(value) =>
+                                form.setData('department_id', value)
+                            }
+                            placeholder="Select a department"
+                            emptyLabel="General / no department"
+                            options={departments.map((department) => ({
+                                value: department.id.toString(),
+                                label: `${department.name}${department.status === 'inactive' ? ' (Inactive)' : ''}`,
+                            }))}
+                        />
+                        <InputError message={form.errors.department_id} />
+                    </div>
+                )}
 
                 <div className="grid gap-2">
                     <Label htmlFor="position_title">Position or title</Label>
@@ -550,7 +642,14 @@ export default function UserForm({
                         Current department
                     </div>
                     <div className="mt-2 font-medium">
-                        {selectedDepartment?.name ?? 'General / no department'}
+                        {isRegistrationStaff
+                            ? selectedDepartments.length > 0
+                                ? selectedDepartments
+                                      .map((department) => department.name)
+                                      .join(', ')
+                                : 'All departments'
+                            : (selectedDepartment?.name ??
+                              'General / no department')}
                     </div>
                 </div>
 

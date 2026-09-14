@@ -258,6 +258,99 @@ test('admins can create users with role and scope assignments', function () {
         ->and($createdRegistrant->status)->toBe('inactive');
 });
 
+test('admins can assign multiple department scopes to registration staff', function () {
+    $district = District::factory()->create();
+    $admin = User::factory()->admin()->create([
+        'district_id' => $district->id,
+    ]);
+    $section = Section::factory()->for($district)->create();
+    $youthDepartment = Department::factory()->create([
+        'name' => 'Youth Ministries',
+    ]);
+    $ladiesDepartment = Department::factory()->create([
+        'name' => 'Ladies Ministries',
+    ]);
+    $musicDepartment = Department::factory()->create([
+        'name' => 'Music Commission',
+    ]);
+    $registrationStaffRole = Role::query()->firstOrCreate([
+        'name' => Role::REGISTRATION_STAFF,
+    ]);
+
+    $this->actingAs($admin)
+        ->post(route('admin.users.store'), [
+            'name' => 'Section 3 Registration Staff',
+            'email' => 'section3.staff@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'role_id' => $registrationStaffRole->id,
+            'district_id' => $district->id,
+            'department_id' => '',
+            'department_ids' => [
+                $ladiesDepartment->id,
+                $musicDepartment->id,
+            ],
+            'section_id' => $section->id,
+            'pastor_id' => '',
+            'position_title' => 'Registration Staff',
+            'status' => 'active',
+        ])
+        ->assertRedirect(route('admin.users.index'));
+
+    $staff = User::query()
+        ->where('email', 'section3.staff@example.com')
+        ->firstOrFail();
+
+    expect($staff->roleName())->toBe(Role::REGISTRATION_STAFF)
+        ->and($staff->district_id)->toBe($district->id)
+        ->and($staff->section_id)->toBe($section->id)
+        ->and($staff->department_id)->toBe($ladiesDepartment->id)
+        ->and($staff->departments()->pluck('departments.id')->all())
+        ->toEqualCanonicalizing([
+            $ladiesDepartment->id,
+            $musicDepartment->id,
+        ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.users.edit', $staff))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('userRecord.department_id', $ladiesDepartment->id)
+            ->where('userRecord.department_ids', [
+                $ladiesDepartment->id,
+                $musicDepartment->id,
+            ]));
+
+    $this->actingAs($admin)
+        ->patch(route('admin.users.update', $staff), [
+            'name' => 'Updated Section Staff',
+            'email' => 'section3.staff@example.com',
+            'password' => '',
+            'password_confirmation' => '',
+            'role_id' => $registrationStaffRole->id,
+            'district_id' => $district->id,
+            'department_id' => '',
+            'department_ids' => [
+                $youthDepartment->id,
+                $musicDepartment->id,
+            ],
+            'section_id' => $section->id,
+            'pastor_id' => '',
+            'position_title' => 'Registration Encoder',
+            'status' => 'active',
+        ])
+        ->assertRedirect(route('admin.users.index'));
+
+    $staff->refresh();
+
+    expect($staff->department_id)->toBe($youthDepartment->id)
+        ->and($staff->departments()->pluck('departments.id')->all())
+        ->toEqualCanonicalizing([
+            $youthDepartment->id,
+            $musicDepartment->id,
+        ]);
+});
+
 test('admins must satisfy role and scope validation rules when creating users', function () {
     $district = District::factory()->create();
     $admin = User::factory()->admin()->create([
