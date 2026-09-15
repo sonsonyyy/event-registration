@@ -557,7 +557,7 @@ export default function EventCheckInIndex({
                                 searchValue={search}
                                 onSearchValueChange={setSearch}
                                 onSubmit={submitSearch}
-                                placeholder="Search church, pastor, section, or district"
+                                placeholder="Search church or pastor"
                                 className={elevatedIndexTableStyles.toolbar}
                                 searchWrapperClassName={
                                     elevatedIndexTableStyles.searchWrapper

@@ -117,6 +117,17 @@ test('onsite registrations can be searched and paginated', function () {
             ->has('registrations.data', 1)
             ->where('registrations.meta.total', 2)
             ->where('registrations.meta.last_page', 2));
+
+    $this->actingAs($staff)
+        ->get(route('registrations.onsite.index', [
+            'search' => 'District Camp 2026',
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/onsite/index')
+            ->where('filters.search', 'District Camp 2026')
+            ->has('registrations.data', 0)
+            ->where('registrations.meta.total', 0));
 });
 
 test('onsite create page only exposes active fee categories for new transactions', function () {

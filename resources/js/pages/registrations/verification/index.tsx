@@ -558,7 +558,7 @@ export default function RegistrationVerificationIndex({
                                     }),
                                 )
                             }
-                            placeholder="Search event, church, pastor, reference, or submitter"
+                            placeholder="Search church, pastor, or reference"
                             className={reviewWorkspaceStyles.toolbar}
                             searchWrapperClassName={
                                 reviewWorkspaceStyles.searchWrapper

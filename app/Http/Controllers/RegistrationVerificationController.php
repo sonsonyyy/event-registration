@@ -254,25 +254,10 @@ class RegistrationVerificationController extends Controller
 
                 $searchQuery
                     ->where('payment_reference', 'like', $like)
-                    ->orWhere('receipt_original_name', 'like', $like)
-                    ->orWhere('remarks', 'like', $like)
-                    ->orWhereHas('event', function (Builder $eventQuery) use ($like): void {
-                        $eventQuery
-                            ->where('name', 'like', $like)
-                            ->orWhere('venue', 'like', $like)
-                            ->orWhere('description', 'like', $like);
-                    })
                     ->orWhereHas('pastor', function (Builder $pastorQuery) use ($like): void {
                         $pastorQuery
                             ->where('church_name', 'like', $like)
-                            ->orWhere('pastor_name', 'like', $like)
-                            ->orWhere('contact_number', 'like', $like)
-                            ->orWhere('email', 'like', $like);
-                    })
-                    ->orWhereHas('encodedByUser', function (Builder $userQuery) use ($like): void {
-                        $userQuery
-                            ->where('name', 'like', $like)
-                            ->orWhere('email', 'like', $like);
+                            ->orWhere('pastor_name', 'like', $like);
                     });
             });
         }

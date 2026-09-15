@@ -231,6 +231,18 @@ test('admins can filter account requests by section within their district', func
             ->where('requests.data.0.pastor.section_name', 'Beta Section')
             ->where('requests.data.1.pastor.section_name', 'Beta Section')
             ->where('requests.meta.total', 2));
+
+    $this->actingAs($admin)
+        ->get(route('account-requests.index', [
+            'search' => 'Beta Section',
+            'status' => 'all',
+        ]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('account-requests/index')
+            ->where('filters.search', 'Beta Section')
+            ->has('requests.data', 0)
+            ->where('requests.meta.total', 0));
 });
 
 test('managers can only review self-service registrant requests within their assigned section', function () {

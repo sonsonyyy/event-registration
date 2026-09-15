@@ -173,6 +173,18 @@ test('registration staff can view event check-in progress and store partial clai
             ->where('summary.remaining_quantity', 2)
             ->where('churches.data.0.claimed_quantity', 5)
             ->where('churches.data.0.remaining_quantity', 2));
+
+    $this->actingAs($staff)
+        ->get(route('event-check-in.index', [
+            'event_id' => $event->id,
+            'search' => 'Central Section',
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('event-check-in/index')
+            ->where('filters.search', 'Central Section')
+            ->has('churches.data', 0)
+            ->where('churches.meta.total', 0));
 });
 
 test('event check-in rejects claims that exceed remaining quantity', function () {

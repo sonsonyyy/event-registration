@@ -172,15 +172,7 @@ class RegistrantApprovalController extends Controller
                     ->orWhereHas('pastor', function (Builder $pastorQuery) use ($like): void {
                         $pastorQuery
                             ->where('church_name', 'like', $like)
-                            ->orWhere('pastor_name', 'like', $like)
-                            ->orWhere('contact_number', 'like', $like)
-                            ->orWhere('email', 'like', $like);
-                    })
-                    ->orWhereHas('pastor.section', function (Builder $sectionQuery) use ($like): void {
-                        $sectionQuery->where('name', 'like', $like);
-                    })
-                    ->orWhereHas('pastor.section.district', function (Builder $districtQuery) use ($like): void {
-                        $districtQuery->where('name', 'like', $like);
+                            ->orWhere('pastor_name', 'like', $like);
                     });
             });
         }

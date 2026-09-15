@@ -482,8 +482,6 @@ class EventCheckInController extends Controller
                     $searchableText = implode(' ', [
                         $record['church_name'],
                         $record['pastor_name'],
-                        $record['section_name'] ?? '',
-                        $record['district_name'] ?? '',
                     ]);
 
                     return str_contains(mb_strtolower($searchableText), $normalizedSearch);
