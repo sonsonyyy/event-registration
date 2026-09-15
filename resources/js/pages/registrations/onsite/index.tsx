@@ -230,7 +230,7 @@ export default function OnsiteRegistrationIndex({
                             searchValue={search}
                             onSearchValueChange={setSearch}
                             onSubmit={submitSearch}
-                            placeholder="Search event, church, pastor, receipt, or encoder"
+                            placeholder="Search church or pastor"
                             className={elevatedIndexTableStyles.toolbar}
                             searchWrapperClassName={
                                 elevatedIndexTableStyles.searchWrapper

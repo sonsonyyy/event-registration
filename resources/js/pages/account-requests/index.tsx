@@ -240,7 +240,7 @@ export default function AccountRequestsIndex({
                                     }),
                                 )
                             }
-                            placeholder="Search representative, email, church, pastor, or section"
+                            placeholder="Search representative, email, church, or pastor"
                             className={reviewWorkspaceStyles.toolbar}
                             searchWrapperClassName={
                                 reviewWorkspaceStyles.searchWrapper

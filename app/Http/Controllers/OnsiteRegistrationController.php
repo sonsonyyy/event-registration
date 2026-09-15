@@ -623,20 +623,11 @@ class OnsiteRegistrationController extends Controller
             ->where('registration_mode', Registration::MODE_ONSITE)
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $query) use ($search): void {
-                    $query
-                        ->where('payment_reference', 'like', "%{$search}%")
-                        ->orWhere('remarks', 'like', "%{$search}%")
-                        ->orWhereHas('event', function (Builder $query) use ($search): void {
-                            $query->where('name', 'like', "%{$search}%");
-                        })
-                        ->orWhereHas('pastor', function (Builder $query) use ($search): void {
-                            $query
-                                ->where('church_name', 'like', "%{$search}%")
-                                ->orWhere('pastor_name', 'like', "%{$search}%");
-                        })
-                        ->orWhereHas('encodedByUser', function (Builder $query) use ($search): void {
-                            $query->where('name', 'like', "%{$search}%");
-                        });
+                    $query->whereHas('pastor', function (Builder $query) use ($search): void {
+                        $query
+                            ->where('church_name', 'like', "%{$search}%")
+                            ->orWhere('pastor_name', 'like', "%{$search}%");
+                    });
                 });
             })
             ->with([

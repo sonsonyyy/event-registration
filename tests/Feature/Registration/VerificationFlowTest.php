@@ -140,6 +140,17 @@ test('managers can view a verification queue scoped to their assigned section', 
             ->has('registrations.data', 3)
             ->where('registrations.data.0.pastor.church_name', 'Grace Community Church')
             ->where('registrations.data.2.registration_status', Registration::STATUS_VERIFIED));
+
+    $this->actingAs($manager)
+        ->get(route('registrations.verification.index', [
+            'search' => 'CLD Youth Conference 2026',
+        ]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('registrations/verification/index')
+            ->where('filters.search', 'CLD Youth Conference 2026')
+            ->has('registrations.data', 0)
+            ->where('registrations.meta.total', 0));
 });
 
 test('admins can open uploaded receipts and verify online registrations', function () {
