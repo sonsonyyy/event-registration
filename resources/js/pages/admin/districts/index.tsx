@@ -1,4 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { Archive, PencilLine, Plus } from 'lucide-react';
 import { useState } from 'react';
 import DistrictController from '@/actions/App/Http/Controllers/Admin/DistrictController';
 import ConfirmActionDialog from '@/components/confirm-action-dialog';
@@ -34,6 +35,8 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: DistrictController.index(),
     },
 ];
+
+const districtTableClassName = `${elevatedIndexTableStyles.table} min-w-[60rem]`;
 
 export default function DistrictIndex({ districts }: Props) {
     const [districtToDelete, setDistrictToDelete] = useState<District | null>(
@@ -72,6 +75,7 @@ export default function DistrictIndex({ districts }: Props) {
                                 }
                             >
                                 <Link href={DistrictController.create()}>
+                                    <Plus className="size-4" />
                                     New district
                                 </Link>
                             </Button>
@@ -79,7 +83,7 @@ export default function DistrictIndex({ districts }: Props) {
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className={elevatedIndexTableStyles.table}>
+                        <table className={districtTableClassName}>
                             <thead className={elevatedIndexTableStyles.thead}>
                                 <tr
                                     className={
@@ -98,12 +102,15 @@ export default function DistrictIndex({ districts }: Props) {
                                             elevatedIndexTableStyles.headerCell
                                         }
                                     >
+                                        Description
+                                    </th>
+                                    <th
+                                        className={`${elevatedIndexTableStyles.headerCell} text-center`}
+                                    >
                                         Status
                                     </th>
                                     <th
-                                        className={
-                                            elevatedIndexTableStyles.headerCell
-                                        }
+                                        className={`${elevatedIndexTableStyles.headerCell} text-right`}
                                     >
                                         Sections
                                     </th>
@@ -120,7 +127,7 @@ export default function DistrictIndex({ districts }: Props) {
                                 {districts.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={4}
+                                            colSpan={5}
                                             className={
                                                 elevatedIndexTableStyles.emptyCell
                                             }
@@ -154,30 +161,35 @@ export default function DistrictIndex({ districts }: Props) {
                                             }
                                         >
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.firstCell
-                                                }
+                                                className={`${elevatedIndexTableStyles.firstCell} min-w-[14rem]`}
                                             >
-                                                <div
+                                                <span
                                                     className={
                                                         elevatedIndexTableStyles.primaryText
                                                     }
+                                                    title={district.name}
                                                 >
                                                     {district.name}
-                                                </div>
-                                                <div
+                                                </span>
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[20rem]`}
+                                            >
+                                                <span
                                                     className={
                                                         elevatedIndexTableStyles.secondaryText
+                                                    }
+                                                    title={
+                                                        district.description ??
+                                                        'No description provided.'
                                                     }
                                                 >
                                                     {district.description ||
                                                         'No description provided.'}
-                                                </div>
+                                                </span>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} text-center`}
                                             >
                                                 <DataTableBadge
                                                     tone={resolveDataTableTone(
@@ -187,29 +199,21 @@ export default function DistrictIndex({ districts }: Props) {
                                                             inactive: 'rose',
                                                         },
                                                     )}
+                                                    className="mx-auto"
                                                 >
                                                     {district.status}
                                                 </DataTableBadge>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} text-right`}
                                             >
-                                                <div
+                                                <span
                                                     className={
                                                         elevatedIndexTableStyles.primaryText
                                                     }
                                                 >
                                                     {district.sections_count}
-                                                </div>
-                                                <div
-                                                    className={
-                                                        elevatedIndexTableStyles.secondaryText
-                                                    }
-                                                >
-                                                    sections
-                                                </div>
+                                                </span>
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
@@ -230,6 +234,7 @@ export default function DistrictIndex({ districts }: Props) {
                                                                 district.id,
                                                             )}
                                                         >
+                                                            <PencilLine className="size-4" />
                                                             Edit
                                                         </Link>
                                                     </Button>
@@ -243,6 +248,7 @@ export default function DistrictIndex({ districts }: Props) {
                                                             )
                                                         }
                                                     >
+                                                        <Archive className="size-4" />
                                                         Archive
                                                     </Button>
                                                 </div>

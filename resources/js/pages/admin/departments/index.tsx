@@ -1,4 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { Archive, PencilLine, Plus } from 'lucide-react';
 import { useState } from 'react';
 import DepartmentController from '@/actions/App/Http/Controllers/Admin/DepartmentController';
 import ConfirmActionDialog from '@/components/confirm-action-dialog';
@@ -36,6 +37,8 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+const departmentTableClassName = `${elevatedIndexTableStyles.table} min-w-[68rem]`;
+
 export default function DepartmentIndex({ departments }: Props) {
     const [departmentToDelete, setDepartmentToDelete] =
         useState<Department | null>(null);
@@ -72,6 +75,7 @@ export default function DepartmentIndex({ departments }: Props) {
                                 }
                             >
                                 <Link href={DepartmentController.create()}>
+                                    <Plus className="size-4" />
                                     New department
                                 </Link>
                             </Button>
@@ -79,7 +83,7 @@ export default function DepartmentIndex({ departments }: Props) {
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className={elevatedIndexTableStyles.table}>
+                        <table className={departmentTableClassName}>
                             <thead className={elevatedIndexTableStyles.thead}>
                                 <tr
                                     className={
@@ -98,19 +102,20 @@ export default function DepartmentIndex({ departments }: Props) {
                                             elevatedIndexTableStyles.headerCell
                                         }
                                     >
+                                        Description
+                                    </th>
+                                    <th
+                                        className={`${elevatedIndexTableStyles.headerCell} text-center`}
+                                    >
                                         Status
                                     </th>
                                     <th
-                                        className={
-                                            elevatedIndexTableStyles.headerCell
-                                        }
+                                        className={`${elevatedIndexTableStyles.headerCell} text-right`}
                                     >
                                         Users
                                     </th>
                                     <th
-                                        className={
-                                            elevatedIndexTableStyles.headerCell
-                                        }
+                                        className={`${elevatedIndexTableStyles.headerCell} text-right`}
                                     >
                                         Events
                                     </th>
@@ -127,7 +132,7 @@ export default function DepartmentIndex({ departments }: Props) {
                                 {departments.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={5}
+                                            colSpan={6}
                                             className={
                                                 elevatedIndexTableStyles.emptyCell
                                             }
@@ -161,30 +166,35 @@ export default function DepartmentIndex({ departments }: Props) {
                                             }
                                         >
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.firstCell
-                                                }
+                                                className={`${elevatedIndexTableStyles.firstCell} min-w-[14rem]`}
                                             >
-                                                <div
+                                                <span
                                                     className={
                                                         elevatedIndexTableStyles.primaryText
                                                     }
+                                                    title={department.name}
                                                 >
                                                     {department.name}
-                                                </div>
-                                                <div
+                                                </span>
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[20rem]`}
+                                            >
+                                                <span
                                                     className={
                                                         elevatedIndexTableStyles.secondaryText
+                                                    }
+                                                    title={
+                                                        department.description ??
+                                                        'No description provided.'
                                                     }
                                                 >
                                                     {department.description ||
                                                         'No description provided.'}
-                                                </div>
+                                                </span>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} text-center`}
                                             >
                                                 <DataTableBadge
                                                     tone={resolveDataTableTone(
@@ -194,16 +204,15 @@ export default function DepartmentIndex({ departments }: Props) {
                                                             inactive: 'rose',
                                                         },
                                                     )}
+                                                    className="mx-auto"
                                                 >
                                                     {department.status}
                                                 </DataTableBadge>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} text-right`}
                                             >
-                                                <div
+                                                <span
                                                     className={
                                                         elevatedIndexTableStyles.primaryText
                                                     }
@@ -211,34 +220,18 @@ export default function DepartmentIndex({ departments }: Props) {
                                                     {
                                                         department.assigned_users_count
                                                     }
-                                                </div>
-                                                <div
-                                                    className={
-                                                        elevatedIndexTableStyles.secondaryText
-                                                    }
-                                                >
-                                                    assigned users
-                                                </div>
+                                                </span>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} text-right`}
                                             >
-                                                <div
+                                                <span
                                                     className={
                                                         elevatedIndexTableStyles.primaryText
                                                     }
                                                 >
                                                     {department.events_count}
-                                                </div>
-                                                <div
-                                                    className={
-                                                        elevatedIndexTableStyles.secondaryText
-                                                    }
-                                                >
-                                                    linked events
-                                                </div>
+                                                </span>
                                             </td>
                                             <td
                                                 className={`${elevatedIndexTableStyles.lastCellRight} text-right`}
@@ -259,6 +252,7 @@ export default function DepartmentIndex({ departments }: Props) {
                                                                 department.id,
                                                             )}
                                                         >
+                                                            <PencilLine className="size-4" />
                                                             Edit
                                                         </Link>
                                                     </Button>
@@ -272,6 +266,7 @@ export default function DepartmentIndex({ departments }: Props) {
                                                             )
                                                         }
                                                     >
+                                                        <Archive className="size-4" />
                                                         Archive
                                                     </Button>
                                                 </div>

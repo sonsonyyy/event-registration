@@ -1,4 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { Archive, PencilLine, Plus } from 'lucide-react';
 import { useState } from 'react';
 import PastorController from '@/actions/App/Http/Controllers/Admin/PastorController';
 import ConfirmActionDialog from '@/components/confirm-action-dialog';
@@ -64,6 +65,8 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: PastorController.index(),
     },
 ];
+
+const pastorTableClassName = `${elevatedIndexTableStyles.table} min-w-[94rem]`;
 
 export default function PastorIndex({
     pastors,
@@ -231,6 +234,7 @@ export default function PastorIndex({
                                         }
                                     >
                                         <Link href={PastorController.create()}>
+                                            <Plus className="size-4" />
                                             New pastor record
                                         </Link>
                                     </Button>
@@ -240,7 +244,7 @@ export default function PastorIndex({
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className={elevatedIndexTableStyles.table}>
+                        <table className={pastorTableClassName}>
                             <thead className={elevatedIndexTableStyles.thead}>
                                 <tr
                                     className={
@@ -259,6 +263,20 @@ export default function PastorIndex({
                                             elevatedIndexTableStyles.headerCell
                                         }
                                     >
+                                        Pastor
+                                    </th>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
+                                        Address
+                                    </th>
+                                    <th
+                                        className={
+                                            elevatedIndexTableStyles.headerCell
+                                        }
+                                    >
                                         Section
                                     </th>
                                     <th
@@ -266,12 +284,17 @@ export default function PastorIndex({
                                             elevatedIndexTableStyles.headerCell
                                         }
                                     >
-                                        Contact
+                                        Contact Number
                                     </th>
                                     <th
                                         className={
                                             elevatedIndexTableStyles.headerCell
                                         }
+                                    >
+                                        Email
+                                    </th>
+                                    <th
+                                        className={`${elevatedIndexTableStyles.headerCell} text-center`}
                                     >
                                         Status
                                     </th>
@@ -288,7 +311,7 @@ export default function PastorIndex({
                                 {pastors.data.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={5}
+                                            colSpan={8}
                                             className={
                                                 elevatedIndexTableStyles.emptyCell
                                             }
@@ -326,77 +349,89 @@ export default function PastorIndex({
                                             }
                                         >
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.firstCell
-                                                }
+                                                className={`${elevatedIndexTableStyles.firstCell} min-w-[16rem]`}
                                             >
-                                                <div
+                                                <span
                                                     className={
                                                         elevatedIndexTableStyles.primaryText
                                                     }
+                                                    title={pastor.church_name}
                                                 >
                                                     {pastor.church_name}
-                                                </div>
-                                                <div
+                                                </span>
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[14rem]`}
+                                            >
+                                                <span
                                                     className={
-                                                        elevatedIndexTableStyles.secondaryText
+                                                        elevatedIndexTableStyles.primaryText
                                                     }
+                                                    title={pastor.pastor_name}
                                                 >
                                                     {pastor.pastor_name}
-                                                </div>
-                                                <div
+                                                </span>
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[18rem]`}
+                                            >
+                                                <span
                                                     className={
                                                         elevatedIndexTableStyles.detailText
+                                                    }
+                                                    title={
+                                                        pastor.address ||
+                                                        'No address provided.'
                                                     }
                                                 >
                                                     {pastor.address ||
                                                         'No address provided.'}
-                                                </div>
+                                                </span>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[12rem]`}
                                             >
-                                                <div
+                                                <span
                                                     className={
                                                         elevatedIndexTableStyles.primaryText
                                                     }
+                                                    title={pastor.section.name}
                                                 >
                                                     {pastor.section.name}
-                                                </div>
-                                                <div
-                                                    className={
-                                                        elevatedIndexTableStyles.metaText
-                                                    }
-                                                >
-                                                    {pastor.district.name}
-                                                </div>
+                                                </span>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[12rem]`}
                                             >
-                                                <div
+                                                <span
                                                     className={
                                                         elevatedIndexTableStyles.strongText
+                                                    }
+                                                    title={
+                                                        pastor.contact_number ||
+                                                        'No contact number'
                                                     }
                                                 >
                                                     {pastor.contact_number ||
                                                         'No contact number'}
-                                                </div>
-                                                <div
-                                                    className={`${elevatedIndexTableStyles.secondaryText} break-all`}
+                                                </span>
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} max-w-[14rem] min-w-[12rem]`}
+                                            >
+                                                <span
+                                                    className={`${elevatedIndexTableStyles.primaryText} block truncate`}
+                                                    title={
+                                                        pastor.email ||
+                                                        'No email address'
+                                                    }
                                                 >
                                                     {pastor.email ||
                                                         'No email address'}
-                                                </div>
+                                                </span>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} text-center`}
                                             >
                                                 <DataTableBadge
                                                     tone={resolveDataTableTone(
@@ -406,6 +441,7 @@ export default function PastorIndex({
                                                             inactive: 'rose',
                                                         },
                                                     )}
+                                                    className="mx-auto"
                                                 >
                                                     {pastor.status}
                                                 </DataTableBadge>
@@ -429,6 +465,7 @@ export default function PastorIndex({
                                                                 pastor.id,
                                                             )}
                                                         >
+                                                            <PencilLine className="size-4" />
                                                             Edit
                                                         </Link>
                                                     </Button>
@@ -442,6 +479,7 @@ export default function PastorIndex({
                                                             )
                                                         }
                                                     >
+                                                        <Archive className="size-4" />
                                                         Archive
                                                     </Button>
                                                 </div>
