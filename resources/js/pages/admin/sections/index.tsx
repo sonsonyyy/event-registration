@@ -1,4 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { Archive, PencilLine, Plus } from 'lucide-react';
 import { useState } from 'react';
 import SectionController from '@/actions/App/Http/Controllers/Admin/SectionController';
 import ConfirmActionDialog from '@/components/confirm-action-dialog';
@@ -39,6 +40,8 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+const sectionTableClassName = `${elevatedIndexTableStyles.table} min-w-[70rem]`;
+
 export default function SectionIndex({ sections }: Props) {
     const [sectionToDelete, setSectionToDelete] = useState<Section | null>(
         null,
@@ -76,6 +79,7 @@ export default function SectionIndex({ sections }: Props) {
                                 }
                             >
                                 <Link href={SectionController.create()}>
+                                    <Plus className="size-4" />
                                     New section
                                 </Link>
                             </Button>
@@ -83,7 +87,7 @@ export default function SectionIndex({ sections }: Props) {
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className={elevatedIndexTableStyles.table}>
+                        <table className={sectionTableClassName}>
                             <thead className={elevatedIndexTableStyles.thead}>
                                 <tr
                                     className={
@@ -102,19 +106,20 @@ export default function SectionIndex({ sections }: Props) {
                                             elevatedIndexTableStyles.headerCell
                                         }
                                     >
+                                        Description
+                                    </th>
+                                    <th
+                                        className={`${elevatedIndexTableStyles.headerCell} text-left`}
+                                    >
                                         District
                                     </th>
                                     <th
-                                        className={
-                                            elevatedIndexTableStyles.headerCell
-                                        }
+                                        className={`${elevatedIndexTableStyles.headerCell} text-right`}
                                     >
                                         Pastors
                                     </th>
                                     <th
-                                        className={
-                                            elevatedIndexTableStyles.headerCell
-                                        }
+                                        className={`${elevatedIndexTableStyles.headerCell} text-center`}
                                     >
                                         Status
                                     </th>
@@ -131,7 +136,7 @@ export default function SectionIndex({ sections }: Props) {
                                 {sections.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={5}
+                                            colSpan={6}
                                             className={
                                                 elevatedIndexTableStyles.emptyCell
                                             }
@@ -165,63 +170,57 @@ export default function SectionIndex({ sections }: Props) {
                                             }
                                         >
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.firstCell
-                                                }
+                                                className={`${elevatedIndexTableStyles.firstCell} min-w-[14rem]`}
                                             >
-                                                <div
+                                                <span
                                                     className={
                                                         elevatedIndexTableStyles.primaryText
                                                     }
+                                                    title={section.name}
                                                 >
                                                     {section.name}
-                                                </div>
-                                                <div
+                                                </span>
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[20rem]`}
+                                            >
+                                                <span
                                                     className={
                                                         elevatedIndexTableStyles.secondaryText
+                                                    }
+                                                    title={
+                                                        section.description ??
+                                                        'No description provided.'
                                                     }
                                                 >
                                                     {section.description ||
                                                         'No description provided.'}
-                                                </div>
+                                                </span>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} text-left`}
                                             >
-                                                <div
+                                                <span
                                                     className={
                                                         elevatedIndexTableStyles.primaryText
                                                     }
                                                 >
                                                     {section.district.name}
-                                                </div>
+                                                </span>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} text-right`}
                                             >
-                                                <div
+                                                <span
                                                     className={
                                                         elevatedIndexTableStyles.primaryText
                                                     }
                                                 >
                                                     {section.pastors_count}
-                                                </div>
-                                                <div
-                                                    className={
-                                                        elevatedIndexTableStyles.secondaryText
-                                                    }
-                                                >
-                                                    pastor records
-                                                </div>
+                                                </span>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} text-center`}
                                             >
                                                 <DataTableBadge
                                                     tone={resolveDataTableTone(
@@ -231,6 +230,7 @@ export default function SectionIndex({ sections }: Props) {
                                                             inactive: 'rose',
                                                         },
                                                     )}
+                                                    className="mx-auto"
                                                 >
                                                     {section.status}
                                                 </DataTableBadge>
@@ -254,6 +254,7 @@ export default function SectionIndex({ sections }: Props) {
                                                                 section.id,
                                                             )}
                                                         >
+                                                            <PencilLine className="size-4" />
                                                             Edit
                                                         </Link>
                                                     </Button>
@@ -267,6 +268,7 @@ export default function SectionIndex({ sections }: Props) {
                                                             )
                                                         }
                                                     >
+                                                        <Archive className="size-4" />
                                                         Archive
                                                     </Button>
                                                 </div>

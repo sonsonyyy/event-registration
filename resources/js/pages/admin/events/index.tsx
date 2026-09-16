@@ -61,7 +61,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const eventTableClassName = `${elevatedIndexTableStyles.table} min-w-[82rem]`;
+const eventTableClassName = `${elevatedIndexTableStyles.table} min-w-[78rem]`;
 
 const parseScopeSummary = (
     scopeSummary: string,
@@ -195,35 +195,34 @@ export default function EventIndex({ events, filters, perPageOptions }: Props) {
                                             elevatedIndexTableStyles.headerCell
                                         }
                                     >
-                                        Scope / Department
+                                        Scope
                                     </th>
                                     <th
                                         className={
                                             elevatedIndexTableStyles.headerCell
                                         }
                                     >
-                                        Schedule
+                                        Department
                                     </th>
                                     <th
-                                        className={
-                                            elevatedIndexTableStyles.headerCell
-                                        }
+                                        className={`${elevatedIndexTableStyles.headerCell} text-right`}
                                     >
-                                        Registration
+                                        Remaining / Capacity
                                     </th>
                                     <th
-                                        className={
-                                            elevatedIndexTableStyles.headerCell
-                                        }
+                                        className={`${elevatedIndexTableStyles.headerCell} text-right`}
                                     >
-                                        Capacity
+                                        Reserved
                                     </th>
                                     <th
-                                        className={
-                                            elevatedIndexTableStyles.headerCell
-                                        }
+                                        className={`${elevatedIndexTableStyles.headerCell} text-center`}
                                     >
-                                        Fees
+                                        Status
+                                    </th>
+                                    <th
+                                        className={`${elevatedIndexTableStyles.headerCell} text-center`}
+                                    >
+                                        Accepting
                                     </th>
                                     <th
                                         className={
@@ -238,7 +237,7 @@ export default function EventIndex({ events, filters, perPageOptions }: Props) {
                                 {events.data.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={7}
+                                            colSpan={8}
                                             className={
                                                 elevatedIndexTableStyles.emptyCell
                                             }
@@ -282,132 +281,97 @@ export default function EventIndex({ events, filters, perPageOptions }: Props) {
                                                 <td
                                                     className={`${elevatedIndexTableStyles.firstCell} min-w-[18rem]`}
                                                 >
-                                                    <div
-                                                        className={
-                                                            elevatedIndexTableStyles.primaryText
-                                                        }
+                                                    <span
+                                                        className={`${elevatedIndexTableStyles.primaryText} whitespace-nowrap`}
+                                                        title={event.name}
                                                     >
                                                         {event.name}
-                                                    </div>
-                                                    <div
-                                                        className={`${elevatedIndexTableStyles.secondaryText} whitespace-nowrap`}
-                                                    >
-                                                        {event.venue}
-                                                    </div>
+                                                    </span>
                                                 </td>
                                                 <td
                                                     className={`${elevatedIndexTableStyles.cell} min-w-[12rem]`}
                                                 >
-                                                    <div
-                                                        className={`${elevatedIndexTableStyles.primaryText} whitespace-nowrap`}
+                                                    <span
+                                                        className={
+                                                            elevatedIndexTableStyles.primaryText
+                                                        }
+                                                        title={scopeLabel}
                                                     >
                                                         {scopeLabel}
-                                                    </div>
-                                                    <div
-                                                        className={`${elevatedIndexTableStyles.secondaryText} whitespace-nowrap`}
+                                                    </span>
+                                                </td>
+                                                <td
+                                                    className={`${elevatedIndexTableStyles.cell} min-w-[12rem]`}
+                                                >
+                                                    <span
+                                                        className={`${elevatedIndexTableStyles.primaryText} whitespace-nowrap`}
+                                                        title={departmentLabel}
                                                     >
                                                         {departmentLabel}
-                                                    </div>
+                                                    </span>
                                                 </td>
                                                 <td
-                                                    className={`${elevatedIndexTableStyles.cell} min-w-[18rem]`}
+                                                    className={`${elevatedIndexTableStyles.cell} min-w-[12rem] text-right`}
                                                 >
-                                                    <div
-                                                        className={`${elevatedIndexTableStyles.strongText} whitespace-nowrap`}
-                                                    >
-                                                        {formatSystemDateOnly(
-                                                            event.date_from,
-                                                        )}{' '}
-                                                        to{' '}
-                                                        {formatSystemDateOnly(
-                                                            event.date_to,
-                                                        )}
-                                                    </div>
-                                                    <div
-                                                        className={`${elevatedIndexTableStyles.secondaryText} whitespace-nowrap`}
-                                                    >
-                                                        Opens{' '}
-                                                        {formatSystemDateTime(
-                                                            event.registration_open_at,
-                                                        )}{' '}
-                                                        - Closes{' '}
-                                                        {formatSystemDateTime(
-                                                            event.registration_close_at,
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td
-                                                    className={`${elevatedIndexTableStyles.cell} min-w-[14rem]`}
-                                                >
-                                                    <div className="flex flex-nowrap items-center gap-2">
-                                                        <DataTableBadge
-                                                            tone={resolveDataTableTone(
-                                                                event.status,
-                                                                {
-                                                                    open: 'emerald',
-                                                                    draft: 'slate',
-                                                                    closed: 'amber',
-                                                                    completed:
-                                                                        'blue',
-                                                                    cancelled:
-                                                                        'rose',
-                                                                },
-                                                            )}
-                                                        >
-                                                            {event.status}
-                                                        </DataTableBadge>
-                                                        <DataTableBadge
-                                                            tone={
-                                                                event.accepting_registrations
-                                                                    ? 'emerald'
-                                                                    : 'slate'
-                                                            }
-                                                            capitalize={false}
-                                                        >
-                                                            {event.accepting_registrations
-                                                                ? 'Accepting'
-                                                                : 'Not accepting'}
-                                                        </DataTableBadge>
-                                                    </div>
-                                                </td>
-                                                <td
-                                                    className={`${elevatedIndexTableStyles.cell} min-w-[11rem]`}
-                                                >
-                                                    <div
-                                                        className={`${elevatedIndexTableStyles.strongText} whitespace-nowrap`}
+                                                    <span
+                                                        className={
+                                                            elevatedIndexTableStyles.primaryText
+                                                        }
                                                     >
                                                         {event.remaining_slots}{' '}
-                                                        / {event.total_capacity}{' '}
-                                                        remaining
-                                                    </div>
-                                                    <div
-                                                        className={
-                                                            elevatedIndexTableStyles.secondaryText
-                                                        }
-                                                    >
-                                                        Reserved{' '}
-                                                        {
-                                                            event.reserved_quantity
-                                                        }
-                                                    </div>
+                                                        / {event.total_capacity}
+                                                    </span>
                                                 </td>
                                                 <td
-                                                    className={`${elevatedIndexTableStyles.cell} min-w-[8rem]`}
+                                                    className={`${elevatedIndexTableStyles.cell} min-w-[8rem] text-right`}
                                                 >
-                                                    <div
+                                                    <span
                                                         className={
                                                             elevatedIndexTableStyles.primaryText
                                                         }
                                                     >
                                                         {
-                                                            event.fee_categories_count
-                                                        }{' '}
-                                                        fee
-                                                        {event.fee_categories_count ===
-                                                        1
-                                                            ? ' category'
-                                                            : ' categories'}
-                                                    </div>
+                                                            event.reserved_quantity
+                                                        }
+                                                    </span>
+                                                </td>
+                                                <td
+                                                    className={`${elevatedIndexTableStyles.cell} min-w-[8rem] text-center`}
+                                                >
+                                                    <DataTableBadge
+                                                        tone={resolveDataTableTone(
+                                                            event.status,
+                                                            {
+                                                                open: 'emerald',
+                                                                draft: 'slate',
+                                                                closed: 'amber',
+                                                                completed:
+                                                                    'blue',
+                                                                cancelled:
+                                                                    'rose',
+                                                            },
+                                                        )}
+                                                        className="mx-auto"
+                                                    >
+                                                        {event.status}
+                                                    </DataTableBadge>
+                                                </td>
+                                                <td
+                                                    className={`${elevatedIndexTableStyles.cell} min-w-[9rem] text-center`}
+                                                >
+                                                    <DataTableBadge
+                                                        tone={
+                                                            event.accepting_registrations
+                                                                ? 'emerald'
+                                                                : 'slate'
+                                                        }
+                                                        capitalize={false}
+                                                        className="mx-auto"
+                                                    >
+                                                        {event.accepting_registrations
+                                                            ? 'Accepting'
+                                                            : 'Not accepting'}
+                                                    </DataTableBadge>
                                                 </td>
                                                 <td
                                                     className={`${elevatedIndexTableStyles.lastCellRight} min-w-[15rem] text-right`}

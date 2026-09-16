@@ -1,4 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { Archive, PencilLine, Plus } from 'lucide-react';
 import { useState } from 'react';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
 import ConfirmActionDialog from '@/components/confirm-action-dialog';
@@ -95,6 +96,25 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: UserController.index(),
     },
 ];
+
+const userTableClassName = `${elevatedIndexTableStyles.table} min-w-[84rem]`;
+
+const formatUserSection = (user: UserRecord): string =>
+    user.pastor?.section_name ?? user.section?.name ?? '-';
+
+const formatUserScope = (user: UserRecord): string => {
+    const sectionName = formatUserSection(user);
+
+    if (sectionName === '-') {
+        return user.scope_summary;
+    }
+
+    const scopeParts = user.scope_summary
+        .split(' · ')
+        .filter((scopePart) => scopePart !== sectionName);
+
+    return scopeParts.length > 0 ? scopeParts.join(' · ') : '-';
+};
 
 export default function UserIndex({
     users,
@@ -400,6 +420,7 @@ export default function UserIndex({
                                         }
                                     >
                                         <Link href={UserController.create()}>
+                                            <Plus className="size-4" />
                                             New user
                                         </Link>
                                     </Button>
@@ -409,7 +430,7 @@ export default function UserIndex({
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className={elevatedIndexTableStyles.table}>
+                        <table className={userTableClassName}>
                             <thead className={elevatedIndexTableStyles.thead}>
                                 <tr
                                     className={
@@ -428,7 +449,7 @@ export default function UserIndex({
                                             elevatedIndexTableStyles.headerCell
                                         }
                                     >
-                                        Role
+                                        Email
                                     </th>
                                     <th
                                         className={
@@ -441,6 +462,16 @@ export default function UserIndex({
                                         className={
                                             elevatedIndexTableStyles.headerCell
                                         }
+                                    >
+                                        Section
+                                    </th>
+                                    <th
+                                        className={`${elevatedIndexTableStyles.headerCell} text-center`}
+                                    >
+                                        Role
+                                    </th>
+                                    <th
+                                        className={`${elevatedIndexTableStyles.headerCell} text-center`}
                                     >
                                         Status
                                     </th>
@@ -457,7 +488,7 @@ export default function UserIndex({
                                 {users.data.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={5}
+                                            colSpan={7}
                                             className={
                                                 elevatedIndexTableStyles.emptyCell
                                             }
@@ -494,39 +525,59 @@ export default function UserIndex({
                                             }
                                         >
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.firstCell
-                                                }
+                                                className={`${elevatedIndexTableStyles.firstCell} min-w-[14rem]`}
                                             >
-                                                <div
+                                                <span
                                                     className={
                                                         elevatedIndexTableStyles.primaryText
                                                     }
+                                                    title={user.name}
                                                 >
                                                     {user.name}
-                                                </div>
-                                                <div
-                                                    className={
-                                                        elevatedIndexTableStyles.secondaryText
-                                                    }
-                                                >
-                                                    {user.email}
-                                                </div>
-                                                {user.is_current_user && (
-                                                    <div className="mt-2">
-                                                        <DataTableBadge
-                                                            tone="slate"
-                                                            capitalize={false}
-                                                        >
-                                                            Current account
-                                                        </DataTableBadge>
-                                                    </div>
-                                                )}
+                                                </span>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[18rem]`}
+                                            >
+                                                <span
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                    title={user.email}
+                                                >
+                                                    {user.email}
+                                                </span>
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[18rem]`}
+                                            >
+                                                <span
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                    title={formatUserScope(
+                                                        user,
+                                                    )}
+                                                >
+                                                    {formatUserScope(user)}
+                                                </span>
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} min-w-[12rem]`}
+                                            >
+                                                <span
+                                                    className={
+                                                        elevatedIndexTableStyles.primaryText
+                                                    }
+                                                    title={formatUserSection(
+                                                        user,
+                                                    )}
+                                                >
+                                                    {formatUserSection(user)}
+                                                </span>
+                                            </td>
+                                            <td
+                                                className={`${elevatedIndexTableStyles.cell} text-center`}
                                             >
                                                 <DataTableBadge
                                                     tone={resolveDataTableTone(
@@ -542,65 +593,14 @@ export default function UserIndex({
                                                         'slate',
                                                     )}
                                                     capitalize={false}
+                                                    className="mx-auto"
                                                 >
                                                     {user.role.name ??
                                                         'No role'}
                                                 </DataTableBadge>
                                             </td>
                                             <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
-                                            >
-                                                <div
-                                                    className={
-                                                        elevatedIndexTableStyles.primaryText
-                                                    }
-                                                >
-                                                    {user.scope_summary}
-                                                </div>
-                                                {user.pastor && (
-                                                    <div
-                                                        className={
-                                                            elevatedIndexTableStyles.metaText
-                                                        }
-                                                    >
-                                                        {
-                                                            user.pastor
-                                                                .district_name
-                                                        }
-                                                    </div>
-                                                )}
-                                                {!user.pastor &&
-                                                    user.section && (
-                                                        <div
-                                                            className={
-                                                                elevatedIndexTableStyles.metaText
-                                                            }
-                                                        >
-                                                            {
-                                                                user.section
-                                                                    .district_name
-                                                            }
-                                                        </div>
-                                                    )}
-                                                {user.pastor && (
-                                                    <div
-                                                        className={
-                                                            elevatedIndexTableStyles.subMetaText
-                                                        }
-                                                    >
-                                                        {
-                                                            user.pastor
-                                                                .section_name
-                                                        }
-                                                    </div>
-                                                )}
-                                            </td>
-                                            <td
-                                                className={
-                                                    elevatedIndexTableStyles.cell
-                                                }
+                                                className={`${elevatedIndexTableStyles.cell} text-center`}
                                             >
                                                 <DataTableBadge
                                                     tone={resolveDataTableTone(
@@ -610,6 +610,7 @@ export default function UserIndex({
                                                             inactive: 'rose',
                                                         },
                                                     )}
+                                                    className="mx-auto"
                                                 >
                                                     {user.status}
                                                 </DataTableBadge>
@@ -633,6 +634,7 @@ export default function UserIndex({
                                                                 user.id,
                                                             )}
                                                         >
+                                                            <PencilLine className="size-4" />
                                                             Edit
                                                         </Link>
                                                     </Button>
@@ -647,6 +649,7 @@ export default function UserIndex({
                                                                 )
                                                             }
                                                         >
+                                                            <Archive className="size-4" />
                                                             Archive
                                                         </Button>
                                                     ) : (
